@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1a0a2e">
+<title>뽑아요! AI 인형뽑기</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<img id="img_wonhee" src="assets/wonhee.svg" style="display:none" alt="">
+<img id="img_ollie"  src="assets/ollie.svg"  style="display:none" alt="">
+
+<div class="bg-stars" id="bgStars"></div>
+
+<div class="app">
+  <div class="logo">&#127914; 뽑아요!</div>
+  <div class="logo-sub">AI CLAW MACHINE</div>
+
+  <div class="top-bar">
+    <div class="ticket-row">
+      <div class="t-left">
+        <div class="t-icon">&#127903;</div>
+        <div><div class="t-lbl">TICKET</div><div class="t-num" id="ticketNum">5</div></div>
+      </div>
+      <button class="charge-btn" onclick="addTickets()">+ 충전</button>
+    </div>
+    <div class="col-btn" onclick="openCollection()">
+      &#127942;
+      <div class="col-badge" id="colBadge">0</div>
+    </div>
+  </div>
+
+  <div class="ai-bar"><div class="ai-dot"></div><span id="aiTxt">AI가 오늘의 인형을 큐레이션 중...</span></div>
+
+  <div class="mood-sec">
+    <div class="sec-lbl">&#10022; 오늘 기분</div>
+    <div class="mood-row">
+      <div class="mood-btn active" data-mood="행복" onclick="selMood(this)">&#128522;<span>행복</span></div>
+      <div class="mood-btn" data-mood="설렘" onclick="selMood(this)">&#129392;<span>설렘</span></div>
+      <div class="mood-btn" data-mood="지침" onclick="selMood(this)">&#128554;<span>지침</span></div>
+      <div class="mood-btn" data-mood="신남" onclick="selMood(this)">&#129321;<span>신남</span></div>
+      <div class="mood-btn" data-mood="우울" onclick="selMood(this)">&#128546;<span>우울</span></div>
+    </div>
+  </div>
+
+  <div class="machine">
+    <div class="m-header">
+      <div class="m-title">CLAW FEVER</div>
+      <div class="m-lights"><div class="ml"></div><div class="ml"></div><div class="ml"></div><div class="ml"></div></div>
+    </div>
+    <div class="glass" id="glassWrap">
+      <canvas id="gc"></canvas>
+      <div class="spotlights"></div>
+      <div class="chute-zone" id="chuteZone">
+        <div class="chute-sign">O U T</div>
+        <div class="chute-slot">
+          <img class="chute-doll-img" id="chuteDoll" src="" alt="">
+        </div>
+        <div class="chute-arrows">&#9660;&#9660;&#9660;</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctrl-panel">
+    <div class="speed-row">
+      <span class="speed-lbl">이동 속도</span>
+      <div class="speed-track">
+        <div class="speed-fill-l" id="speedL"></div>
+        <div class="speed-fill-r" id="speedR"></div>
+        <div class="speed-center"></div>
+      </div>
+      <span class="speed-val" id="speedVal">0.0</span>
+    </div>
+    <div class="tension-row">
+      <span class="tension-lbl">AI 긴장감</span>
+      <div class="tension-track"><div class="tension-fill" id="tensionFill"></div></div>
+      <span class="tension-pct" id="tensionPct">0%</span>
+    </div>
+    <div class="btn-row">
+      <button class="dir-btn" id="btnL">&#9664;</button>
+      <button class="grab-btn" id="grabBtn" onclick="doGrab()">&#127919; 뽑기!</button>
+      <button class="dir-btn" id="btnR">&#9654;</button>
+    </div>
+  </div>
+
+  <div class="pts-panel">
+    <div class="pts-top">
+      <div>
+        <div style="font-size:9px;color:rgba(255,255,255,.3);letter-spacing:1px;">누적 포인트</div>
+        <div class="pts-num"><span id="totalPts">0</span> P</div>
+      </div>
+      <div style="text-align:right;font-size:10px;color:rgba(255,255,255,.3);">제휴 서비스<br><span style="color:var(--cyan);font-size:9px;">연결 예정</span></div>
+    </div>
+    <div id="phList" style="display:flex;flex-direction:column;gap:4px;max-height:70px;overflow-y:auto;">
+      <div style="text-align:center;font-size:10px;color:rgba(255,255,255,.25);padding:4px;">아직 포인트 내역이 없어요</div>
+    </div>
+  </div>
+</div>
+
+<!-- 결과 카드 -->
+<div class="overlay" id="resOverlay">
+  <div class="r-card">
+    <button class="r-close" onclick="closeRes()">&#10005;</button>
+    <img class="r-img" id="resImg" src="" alt="">
+    <div class="r-badge tag-sr" id="resBadge">SR</div>
+    <div class="r-name" id="resName"></div>
+    <div class="r-story" id="resStory"></div>
+    <div class="r-pts" id="resPts"></div>
+    <button class="share-btn" onclick="doShare()">&#128228; 공유하기</button>
+  </div>
+</div>
+
+<!-- 모음집 패널 -->
+<div class="collection-panel" id="collectionPanel">
+  <div class="col-header">
+    <div class="col-header-title">&#127942; 내 인형 모음집</div>
+    <button class="col-close-btn" onclick="closeCollection()">닫기</button>
+  </div>
+  <div class="col-stats">
+    <div class="col-stat">
+      <div class="col-stat-num" id="statTotal">0</div>
+      <div class="col-stat-lbl">총 보유</div>
+    </div>
+    <div class="col-stat">
+      <div class="col-stat-num" id="statSSR" style="color:var(--yellow)">0</div>
+      <div class="col-stat-lbl">SSR</div>
+    </div>
+    <div class="col-stat">
+      <div class="col-stat-num" id="statSR" style="color:var(--pink)">0</div>
+      <div class="col-stat-lbl">SR</div>
+    </div>
+    <div class="col-stat">
+      <div class="col-stat-num" id="statR" style="color:var(--cyan)">0</div>
+      <div class="col-stat-lbl">R</div>
+    </div>
+  </div>
+  <div class="col-grid-wrap">
+    <div class="col-grid" id="collectionGrid">
+      <div class="col-empty">뽑은 인형이 없어요<br>첫 번째 인형을 뽑아보세요!</div>
+    </div>
+  </div>
+</div>
+
+<!-- 모음집 상세 -->
+<div class="col-detail" id="colDetail">
+  <div class="col-detail-card">
+    <button class="r-close" onclick="closeColDetail()">&#10005;</button>
+    <img id="detailImg" src="" alt="" style="width:110px;height:110px;object-fit:contain;margin:0 auto 10px;display:block;">
+    <div id="detailRarity" class="r-badge detail-rarity">SR</div>
+    <div id="detailName" class="detail-name"></div>
+    <div id="detailStory" class="detail-story"></div>
+    <div id="detailPts" class="detail-pts"></div>
+    <div id="detailTime" class="detail-time"></div>
+  </div>
+</div>
+
+<script src="game.js"></script>
+</body>
+</html>
