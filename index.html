@@ -101,6 +101,19 @@
   </div>
 </div>
 
+<!-- 로그인 (Supabase 설정 시에만 표시) -->
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-card">
+    <div class="login-logo">&#127914; 뽑아요!</div>
+    <div class="login-sub">닉네임으로 시작해요</div>
+    <input class="login-input" id="loginNick" type="text" maxlength="12" placeholder="닉네임 (2~12자)" autocomplete="off">
+    <input class="login-input" id="loginPin" type="tel" inputmode="numeric" maxlength="4" placeholder="PIN 4자리 (숫자)" autocomplete="off">
+    <div class="login-err" id="loginErr"></div>
+    <button class="login-btn" id="loginBtn">시작하기 &#127919;</button>
+    <div class="login-hint">처음이면 자동으로 가입돼요.<br>PIN은 내 콜렉션 보호용 숫자 4자리!</div>
+  </div>
+</div>
+
 <!-- 결과 카드 -->
 <div class="overlay" id="resOverlay">
   <div class="r-card">
@@ -117,8 +130,11 @@
 <!-- 모음집 패널 -->
 <div class="collection-panel" id="collectionPanel">
   <div class="col-header">
-    <div class="col-header-title">&#127942; 내 인형 모음집</div>
-    <button class="col-close-btn" onclick="closeCollection()">닫기</button>
+    <div class="col-header-title" id="colHeaderTitle">&#127942; 내 인형 모음집</div>
+    <div style="display:flex;gap:6px;">
+      <button class="col-close-btn" id="logoutBtn" style="display:none;">로그아웃</button>
+      <button class="col-close-btn" onclick="closeCollection()">닫기</button>
+    </div>
   </div>
   <div class="col-stats">
     <div class="col-stat">
@@ -158,6 +174,8 @@
   </div>
 </div>
 
+<script src="config.js"></script>
+<script src="db.js"></script>
 <script src="game.js"></script>
 </body>
 </html>

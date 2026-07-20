@@ -75,6 +75,7 @@
   var isGrabbing = false;
   var lastT = 0;
   var collection = [];
+  var player = null; // 로그인한 플레이어 {id, nickname} — null이면 로컬 모드
 
   var DOLL_CFGS = [
     { key:'wonhee', w:78, h:78, rot:-5, layer:1 },
@@ -490,7 +491,7 @@
     document.getElementById('totalPts').textContent = totalPts;
     document.getElementById('resPts').textContent = '+' + pts + ' 포인트 적립!';
 
-    collection.unshift({
+    var pull = {
       key:    key,
       name:   info.name,
       story:  info.story,
@@ -498,7 +499,9 @@
       pts:    pts,
       src:    asset.el.src,
       time:   new Date().toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
-    });
+    };
+    collection.unshift(pull);
+    if (player) DB.addPull(player.id, pull);
     saveState();
     renderCollection();
     updateCollectionBadge();
@@ -616,9 +619,18 @@
   }
 
   // ══════════════════════════════════════════
-  // 저장/불러오기 (수정: 티켓·포인트·내역도 저장)
+  // 저장/불러오기
+  // 로그인 시: 서버(Supabase)가 원본 / 미로그인: localStorage
   // ══════════════════════════════════════════
   function saveState() {
+    if (player) {
+      DB.savePlayer(player.id, {
+        tickets: tickets,
+        total_pts: totalPts,
+        attempt_count: attemptCount
+      });
+      return;
+    }
     try {
       var lite = collection.map(function(c) {
         return { key:c.key, name:c.name, story:c.story, rarity:c.rarity, pts:c.pts, time:c.time };
@@ -798,8 +810,83 @@
     }));
   }
 
-  function start() {
-    loadState();
+  // ══════════════════════════════════════════
+  // 로그인 (Supabase 설정 시)
+  // ══════════════════════════════════════════
+  function formatPullTime(iso) {
+    try {
+      return new Date(iso).toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' });
+    } catch(e) { return ''; }
+  }
+
+  // 서버에서 받은 플레이어 데이터로 게임 상태 채우기
+  function hydratePlayer(p, pulls) {
+    player   = { id: p.id, nickname: p.nickname };
+    tickets  = (typeof p.tickets === 'number')       ? p.tickets       : 5;
+    totalPts = (typeof p.total_pts === 'number')     ? p.total_pts     : 0;
+    attemptCount = (typeof p.attempt_count === 'number') ? p.attempt_count : 0;
+
+    collection = (pulls || []).map(function(r) {
+      return {
+        key: r.doll_key, name: r.name, story: r.story || '',
+        rarity: r.rarity, pts: r.pts,
+        src: ASSETS[r.doll_key] ? ASSETS[r.doll_key].el.src : '',
+        time: formatPullTime(r.created_at)
+      };
+    });
+    ptsHistory = collection.slice(0, 20).map(function(c) { return { name: c.name, pts: c.pts }; });
+
+    document.getElementById('colHeaderTitle').innerHTML = '&#127942; ';
+    document.getElementById('colHeaderTitle').appendChild(
+      document.createTextNode(p.nickname + '의 인형 모음집'));
+    var lb = document.getElementById('logoutBtn');
+    lb.style.display = 'block';
+    lb.onclick = function() {
+      DB.forgetLogin();
+      location.reload();
+    };
+  }
+
+  function showLogin(onDone) {
+    var ov   = document.getElementById('loginOverlay');
+    var nick = document.getElementById('loginNick');
+    var pin  = document.getElementById('loginPin');
+    var err  = document.getElementById('loginErr');
+    var btn  = document.getElementById('loginBtn');
+    ov.classList.add('show');
+
+    function submit() {
+      var n = nick.value.trim();
+      var p = pin.value.trim();
+      err.textContent = '';
+      if (n.length < 2 || n.length > 12) { err.textContent = '닉네임은 2~12자로 해주세요'; return; }
+      if (!/^\d{4}$/.test(p)) { err.textContent = 'PIN은 숫자 4자리예요'; return; }
+      btn.disabled = true;
+      btn.textContent = '접속 중...';
+      DB.loginOrSignup(n, p).then(function(res) {
+        return DB.getPulls(res.player.id).then(function(pulls) {
+          ov.classList.remove('show');
+          hydratePlayer(res.player, pulls);
+          if (res.isNew) setAiTxt(n + '님 환영해요! 첫 인형을 뽑아보세요 🎉');
+          else setAiTxt(n + '님 다시 오셨네요! 이어서 뽑아요 🎪');
+          onDone();
+        });
+      }).catch(function(e) {
+        btn.disabled = false;
+        btn.textContent = '시작하기 🎯';
+        err.textContent = (e.message === 'PIN_MISMATCH')
+          ? '이미 있는 닉네임인데 PIN이 달라요'
+          : '접속 실패... 잠시 후 다시 시도해주세요';
+      });
+    }
+    btn.addEventListener('click', submit);
+    pin.addEventListener('keydown', function(e) { if (e.key === 'Enter') submit(); });
+  }
+
+  // ══════════════════════════════════════════
+  // 시작
+  // ══════════════════════════════════════════
+  function beginGame() {
     document.getElementById('ticketNum').textContent = tickets;
     document.getElementById('totalPts').textContent  = totalPts;
     renderHistory();
@@ -807,16 +894,37 @@
     updateCollectionBadge();
     updateTension(Math.min(BASE_RATE + attemptCount * PITY_STEP, MAX_RATE));
 
-    bindDirBtn('btnL', -1);
-    bindDirBtn('btnR',  1);
-
-    window.addEventListener('resize', resizeCanvas);
-    window.addEventListener('orientationchange', function() { setTimeout(resizeCanvas, 200); });
-
     waitImages().then(function() {
       resizeCanvas();
       requestAnimationFrame(function(t) { lastT = t; requestAnimationFrame(loop); });
     });
+  }
+
+  function start() {
+    bindDirBtn('btnL', -1);
+    bindDirBtn('btnR',  1);
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', function() { setTimeout(resizeCanvas, 200); });
+
+    if (window.DB && DB.enabled) {
+      // 서버 모드: 자동 로그인 시도 → 실패하면 로그인 화면
+      DB.autoLogin().then(function(p) {
+        if (p) {
+          return DB.getPulls(p.id).then(function(pulls) {
+            hydratePlayer(p, pulls);
+            setAiTxt(p.nickname + '님 어서오세요! 🎪');
+            beginGame();
+          });
+        }
+        showLogin(beginGame);
+      }).catch(function() {
+        showLogin(beginGame);
+      });
+    } else {
+      // 로컬 모드
+      loadState();
+      beginGame();
+    }
   }
 
   if (document.readyState === 'loading') {

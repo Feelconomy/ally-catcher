@@ -18,13 +18,45 @@ python3 -m http.server 8080
 
 ```
 claw-machine/
-├── index.html      # 마크업
-├── style.css       # 스타일 (모바일 최적화)
-├── game.js         # 게임 로직 전체
+├── index.html          # 마크업
+├── style.css           # 스타일 (모바일 최적화)
+├── game.js             # 게임 로직 전체
+├── config.js           # Supabase URL/키 설정 (비어있으면 로컬 모드)
+├── db.js               # Supabase REST 클라이언트 (SDK 없이 fetch)
+├── supabase/
+│   └── schema.sql      # DB 테이블 생성 SQL
 └── assets/
-    ├── wonhee.svg  # 인형: 졸업생 원희 (임시 이미지 — 원본 PNG로 교체 가능)
-    └── ollie.svg   # 인형: 직장인 올리 (임시 이미지 — 원본 PNG로 교체 가능)
+    ├── wonhee.svg      # 인형: 졸업생 원희 (임시 이미지 — 원본 PNG로 교체 가능)
+    └── ollie.svg       # 인형: 직장인 올리 (임시 이미지 — 원본 PNG로 교체 가능)
 ```
+
+## 로그인 + 서버 저장 (Supabase)
+
+기본은 **로컬 모드** (localStorage, 로그인 없음). Supabase를 연결하면
+**닉네임+PIN 로그인** 화면이 뜨고 콜렉션/포인트/티켓이 서버에 저장돼서
+어느 기기에서든 이어서 플레이할 수 있습니다.
+
+연결 방법 (5분):
+
+1. [supabase.com](https://supabase.com) 가입 → New Project 생성
+2. 대시보드 → **SQL Editor** → `supabase/schema.sql` 내용 붙여넣고 Run
+3. 대시보드 → **Settings → API** 에서 두 값 복사:
+   - Project URL
+   - anon public key
+4. `config.js`에 붙여넣기:
+   ```js
+   window.CLAW_CONFIG = {
+     SUPABASE_URL: 'https://xxxx.supabase.co',
+     SUPABASE_ANON_KEY: 'eyJ...'
+   };
+   ```
+
+로그인 방식: 닉네임 2~12자 + PIN 숫자 4자리.
+처음 입력한 닉네임은 자동 가입, 이후엔 PIN이 맞아야 접속됩니다.
+
+> ⚠️ 의도적으로 가벼운 로그인입니다. PIN은 평문 저장이고 anon 키로
+> 모든 데이터 접근이 가능해요. 포인트에 실제 가치(제휴 등)가 붙는 시점엔
+> 뽑기 판정과 포인트 적립을 서버(Edge Function)로 옮겨야 합니다.
 
 ## 인형 이미지 교체
 
