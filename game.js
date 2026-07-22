@@ -501,8 +501,13 @@
       time:   new Date().toLocaleString('ko-KR', { month:'numeric', day:'numeric', hour:'2-digit', minute:'2-digit' })
     };
     collection.unshift(pull);
-    if (player) DB.addPull(player.id, pull);
-    saveState();
+    if (player) {
+      DB.addPull(player.id, pull);
+      saveState();
+      DB.flush(); // 성공 직후 포인트/티켓 즉시 서버 반영 (앱 닫아도 안전)
+    } else {
+      saveState();
+    }
     renderCollection();
     updateCollectionBadge();
 
@@ -823,7 +828,6 @@
   function hydratePlayer(p, pulls) {
     player   = { id: p.id, nickname: p.nickname };
     tickets  = (typeof p.tickets === 'number')       ? p.tickets       : 5;
-    totalPts = (typeof p.total_pts === 'number')     ? p.total_pts     : 0;
     attemptCount = (typeof p.attempt_count === 'number') ? p.attempt_count : 0;
 
     collection = (pulls || []).map(function(r) {
@@ -834,6 +838,13 @@
         time: formatPullTime(r.created_at)
       };
     });
+
+    // 포인트는 뽑기 기록 합계로 재계산 → 저장 타이밍 사고와 무관하게 항상 일치
+    var sumPts = collection.reduce(function(s, c) { return s + (c.pts || 0); }, 0);
+    totalPts = sumPts || (typeof p.total_pts === 'number' ? p.total_pts : 0);
+    if (player && sumPts !== p.total_pts) {
+      DB.savePlayer(player.id, { total_pts: totalPts }); // DB 값도 보정
+    }
     ptsHistory = collection.slice(0, 20).map(function(c) { return { name: c.name, pts: c.pts }; });
 
     document.getElementById('colHeaderTitle').innerHTML = '&#127942; ';
@@ -905,6 +916,14 @@
     bindDirBtn('btnR',  1);
     window.addEventListener('resize', resizeCanvas);
     window.addEventListener('orientationchange', function() { setTimeout(resizeCanvas, 200); });
+
+    // 앱을 닫거나 백그라운드로 보낼 때 대기 중인 저장을 즉시 밀어냄
+    if (window.DB && DB.enabled) {
+      window.addEventListener('pagehide', function() { DB.flush(true); });
+      document.addEventListener('visibilitychange', function() {
+        if (document.visibilityState === 'hidden') DB.flush(true);
+      });
+    }
 
     if (window.DB && DB.enabled) {
       // 서버 모드: 자동 로그인 시도 → 실패하면 로그인 화면

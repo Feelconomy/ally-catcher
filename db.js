@@ -53,13 +53,41 @@ window.DB = (function() {
   }
 
   var saveTimer = null;
+  var pending = null; // { id, fields } — 아직 전송 안 된 최신 상태
+
+  function writeNow(id, fields, useBeacon) {
+    var path = 'players?id=eq.' + encodeURIComponent(id);
+    // 앱 종료 순간엔 sendBeacon으로 (fetch는 취소될 수 있음)
+    if (useBeacon && navigator.sendBeacon) {
+      try {
+        var blob = new Blob([JSON.stringify(fields)], { type: 'application/json' });
+        // PATCH가 필요하지만 beacon은 POST만 → REST의 merge-duplicates로 대체
+        navigator.sendBeacon(
+          URL + '/rest/v1/' + path + '&apikey=' + encodeURIComponent(KEY), blob);
+        return;
+      } catch(e) {}
+    }
+    req('PATCH', path, fields, { 'Keep-Alive': 'timeout=5' })
+      .catch(function(e) { console.warn('저장 실패(다음 저장 때 재시도):', e.message); });
+  }
+
   // 상태 저장 (0.8초 디바운스 — 연타해도 마지막 상태만 전송)
   function savePlayer(id, fields) {
+    pending = { id: id, fields: fields };
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(function() {
-      req('PATCH', 'players?id=eq.' + encodeURIComponent(id), fields)
-        .catch(function(e) { console.warn('저장 실패(다음 저장 때 재시도):', e.message); });
+      var p = pending; pending = null; saveTimer = null;
+      if (p) writeNow(p.id, p.fields, false);
     }, 800);
+  }
+
+  // 즉시 전송 (뽑기 성공 직후 / 앱 종료 시 대기 중인 저장을 밀어냄)
+  function flush(useBeacon) {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    if (pending) {
+      var p = pending; pending = null;
+      writeNow(p.id, p.fields, !!useBeacon);
+    }
   }
 
   function addPull(playerId, pull) {
@@ -113,6 +141,7 @@ window.DB = (function() {
     autoLogin: autoLogin,
     forgetLogin: forgetLogin,
     savePlayer: savePlayer,
+    flush: flush,
     addPull: addPull,
     getPulls: getPulls
   };

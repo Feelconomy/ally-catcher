@@ -9,6 +9,6 @@
 //   - SUPABASE_ANON_KEY: anon public key  (eyJ... 로 시작하는 긴 문자열)
 // ══════════════════════════════════════════
 window.CLAW_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: ''
+  SUPABASE_URL: 'https://laprbwzdsnuzhliyhhyk.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhcHJid3pkc251emhsaXloaHlrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ3Mjk4ODgsImV4cCI6MjEwMDMwNTg4OH0.jqYwfIthYRxKtlvgR4NwYgqn_kt4BSW1CDM726hPxJ4'
 };
