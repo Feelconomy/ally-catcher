@@ -48,29 +48,33 @@ const Sync = (function () {
     });
   }
 
-  // ── 플레이어 저장 (티켓·포인트) : 디바운스 ──────────────────────────
-  let saveTimer = null;
-  let pending = null;
+  // ── 플레이어 저장 (티켓·포인트) ──────────────────────────────────────
+  // 직렬화: 한 번에 하나의 PATCH만 날려 순서 뒤바뀜(늦게 온 옛 값이 덮는) 방지.
+  // 항상 Store의 '현재' 값을 읽어 보내므로, 밀린 호출은 최신 상태로 수렴한다.
+  let writing = false;
+  let dirty = false;
 
-  function writeNow(fields, keepalive) {
+  function doWrite(keepalive) {
+    const body = { tickets: Store.state.tickets | 0, points: Store.state.points | 0 };
     return req('PATCH', 'players?device_id=eq.' + encodeURIComponent(getDeviceId()),
-      fields, null, { keepalive: !!keepalive })
-      .catch((e) => console.warn('플레이어 저장 실패(다음에 재시도):', e.message));
+      body, null, { keepalive: !!keepalive })
+      .catch((e) => console.warn('플레이어 저장 실패:', e.message));
   }
 
   function savePlayer() {
     if (!enabled || !playerId) return;
-    pending = { tickets: Store.state.tickets | 0, points: Store.state.points | 0 };
-    if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      const f = pending; pending = null; saveTimer = null;
-      if (f) writeNow(f, false);
-    }, 700);
+    if (writing) { dirty = true; return; }   // 진행 중이면 끝나고 한 번 더
+    writing = true;
+    doWrite(false).then(() => {
+      writing = false;
+      if (dirty) { dirty = false; savePlayer(); } // 마지막 상태를 반드시 반영
+    });
   }
 
+  // 종료/백그라운드 시: 최신 상태를 즉시(keepalive) 저장. PATCH는 절대값이라 중복 무해.
   function flush(keepalive) {
-    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-    if (pending) { const f = pending; pending = null; writeNow(f, keepalive); }
+    if (!enabled || !playerId) return;
+    doWrite(!!keepalive);
   }
 
   // ── 인형(prizes) ────────────────────────────────────────────────────
@@ -78,7 +82,7 @@ const Sync = (function () {
     if (!enabled || !playerId) return;
     req('POST', 'prizes', { player_id: playerId, doll_id: dollId })
       .catch((e) => console.warn('인형 저장 실패:', e.message));
-    flush();               // 승리 직후 티켓/포인트도 즉시 반영 (앱 닫아도 안전)
+    savePlayer();          // 승리 직후 티켓/포인트도 즉시 반영 (앱 닫아도 안전)
   }
 
   // 중복 교환 등으로 목록이 바뀌면 서버 prizes 를 로컬과 일치시킴 (드묾)
@@ -90,7 +94,7 @@ const Sync = (function () {
         if (!rows.length) return null;
         return req('POST', 'prizes', rows);
       })
-      .then(() => flush())
+      .then(() => savePlayer())
       .catch((e) => console.warn('인형 목록 동기화 실패:', e.message));
   }
 
