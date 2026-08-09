@@ -119,8 +119,10 @@ function dialog(body, onMount, opts) {
     onMount, opts);
 }
 
-/* Toasts: black pill at the bottom, optional trailing action. */
-let toastTimer = null;
+/* Toasts: black pill at the bottom, optional trailing action.
+   Each toast owns its dismissal timer — a single shared one meant a second
+   toast cancelled the first one's timer and left it on screen forever. */
+const TOAST_MAX = 3;
 
 function toast(message, opts) {
   const o = opts || {};
@@ -138,14 +140,22 @@ function toast(message, opts) {
     : `${o.tone ? `<span class="ic ${o.tone === 'error' ? 'err' : 'ok'}">${icon(o.tone === 'error' ? 'circleExclamation' : 'circleCheck', 19)}</span>` : ''}
        <span class="tx">${esc(message)}</span>
        ${o.action ? `<button class="act">${esc(o.action)}</button>` : ''}`;
+  // Retire the oldest so a burst of toasts cannot pile up off-screen.
+  while (stack.children.length >= TOAST_MAX) dismissToast(stack.firstElementChild);
   stack.appendChild(node);
 
+  node._timer = setTimeout(() => dismissToast(node), o.duration || 2600);
+
   if (o.action && o.onAction) {
-    $('.act', node).addEventListener('click', () => { node.remove(); o.onAction(); });
+    $('.act', node).addEventListener('click', () => { dismissToast(node); o.onAction(); });
   }
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => node.remove(), o.duration || 2600);
   return node;
+}
+
+function dismissToast(node) {
+  if (!node) return;
+  clearTimeout(node._timer);
+  node.remove();
 }
 
 /* --------------------------------------------------------------- utilities */

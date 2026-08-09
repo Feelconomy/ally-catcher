@@ -2,7 +2,8 @@
 
    Single axis, like the cabinet the design draws: the claw slides left and
    right along one rail and that is the only thing the player steers. The
-   dolls sit in one row on the bed, so lining up is purely horizontal.
+   dolls are heaped in two overlapping rows, so lining up is purely horizontal
+   and the claw takes whatever sits on top of the pile.
 
    One drop per credit. The timer is thinking time — pressing 집게 내리기
    commits the attempt and stops the clock.
@@ -11,24 +12,37 @@
    lose it on the way up or on the way across, exactly like a weak grip on a
    real machine; the doll then falls back onto the bed where it was dropped. */
 
-const GRAB_RADIUS = 0.085;   // how close in x the claw must be to close on a doll
-const AIM_FALLOFF = 0.14;    // distance over which the displayed odds decay
+const GRAB_RADIUS = 0.07;    // how close in x the claw must be to close on a doll
+const AIM_FALLOFF = 0.10;    // distance over which the displayed odds decay
 const REST_CORD = 76;        // idle cord length, px
 const CLAW_W = 104;          // rendered claw width, px
 
-/* Where the dolls sit in the bed — one row, evenly spread, lightly piled. */
+/* The heap. Two overlapping rows — a back row and a front row nestled into its
+   gaps — so the bed reads as a pile of plush rather than a tidy line. Every
+   slot clears the chute mouth on the left, so nothing ever sits on the hole it
+   is supposed to fall through. */
 const BED = [
-  { x: 0.13, lift: 0 },
-  { x: 0.315, lift: 7 },
-  { x: 0.50, lift: 0 },
-  { x: 0.685, lift: 7 },
-  { x: 0.87, lift: 0 },
+  // back row: smaller, higher up, partly hidden by the front row
+  { x: 0.345, layer: 0, size: 54, bottom: 32 },
+  { x: 0.465, layer: 0, size: 56, bottom: 29 },
+  { x: 0.585, layer: 0, size: 54, bottom: 33 },
+  { x: 0.705, layer: 0, size: 57, bottom: 29 },
+  { x: 0.825, layer: 0, size: 54, bottom: 32 },
+  // front row: larger, sitting lower and overlapping the back row
+  { x: 0.405, layer: 1, size: 63, bottom: 7 },
+  { x: 0.525, layer: 1, size: 61, bottom: 10 },
+  { x: 0.645, layer: 1, size: 64, bottom: 6 },
+  { x: 0.765, layer: 1, size: 61, bottom: 9 },
 ];
+
+const BED_MIN_X = 0.345;     // leftmost slot — a slipped doll never lands left of this
+const CHUTE_X = 0.155;       // claw position over the chute mouth
+const START_X = 0.60;        // claw starts over the middle of the pile
 
 const Play = {
   machine: null,
-  dolls: [],          // { dollId, x, lift, rot, size, taken }
-  x: 0.5,             // claw across the cabinet, 0..1 — the only axis
+  dolls: [],          // { dollId, x, layer, size, bottom, rot, taken }
+  x: START_X,         // claw across the cabinet, 0..1 — the only axis
   busy: false,
   over: false,
   dropped: false,     // the one attempt has been spent
@@ -40,7 +54,7 @@ const Play = {
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
   start(machine) {
     this.machine = machine;
-    this.x = 0.5;
+    this.x = START_X;
     this.busy = false; this.over = false; this.dropped = false;
     this.left = PLAY_SECONDS;
     this.stickActive = false;
@@ -49,9 +63,10 @@ const Play = {
     this.dolls = BED.map((slot, i) => ({
       dollId: pool[i % pool.length],
       x: slot.x,
-      lift: slot.lift,
-      size: 62 + (i % 3) * 4,
-      rot: (i % 2 ? 1 : -1) * (4 + (i * 5) % 10),
+      layer: slot.layer,
+      size: slot.size,
+      bottom: slot.bottom,
+      rot: (i % 2 ? 1 : -1) * (5 + (i * 7) % 14),
       taken: false,
     }));
     this.render();
@@ -85,6 +100,12 @@ const Play = {
           <div class="claw" id="claw">
             <div class="held" id="held"></div>
             ${clawSvg()}
+          </div>
+        </div>
+        <div class="bed">
+          <div class="hole" id="hole">
+            <span class="lip"></span>
+            <span class="arrow">${icon('caretDown', 16)}</span>
           </div>
         </div>
         <div class="pit" id="pit"></div>
@@ -241,7 +262,7 @@ const Play = {
     // the drop-back animation.
     pit.innerHTML = this.dolls.map((d, i) => `
       <div class="doll ${d.taken ? 'taken' : ''}" data-i="${i}"
-        style="left:calc(${d.x * 100}% - ${d.size / 2}px);bottom:${14 + d.lift}px;z-index:${d.lift ? 3 : 2}">
+        style="left:calc(${d.x * 100}% - ${d.size / 2}px);bottom:${d.bottom}px;z-index:${2 + d.layer * 2}">
         ${dollImg(d.dollId, d.size, `transform:rotate(${d.rot}deg)`)}
       </div>`).join('');
   },
@@ -255,13 +276,25 @@ const Play = {
     return Math.round(base * (0.25 + 0.75 * aim));
   },
 
-  /** Nearest untaken doll along the rail. */
+  /** What the claw would close on: in a heap it takes whatever is on top,
+      so a front-row doll wins over a back-row one when both are in reach. */
   nearest() {
     let best = null;
     this.dolls.forEach((d, i) => {
       if (d.taken) return;
       const dist = Math.abs(d.x - this.x);
-      if (!best || dist < best.dist) best = { i, d, dist };
+      if (!best) { best = { i, d, dist }; return; }
+
+      const reachable = dist < GRAB_RADIUS;
+      const bestReachable = best.dist < GRAB_RADIUS;
+      if (reachable && bestReachable) {
+        // Both grabbable — prefer the higher layer, then the closer one.
+        if (d.layer > best.d.layer || (d.layer === best.d.layer && dist < best.dist)) best = { i, d, dist };
+      } else if (reachable && !bestReachable) {
+        best = { i, d, dist };
+      } else if (!bestReachable && dist < best.dist) {
+        best = { i, d, dist };
+      }
     });
     return best;
   },
@@ -372,14 +405,16 @@ const Play = {
 
     // Carry to the chute.
     this.setState('CARRYING');
+    const overChute = (CHUTE_X * 100) + '%';
     rig.style.transition = 'left .75s ease-in-out';
-    rig.style.left = '18%';
+    rig.style.left = overChute;
     const mount = document.getElementById('railMount');
-    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = '18%'; }
+    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = overChute; }
 
     if (failMode === 'slipCarry') {
       await wait(430);                       // let go partway across
-      const dropX = 0.18 + (this.x - 0.18) * 0.45;
+      // Never land a slipped doll on the chute mouth — it would look like a win.
+      const dropX = Math.max(BED_MIN_X, CHUTE_X + (this.x - CHUTE_X) * 0.5);
       await this.releaseInto(carried, dropX, 'slip');
       await wait(360);
       this.finish(false, null);
@@ -415,7 +450,7 @@ const Play = {
       // Sink the tips a little into the doll so the grip looks committed.
       targetY = el ? el.getBoundingClientRect().top + 18 : cabRect.bottom - 190;
     } else {
-      targetY = cabRect.bottom - 176;          // clean miss: reach the bed
+      targetY = cabRect.bottom - 152;          // clean miss: reach the bed floor
     }
 
     const current = parseFloat(cord.style.height) || REST_CORD;
@@ -432,7 +467,8 @@ const Play = {
     const idx = this.dolls.findIndex(d => d === doll);
     if (idx >= 0) {
       this.dolls[idx].taken = false;
-      this.dolls[idx].x = Math.max(0.11, Math.min(0.89, x));
+      // Clamp back onto the bed, clear of the chute mouth.
+      this.dolls[idx].x = Math.max(BED_MIN_X, Math.min(0.9, x));
       this.dolls[idx].rot = Math.round((Math.random() - 0.5) * 26);
       this.paintPit();
       const el = $(`.doll[data-i="${idx}"]`, screenEl());

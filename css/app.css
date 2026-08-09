@@ -399,19 +399,19 @@ a:hover { color: var(--green-deep); }
   background: linear-gradient(120deg, var(--green), var(--green-lit));
   padding: 20px; margin-bottom: 18px;
   display: block; width: 100%; text-align: left;
-  min-height: 122px;
 }
 .promo .shine { position: absolute; inset: 0; width: 60px; background: rgba(255, 255, 255, .22); animation: shine 3.6s linear infinite; }
 .promo .body { position: relative; display: flex; align-items: center; gap: 10px; }
 .promo .copy { flex: 1; display: block; }
 .promo .eyebrow { color: var(--yellow); letter-spacing: .06em; display: block; }
 .promo .title { margin-top: 7px; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.35; display: block; }
-/* 원이 sits straight on the gradient — no plate behind it — and overhangs
-   the card so it reads as a sticker. */
+/* 원이 sits straight on the gradient — no plate behind it. Sized to the card's
+   original 78px art slot: the negative margins let the art read larger without
+   growing the card. */
 .promo .mascot {
-  width: 132px; height: auto; flex-shrink: 0;
-  margin: -30px -14px -34px 0;
-  filter: drop-shadow(0 8px 14px rgba(0, 70, 34, .35));
+  width: auto; height: 96px; flex-shrink: 0;
+  margin: -9px -4px -9px 0;
+  filter: drop-shadow(0 6px 12px rgba(0, 70, 34, .32));
 }
 
 .machine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 24px; }
@@ -550,11 +550,33 @@ a:hover { color: var(--green-deep); }
    squash it — the talons are meant to overlap the doll, not contain it. */
 .claw-rig .held img { max-width: none; animation: pop .28s ease-out both; }
 
-.pit {
+/* The bed is the visual backdrop. Dolls live in `.pit`, which spans the full
+   cabinet width so doll x and claw x share one coordinate space. */
+.bed {
   position: absolute; bottom: 118px; left: 20px; right: 20px; height: 118px;
   border-radius: var(--r-lg) var(--r-lg) 0 0;
   background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  overflow: hidden;
 }
+/* The chute mouth — a hole in the bed floor, directly above the PRIZE OUT
+   tray. Nothing is ever placed on it, so the drop target is unambiguous. */
+.bed .hole {
+  position: absolute; left: 0; bottom: 0; width: 66px; height: 100%;
+  border-radius: var(--r-lg) 0 0 0;
+  background: linear-gradient(180deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .88));
+  box-shadow: inset -2px 0 0 rgba(255, 212, 0, .3), inset 0 8px 18px rgba(0, 0, 0, .85);
+}
+.bed .hole .lip {
+  position: absolute; top: 0; left: 0; right: 0; height: 5px;
+  background: linear-gradient(90deg, rgba(255, 212, 0, .5), rgba(255, 212, 0, .18));
+}
+.bed .hole .arrow {
+  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+  color: rgba(255, 212, 0, .5); display: flex;
+  animation: bob 2s ease-in-out infinite;
+}
+
+.pit { position: absolute; bottom: 118px; left: 0; right: 0; height: 118px; pointer-events: none; }
 .pit .doll { position: absolute; transition: opacity .2s ease, transform .3s ease, bottom .3s ease, left .3s ease; }
 .pit .doll.taken { opacity: 0; transform: scale(.4) !important; }
 .pit .doll.dropping { animation: dropIn .34s cubic-bezier(.4, 1.5, .6, 1) both; }
@@ -574,7 +596,18 @@ a:hover { color: var(--green-deep); }
 .chute .glow { position: absolute; top: 0; left: 0; right: 0; height: 26px; background: linear-gradient(180deg, rgba(255, 212, 0, .22), transparent); }
 .chute .sign { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 9px; font-weight: 700; letter-spacing: .14em; color: rgba(255, 212, 0, .85); }
 .chute .slot { width: 80px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .14); }
-.chute img { position: absolute; bottom: 14px; width: 56px; height: 56px; animation: pop .5s ease-out both; }
+.chute img {
+  position: absolute; bottom: 14px; width: 56px; height: 56px;
+  animation: fallIn .55s cubic-bezier(.45, 0, .7, 1) both;
+}
+/* The prize drops through the hole and settles in the tray. */
+@keyframes fallIn {
+  0%   { opacity: 0; transform: translateY(-104px) rotate(-10deg); }
+  22%  { opacity: 1; }
+  72%  { transform: translateY(6px) rotate(5deg); }
+  88%  { transform: translateY(-3px) rotate(-2deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
 
 .odds { flex: 1; height: 96px; border-radius: 14px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); padding: 12px 14px; }
 .odds .l { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: rgba(255, 255, 255, .4); }
