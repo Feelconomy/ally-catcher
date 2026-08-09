@@ -12,6 +12,7 @@ const App = {
   pendingProvider: null,
   guest: false,
   adTimer: null,
+  heroTimer: null,
 
   /** Routes that need an account before they will render. */
   guarded: ['play', 'loading', 'mission', 'exchange', 'entries', 'nh-link', 'settings', 'notif'],
@@ -27,6 +28,7 @@ function render(route, arg) {
   // Leaving the machine tears down its timers and key handlers.
   if (App.route === 'play' && route !== 'play') Play.stop();
   if (App.adTimer) { clearInterval(App.adTimer); App.adTimer = null; }
+  if (App.heroTimer) { clearInterval(App.heroTimer); App.heroTimer = null; }
   Overlay.closeAll();
   shellEl().style.background = '';
 

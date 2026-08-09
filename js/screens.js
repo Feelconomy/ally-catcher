@@ -9,13 +9,23 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen splash">
       <div class="mark"><i></i></div>
       <div class="name">뽑기왕</div>
-      <div class="bar">${meter(46, 'onGreen')}</div>
+      <div class="bar">${meter(8, 'onGreen')}</div>
       <div class="ver">v1.0.0</div>
     </div>`;
+
+    const bar = $('.splash .meter > i');
+    let pct = 8;
+    const load = setInterval(() => {
+      pct = Math.min(100, pct + 12 + Math.random() * 14);
+      if (bar) bar.style.width = pct + '%';
+      if (pct >= 100) clearInterval(load);
+    }, 130);
+
     setTimeout(() => {
+      clearInterval(load);
       if (App.route !== 'splash') return;
       go(Store.state.account ? 'home' : 'login');
-    }, 1100);
+    }, 1300);
   },
 
   /* --- 10 로그인 --------------------------------------------------------- */
@@ -121,13 +131,35 @@ const Screens = {
     setTheme('yellow');
     const slides = [
       { k: '기다림 없는 가상 인형뽑기', h: '한 손으로<br>집게를 내려요',
-        p: '대기 없이 바로 시작. 뽑은 인형은 보관함에 모으고, 포인트는 교환소에서 바꿔요.' },
+        p: '대기 없이 바로 시작. 뽑은 인형은 보관함에 모으고, 포인트는 교환소에서 바꿔요.',
+        art: ['bear', 'rabbit', 'penguin', 'duck'] },
       { k: '티켓은 미션으로만', h: '현금 결제가<br>없는 뽑기',
-        p: '티켓은 데일리 미션과 출석으로만 모아요. 결제 없이도 매일 도전할 수 있어요.' },
+        p: '티켓은 데일리 미션과 출석으로만 모아요. 결제 없이도 매일 도전할 수 있어요.',
+        art: ['ticket'] },
       { k: '모으고 바꾸고', h: '포인트는<br>진짜로 써요',
-        p: '중복 인형은 포인트로 교환하고, 추첨 응모나 NH멤버스 포인트 전환에 사용하세요.' },
+        p: '중복 인형은 포인트로 교환하고, 추첨 응모나 NH멤버스 포인트 전환에 사용하세요.',
+        art: ['exchange'] },
     ];
     let i = 0;
+
+    /** Each slide illustrates its own promise rather than repeating the tray. */
+    const artFor = s => {
+      if (s.art[0] === 'ticket') {
+        return `<div class="onb-art tickets">
+          ${[0, 1, 2].map(k => `<span style="animation-delay:${k * .18}s">${icon('ticketFill', k === 1 ? 68 : 52)}</span>`).join('')}
+          <b>+${SIGNUP_TICKETS}</b>
+        </div>`;
+      }
+      if (s.art[0] === 'exchange') {
+        return `<div class="onb-art swap">
+          <span class="from">${dollImg('cat', 72)}</span>
+          <span class="arw">${icon('arrowRight', 22)}</span>
+          <span class="to"><b>400</b><i>POINT</i></span>
+        </div>`;
+      }
+      return s.art.map((d, k) =>
+        dollImg(d, 96, `animation:bob ${3.2 + k * 0.2}s ease-in-out infinite ${k * 0.25}s`)).join('');
+    };
 
     const paint = () => {
       const s = slides[i];
@@ -138,12 +170,7 @@ const Screens = {
           <div class="kicker">${s.k}</div>
           <h2>${s.h}</h2>
           <p>${esc(s.p)}</p>
-          <div class="tray">
-            ${dollImg('bear', 96, 'animation:bob 3.2s ease-in-out infinite')}
-            ${dollImg('rabbit', 96, 'animation:bob 3.6s ease-in-out infinite .3s')}
-            ${dollImg('penguin', 96, 'animation:bob 3.4s ease-in-out infinite .6s')}
-            ${dollImg('duck', 96, 'animation:bob 3.8s ease-in-out infinite .15s')}
-          </div>
+          <div class="tray ${s.art.length === 1 ? 'single' : ''}">${artFor(s)}</div>
           <div class="foot">
             <div class="dots">${slides.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
             <button class="btn btn--primary" data-act="next">
@@ -220,77 +247,85 @@ const Screens = {
   /* --- 16 / 17 검색 ------------------------------------------------------ */
   search() {
     setTheme('');
-    const term = App.searchTerm || '';
-    const hits = term
-      ? MACHINES.filter(m => m.name.includes(term) || m.contents.some(d => DOLLS[d].name.includes(term)))
-      : [];
 
+    // The chrome is rendered once; only #results repaints as you type, so the
+    // caret and the on-screen keyboard stay put.
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="appbar">
         <button class="iconbtn plain" data-act="back" aria-label="뒤로">${icon('chevronLeft3', 20)}</button>
         <div class="searchbar">
           ${icon('search', 18)}
-          <input id="q" type="search" value="${esc(term)}" placeholder="기계나 인형을 검색해 보세요" autocomplete="off">
-          ${term ? `<button class="clear" data-act="clear" aria-label="지우기">${icon('close', 11)}</button>` : ''}
+          <input id="q" type="search" value="${esc(App.searchTerm || '')}"
+                 placeholder="기계나 인형을 검색해 보세요" autocomplete="off" enterkeyhint="search">
+          <button class="clear" data-act="clear" aria-label="지우기" hidden>${icon('close', 11)}</button>
         </div>
       </div>
-      <div class="scroll pad">
-        ${term === '' ? `
+      <div class="scroll pad" id="results"></div>
+    </div>`;
+
+    const q = $('#q');
+    const results = $('#results');
+    const clearBtn = $('.searchbar .clear');
+
+    const match = term => MACHINES.filter(m =>
+      m.name.includes(term) || m.contents.some(d => DOLLS[d].name.includes(term)));
+
+    const paint = () => {
+      const term = q.value.trim();
+      App.searchTerm = q.value;
+      clearBtn.hidden = !q.value;
+
+      if (!term) {
+        results.innerHTML = `
           <div class="section-head">
             <h3 style="font-size:14px">최근 검색어</h3>
-            <button class="more" data-act="clearRecent">전체 삭제</button>
+            ${Store.state.recent.length ? '<button class="more" data-act="clearRecent">전체 삭제</button>' : ''}
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px">
             ${Store.state.recent.length
               ? Store.state.recent.map(r => `<button class="chip" data-act="recent" data-r="${esc(r)}">${esc(r)}</button>`).join('')
               : '<div class="sub">최근 검색 기록이 없어요</div>'}
-          </div>` : ''}
+          </div>
+          <div style="margin-top:28px;font-size:14px;font-weight:700;margin-bottom:6px">인기 기계</div>
+          ${MACHINES.filter(m => m.open).slice(0, 3).map(m => resultRow(m, '')).join('')}`;
+      } else {
+        const hits = match(term);
+        results.innerHTML = hits.length
+          ? `<div style="font-size:14px;font-weight:700;margin-bottom:6px">검색 결과 ${hits.length}</div>
+             ${hits.map(m => resultRow(m, term)).join('')}`
+          : `<div class="empty" style="padding-top:56px">
+               ${dollImg('dog', 112, 'opacity:.35;filter:grayscale(1)')}
+               <h3>'${esc(term)}' 결과가 없어요</h3>
+               <p>다른 키워드로 찾아보거나<br>인기 기계를 둘러보세요</p>
+               <button class="btn sm auto btn--primary" style="margin-top:22px" data-act="popular">인기 기계 보기</button>
+             </div>`;
+      }
 
-        ${term && hits.length ? `
-          <div style="font-size:14px;font-weight:700;margin-bottom:6px">검색 결과 ${hits.length}</div>
-          ${hits.map(m => `
-            <button class="result-row" data-act="machine" data-id="${m.id}">
-              <span class="thumb" style="background:${m.bg}">${dollImg(m.hero, 34)}</span>
-              <span style="flex:1;text-align:left">
-                <span class="nm" style="display:block">${highlight(m.name, term)}</span>
-                <span class="mt" style="display:block">티켓 ${m.cost}장 · 난이도 ${m.difficulty}</span>
-              </span>
-              <span style="color:var(--ink-25);display:flex">${icon('chevronRight3', 18)}</span>
-            </button>`).join('')}` : ''}
-      </div>
+      bind(results, {
+        clearRecent: () => {
+          const backup = Store.state.recent.slice();
+          Store.state.recent = []; Store.save(); paint();
+          toast('최근 검색어를 지웠어요', {
+            action: '되돌리기',
+            onAction: () => { Store.state.recent = backup; Store.save(); paint(); },
+          });
+        },
+        recent: el => { q.value = el.dataset.r; paint(); },
+        machine: el => { Store.pushRecent(q.value.trim()); go('machine', el.dataset.id); },
+        popular: () => { App.searchTerm = ''; App.homeFilter = '인기'; go('home'); },
+      });
+    };
 
-      ${term && !hits.length ? `
-        <div class="empty">
-          ${dollImg('dog', 112, 'opacity:.35;filter:grayscale(1)')}
-          <h3>'${esc(term)}' 결과가 없어요</h3>
-          <p>다른 키워드로 찾아보거나<br>인기 기계를 둘러보세요</p>
-          <button class="btn sm auto btn--primary" style="margin-top:22px" data-act="popular">인기 기계 보기</button>
-        </div>` : '<div class="grow"></div>'}
-    </div>`;
-
-    const q = $('#q');
-    q.addEventListener('input', () => {
-      App.searchTerm = q.value;
-      clearTimeout(App.searchDebounce);
-      App.searchDebounce = setTimeout(() => { Screens.search(); $('#q').focus(); }, 220);
-    });
+    q.addEventListener('input', paint);
+    q.addEventListener('keydown', ev => { if (ev.key === 'Enter') { Store.pushRecent(q.value.trim()); q.blur(); } });
 
     bind(screenEl(), {
       back: () => { App.searchTerm = ''; go('home'); },
-      clear: () => { App.searchTerm = ''; Screens.search(); $('#q').focus(); },
-      clearRecent: () => {
-        const backup = Store.state.recent.slice();
-        Store.state.recent = []; Store.save(); Screens.search();
-        toast('최근 검색어를 지웠어요', {
-          action: '되돌리기',
-          onAction: () => { Store.state.recent = backup; Store.save(); Screens.search(); },
-        });
-      },
-      recent: el => { App.searchTerm = el.dataset.r; Screens.search(); },
-      machine: el => { Store.pushRecent(term); go('machine', el.dataset.id); },
-      popular: () => { App.searchTerm = ''; App.homeFilter = '인기'; go('home'); },
+      clear: () => { q.value = ''; paint(); q.focus(); },
     });
+
+    paint();
   },
 
   /* --- 18 / 19 기계 상세 ------------------------------------------------- */
@@ -304,8 +339,12 @@ const Screens = {
         ${statusbar()}
         <button class="back" data-act="back" aria-label="뒤로">${icon('chevronLeft3', 20)}</button>
         ${m.open ? `<button class="act" data-act="share" aria-label="공유">${icon('share', 18)}</button>` : ''}
-        ${dollImg(m.hero, 168)}
-        ${m.open ? '<div class="dots"><i class="on"></i><i></i><i></i></div>' : '<span class="pill">점검중</span>'}
+        ${m.open
+          ? `<div class="hero-carousel" id="carousel">
+               ${m.contents.slice(0, 3).map((d, k) => `<div class="slide ${k ? '' : 'on'}">${dollImg(d, 168)}</div>`).join('')}
+             </div>
+             <div class="dots" id="heroDots">${m.contents.slice(0, 3).map((_, k) => `<i class="${k ? '' : 'on'}"></i>`).join('')}</div>`
+          : `${dollImg(m.hero, 168)}<span class="pill">점검중</span>`}
       </div>
 
       <div class="scroll" style="padding:20px 20px 0">
@@ -350,6 +389,21 @@ const Screens = {
           </div>`}
       </div>
     </div>`;
+
+    // Cycle the hero through the dolls this machine actually holds.
+    if (m.open) {
+      const slides = $$('#carousel .slide');
+      const dots = $$('#heroDots i');
+      let at = 0;
+      App.heroTimer = setInterval(() => {
+        if (App.route !== 'machine' || !document.getElementById('carousel')) {
+          clearInterval(App.heroTimer); return;
+        }
+        slides[at].classList.remove('on'); dots[at].classList.remove('on');
+        at = (at + 1) % slides.length;
+        slides[at].classList.add('on'); dots[at].classList.add('on');
+      }, 2400);
+    }
 
     bind(screenEl(), {
       back: () => go('home'),
@@ -546,7 +600,8 @@ const Screens = {
     setTheme('');
     const counts = Store.prizeCounts();
     const owned = Store.codexOwned();
-    const locked = Math.max(0, 12 - DOLL_IDS.length);
+    // The season roster is larger than the dolls in play; the rest stay locked.
+    const lockedSlots = Math.max(0, CODEX_TOTAL - DOLL_IDS.length);
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
@@ -562,15 +617,18 @@ const Screens = {
       <div class="scroll pad">
         <div class="codex-grid">
           ${DOLL_IDS.map(id => counts[id]
-            ? `<div>${dollImg(id, 56)}</div>`
+            ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
             : `<div class="locked">${icon('lock', 20)}</div>`).join('')}
-          ${Array.from({ length: 6 + locked }, () => `<div class="locked">${icon('lock', 20)}</div>`).join('')}
+          ${Array.from({ length: lockedSlots }, () => `<div class="locked">${icon('lock', 20)}</div>`).join('')}
         </div>
         <div style="height:24px"></div>
       </div>
     </div>`;
 
-    bind(screenEl(), { back: () => go('storage') });
+    bind(screenEl(), {
+      back: () => go('storage'),
+      doll: el => Sheets.dollDetail(el.dataset.id),
+    });
   },
 
   /* --- 06 / 31 데일리 미션 ----------------------------------------------- */
@@ -1127,6 +1185,17 @@ function machineCard(m) {
       <span class="st">${m.open ? '바로 시작' : '점검중'}</span>
       <span class="cost">티켓 ${m.cost}장</span>
     </span>
+  </button>`;
+}
+
+function resultRow(m, term) {
+  return `<button class="result-row" data-act="machine" data-id="${m.id}">
+    <span class="thumb" style="background:${m.bg}">${dollImg(m.hero, 34)}</span>
+    <span style="flex:1;text-align:left">
+      <span class="nm" style="display:block">${highlight(m.name, term)}</span>
+      <span class="mt" style="display:block">티켓 ${m.cost}장 · 난이도 ${m.difficulty}${m.open ? '' : ' · 점검중'}</span>
+    </span>
+    <span style="color:var(--ink-25);display:flex">${icon('chevronRight3', 18)}</span>
   </button>`;
 }
 
