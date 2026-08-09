@@ -13,7 +13,15 @@
 </p>
 
 왼쪽은 온보딩 첫 화면, 오른쪽은 홈의 데일리 미션 카드에 쓰이는 캐릭터입니다.
-인형 6종은 `dolls/`에 SVG로 들어 있습니다.
+인형은 `dolls/`에 들어 있습니다. 기본 6종은 SVG 한 장이고, 마스코트 **말랑 올리**만
+플레이 순간마다 포즈가 바뀌는 4장짜리입니다.
+
+<p>
+  <img src="dolls/olly-idle.png" alt="말랑 올리 — 기계 안에 있을 때" width="88">
+  <img src="dolls/olly-grabbed.png" alt="말랑 올리 — 집게에 잡혔을 때" width="88">
+  <img src="dolls/olly-drop.png" alt="말랑 올리 — 떨어질 때" width="88">
+  <img src="dolls/olly-win.png" alt="말랑 올리 — 뽑았을 때" width="88">
+</p>
 
 <p>
   <img src="dolls/bear.svg" alt="말랑 곰돌이" width="64">
@@ -100,7 +108,7 @@ js/
   play.js           집게 게임 (화면 03)
   screens.js        나머지 전체 화면
   app.js            해시 라우터 + 부팅
-dolls/              인형 SVG 6종 (곰·개·토끼·고양이·펭귄·오리)
+dolls/              인형 아트 — SVG 6종 + 말랑 올리 4포즈 PNG
 assets/             캐릭터 일러스트 — ollie.png (온보딩), wonhee.png (미션 카드)
 ```
 

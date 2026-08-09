@@ -468,7 +468,7 @@ const Screens = {
         <div class="blob a"></div><div class="blob b"></div>
         <div class="kicker">GOT IT!</div>
         <h2>배출구에 떨어졌어요</h2>
-        <div class="prize">${dollImg(d.id, 172)}</div>
+        <div class="prize">${dollImg(d.id, 172, '', 'win')}</div>
         <div class="nm">${esc(d.name)}</div>
         <div class="tags">
           <span style="background:rgba(255,255,255,.2);color:#fff">${gradeLabel}</span>

@@ -9,6 +9,18 @@ const DOLLS = {
   cat:     { id: 'cat',     name: '뚱냥이',     grade: 'N',  points: 60,  bg: '#F0F3F6', rate: 18 },
   penguin: { id: 'penguin', name: '솜사탕펭',   grade: 'R',  points: 120, bg: '#EAF1F7', rate: 6 },
   duck:    { id: 'duck',    name: '레몬덕',     grade: 'N',  points: 60,  bg: '#FFF7D6', rate: 18 },
+
+  /* The mascot. Unlike the SVG dolls it carries a pose per moment of a play —
+     see dollArt() in ui.js for how the states are picked. */
+  olly: {
+    id: 'olly', name: '말랑 올리', grade: 'SR', points: 400, bg: '#EAF7DE', rate: 1.8,
+    art: {
+      idle:    'dolls/olly-idle.png',     // 기계 안에 놓여 있을 때
+      grabbed: 'dolls/olly-grabbed.png',  // 집게에 잡혔을 때
+      drop:    'dolls/olly-drop.png',     // 미끄러지거나 배출구로 떨어질 때
+      win:     'dolls/olly-win.png',      // 성공적으로 뽑았을 때
+    },
+  },
 };
 
 const DOLL_IDS = Object.keys(DOLLS);
@@ -50,8 +62,8 @@ const MACHINES = [
     cost: 3, difficulty: '어려움', baseRate: 22, grip: '약',
     bg: '#EEF1FF', hero: 'rabbit',
     blurb: '시즌1 한정 SR 인형이 들어 있는 기계예요. 집게 힘이 약해 위치를 정확히 맞춰야 해요.',
-    contents: ['rabbit', 'penguin', 'cat', 'bear'],
-    pool: ['rabbit', 'penguin', 'cat', 'bear'],
+    contents: ['rabbit', 'olly', 'penguin', 'cat', 'bear'],
+    pool: ['rabbit', 'olly', 'penguin', 'cat', 'bear'],
     reward: 400,
     open: false,
     downNote: '오늘 오후 6시에 다시 열려요. 알림을 켜두면 열리는 즉시 알려드릴게요.',
@@ -63,9 +75,9 @@ const MACHINES = [
     tag: '신규', tagClass: 'badge--new',
     cost: 1, difficulty: '보통', baseRate: 34, grip: '보통',
     bg: '#EAF1F7', hero: 'penguin',
-    blurb: '이번 주 새로 문을 연 기계예요. 티켓 1장으로 가볍게 도전할 수 있어요.',
-    contents: ['penguin', 'duck', 'rabbit', 'cat'],
-    pool: ['penguin', 'penguin', 'duck', 'cat', 'rabbit'],
+    blurb: '이번 주 새로 문을 연 기계예요. 마스코트 말랑 올리가 딱 한 자리 섞여 있어요.',
+    contents: ['olly', 'penguin', 'duck', 'rabbit', 'cat'],
+    pool: ['penguin', 'olly', 'duck', 'penguin', 'cat', 'rabbit'],
     reward: 120,
     open: true,
   },

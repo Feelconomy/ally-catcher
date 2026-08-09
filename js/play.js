@@ -380,7 +380,7 @@ const Play = {
       this.dolls[near.i].taken = true;
       this.paintPit();
       carried = near.d;
-      document.getElementById('held').innerHTML = dollImg(carried.dollId, carried.size);
+      document.getElementById('held').innerHTML = dollImg(carried.dollId, carried.size, '', 'grabbed');
     }
 
     // Lift.
@@ -425,7 +425,7 @@ const Play = {
     delete rig.dataset.grip;
     document.getElementById('held').innerHTML = '';
     const chute = document.getElementById('chute');
-    chute.insertAdjacentHTML('beforeend', dollImg(carried.dollId, 56));
+    chute.insertAdjacentHTML('beforeend', dollImg(carried.dollId, 56, '', 'drop'));
     this.setState('GOT IT');
     haptic(40);
     await wait(620);
@@ -472,7 +472,19 @@ const Play = {
       this.dolls[idx].rot = Math.round((Math.random() - 0.5) * 26);
       this.paintPit();
       const el = $(`.doll[data-i="${idx}"]`, screenEl());
-      if (el) el.classList.add('dropping');
+      if (el) {
+        el.classList.add('dropping');
+        // Show the tumbling pose while it falls, then let it settle back.
+        const img = $('img', el);
+        const d = this.dolls[idx];
+        if (img) {
+          img.src = dollArt(d.dollId, 'drop');
+          setTimeout(() => {
+            const still = $(`.doll[data-i="${idx}"] img`, screenEl());
+            if (still) still.src = dollArt(d.dollId, 'idle');
+          }, 420);
+        }
+      }
     }
     if (reason === 'slip') {
       this.setState('DROPPED');

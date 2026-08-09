@@ -15,10 +15,25 @@ function esc(s) {
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
-function dollImg(id, size, extra) {
+/* Dolls can carry per-moment artwork. A doll with an `art` map swaps image as
+   it moves through a play: sitting in the bed, gripped by the claw, tumbling
+   after a slip, and celebrating on the win screen. Dolls without an `art` map
+   use their single SVG for every state. */
+const DOLL_STATES = ['idle', 'grabbed', 'drop', 'win'];
+
+/** Resolves the image file for `id` in `state`, falling back to idle art. */
+function dollArt(id, state) {
+  const d = DOLLS[id];
+  if (d && d.art) return d.art[state] || d.art.idle;
+  return `dolls/${id}.svg`;
+}
+
+/** `state` is one of DOLL_STATES; omit it for the resting pose. */
+function dollImg(id, size, extra, state) {
   const px = size || 84;
-  return `<img src="dolls/${esc(id)}.svg" alt="" width="${px}" height="${px}"
-    style="width:${px}px;height:${px}px${extra ? ';' + extra : ''}">`;
+  const src = dollArt(id, state || 'idle');
+  return `<img src="${esc(src)}" alt="" width="${px}" height="${px}"
+    style="width:${px}px;height:${px}px;object-fit:contain${extra ? ';' + extra : ''}">`;
 }
 
 /** Sets the shell background tone the screen wants (cream / dark / green / yellow). */
