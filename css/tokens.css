@@ -1,0 +1,100 @@
+/* Design tokens lifted from the 뽑기왕 Claude Design spec. */
+
+:root {
+  /* Brand */
+  --green: #00A650;
+  --green-pressed: #00863F;
+  --green-deep: #00762F;
+  --green-lit: #00C462;
+  --green-signal: #00E070;
+  --yellow: #FFD400;
+  --yellow-pressed: #E8B400;
+  --yellow-soft: #FFF4C2;
+  --yellow-ink: #8A6A00;
+
+  /* NH멤버스 co-brand */
+  --nh-green: #00A651;
+  --nh-green-deep: #00893F;
+  --nh-gold: #FFC20E;
+  --nh-gold-ink: #7A5A00;
+
+  /* Surfaces */
+  --canvas: #F3F1EA;
+  --canvas-alt: #EFEDE6;
+  --cream: #FFFBEF;
+  --surface: #ffffff;
+  --surface-sunken: #F7F8F9;
+  --surface-muted: #F0F1F3;
+  --dark: #141414;
+  --dark-soft: #1C1C1C;
+  --dark-ad: #0B0B0B;
+
+  /* Text */
+  --ink: #171717;
+  --ink-2: #454545;
+  --ink-3: #8A8D94;
+  --ink-60: rgba(23, 23, 23, .62);
+  --ink-50: rgba(23, 23, 23, .5);
+  --ink-45: rgba(23, 23, 23, .45);
+  --ink-40: rgba(23, 23, 23, .4);
+  --ink-30: rgba(23, 23, 23, .3);
+  --ink-25: rgba(23, 23, 23, .25);
+  --on-dark-60: rgba(255, 255, 255, .6);
+  --on-dark-45: rgba(255, 255, 255, .45);
+
+  /* Status */
+  --danger: #D93030;
+  --danger-bright: #FF4242;
+  --danger-bg: #FFE9E9;
+  --danger-ink: #8A1F1F;
+  --success-bg: #E5FBEC;
+  --success-ink: #00863F;
+  --info-bg: #EEF1FF;
+  --info-ink: #4A5AC8;
+  --accent-bg: #FFF0F3;
+  --accent-ink: #D24A6A;
+
+  /* Lines & shadow */
+  --line: rgba(112, 115, 124, .16);
+  --line-soft: rgba(112, 115, 124, .08);
+  --hairline: inset 0 0 0 1px var(--line);
+  --shadow-card: 0 2px 8px rgba(23, 23, 23, .06);
+  --shadow-raised: 0 2px 12px rgba(23, 23, 23, .07);
+  --shadow-sheet: 0 -1px 0 var(--line);
+  --shadow-green: 0 8px 20px rgba(0, 122, 59, .28);
+  --shadow-yellow: 0 8px 20px rgba(255, 212, 0, .28);
+
+  /* Radius */
+  --r-chip: 999px;
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 18px;
+  --r-2xl: 22px;
+  --r-3xl: 26px;
+
+  /* Layout */
+  --shell-w: 420px;
+  --tabbar-h: 82px;
+  --safe-b: env(safe-area-inset-bottom, 0px);
+}
+
+/* Motion vocabulary from the spec. */
+@keyframes clawSwing { 0%, 100% { transform: rotate(-3.5deg); } 50% { transform: rotate(3.5deg); } }
+@keyframes bob       { 0%, 100% { transform: translateY(0); }    50% { transform: translateY(-7px); } }
+@keyframes pop       { 0% { transform: scale(.86); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes shine     { 0% { transform: translateX(-120%) skewX(-18deg); } 100% { transform: translateX(220%) skewX(-18deg); } }
+@keyframes pulse     { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
+@keyframes spin      { to { transform: rotate(360deg); } }
+@keyframes riseIn    { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes sheetUp   { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes fadeIn    { from { opacity: 0; } to { opacity: 1; } }
+@keyframes toastIn   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
