@@ -246,7 +246,7 @@ const Sheets = {
   },
 
   /* --- 테스트 도구 (이스터 에그) -----------------------------------------
-     Hidden behind five taps on the 뽑기왕 wordmark. Not part of the product
+     Hidden behind five taps on the 올리캐쳐 wordmark. Not part of the product
      spec — tickets are otherwise earned only through missions and attendance. */
   devTools() {
     let amount = 10;
