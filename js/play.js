@@ -1,68 +1,56 @@
 /* Screen 03 — the claw machine.
 
-   Modelled on a real cabinet rather than a flat lane:
+   Single axis, like the cabinet the design draws: the claw slides left and
+   right along one rail and that is the only thing the player steers. The
+   dolls sit in one row on the bed, so lining up is purely horizontal.
 
-   - The gantry moves on two axes. Left/right slides the claw along the rail;
-     up/down drives the rail itself toward the back or the front glass. Depth
-     is projected as vertical position + scale, so pushing the stick up really
-     does send the claw further into the cabinet.
-   - One drop per credit. The timer is thinking time — pressing 집게 내리기
-     commits the attempt and stops the clock.
-   - Getting the aim right is necessary but not sufficient. The claw can close
-     on the doll and still lose it while lifting or while carrying it to the
-     chute, exactly like a weak grip on a real machine. The doll then falls
-     back into the pit wherever it was dropped.
-   - A carried doll hangs inside the prongs and rides with the claw. */
+   One drop per credit. The timer is thinking time — pressing 집게 내리기
+   commits the attempt and stops the clock.
 
-/* Cabinet projection. depth 0 = back wall, 1 = front glass. */
-const CAB = {
-  railTop:   d => 34 + d * 30,          // px from the top of the cabinet
-  clawScale: d => 0.86 + d * 0.28,
-  dollBottom: (d, spread) => 84 - d * (spread || 58),   // px from the pit floor
-  dollSize:  d => Math.round(52 + d * 24),
-};
+   Aim is necessary but not sufficient. The claw can close on a doll and still
+   lose it on the way up or on the way across, exactly like a weak grip on a
+   real machine; the doll then falls back onto the bed where it was dropped. */
 
-/* Where the dolls sit in the bed: a back row of three and a front row of two,
-   interleaved so neither row hides the other. */
+const GRAB_RADIUS = 0.085;   // how close in x the claw must be to close on a doll
+const AIM_FALLOFF = 0.14;    // distance over which the displayed odds decay
+const REST_CORD = 76;        // idle cord length, px
+const CLAW_W = 104;          // rendered claw width, px
+
+/* Where the dolls sit in the bed — one row, evenly spread, lightly piled. */
 const BED = [
-  { x: 0.17, depth: 0.18 },
-  { x: 0.50, depth: 0.18 },
-  { x: 0.83, depth: 0.18 },
-  { x: 0.33, depth: 0.86 },
-  { x: 0.67, depth: 0.86 },
+  { x: 0.13, lift: 0 },
+  { x: 0.315, lift: 7 },
+  { x: 0.50, lift: 0 },
+  { x: 0.685, lift: 7 },
+  { x: 0.87, lift: 0 },
 ];
-
-const GRAB_RADIUS = 0.20;   // how close the claw must be to close on a doll
-const REST_CORD = 82;       // idle cord length, px
 
 const Play = {
   machine: null,
-  dolls: [],          // { dollId, x, depth, rot, taken }
-  x: 0.5,             // claw across the cabinet, 0..1
-  depth: 0.55,        // claw reach, 0 = back, 1 = front
+  dolls: [],          // { dollId, x, lift, rot, size, taken }
+  x: 0.5,             // claw across the cabinet, 0..1 — the only axis
   busy: false,
   over: false,
   dropped: false,     // the one attempt has been spent
   left: PLAY_SECONDS,
   timer: null,
   keys: null,
-  view: 'front',
   stickActive: false,
 
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
   start(machine) {
     this.machine = machine;
-    this.x = 0.5; this.depth = 0.55;
+    this.x = 0.5;
     this.busy = false; this.over = false; this.dropped = false;
     this.left = PLAY_SECONDS;
-    this.view = 'front';
     this.stickActive = false;
 
     const pool = machine.pool;
     this.dolls = BED.map((slot, i) => ({
       dollId: pool[i % pool.length],
       x: slot.x,
-      depth: slot.depth,
+      lift: slot.lift,
+      size: 62 + (i % 3) * 4,
       rot: (i % 2 ? 1 : -1) * (4 + (i * 5) % 10),
       taken: false,
     }));
@@ -90,18 +78,13 @@ const Play = {
 
       <div class="cabinet" id="cabinet">
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
-        <div class="views">
-          <button data-act="view" data-v="front" aria-pressed="true">정면</button>
-          <button data-act="view" data-v="side" aria-pressed="false">측면</button>
-        </div>
         <div class="backwall"></div>
-        <div class="rail" id="rail"></div>
+        <div class="rail"><i class="rail-mount" id="railMount"></i></div>
         <div class="claw-rig" id="rig">
           <div class="cord" id="cord"></div>
-          <div class="claw">
+          <div class="claw" id="claw">
             <div class="held" id="held"></div>
-            <div class="bar"></div>
-            <div class="prongs"><i></i><i></i></div>
+            ${clawSvg()}
           </div>
         </div>
         <div class="pit" id="pit"></div>
@@ -120,21 +103,18 @@ const Play = {
       </div>
 
       <div class="controls">
+        <div class="timerrow">
+          <span class="l">남은 시간</span>
+          <span class="t" id="clock">${mmss(this.left)}</span>
+        </div>
+        ${meter(100, 'onDark')}
         <div class="stick" id="stick">
-          <button class="dpad up"    data-dir="up"    aria-label="안쪽으로">${icon('caretUp', 18)}</button>
-          <button class="dpad down"  data-dir="down"  aria-label="앞쪽으로">${icon('caretDown', 18)}</button>
-          <button class="dpad left"  data-dir="left"  aria-label="왼쪽">${icon('chevronLeft3', 18)}</button>
-          <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 18)}</button>
+          <button class="dpad left"  data-dir="left"  aria-label="왼쪽">${icon('chevronLeft3', 20)}</button>
+          <div class="track"></div>
           <div class="knob" id="knob"></div>
+          <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 20)}</button>
         </div>
-        <div class="grow" style="display:flex;flex-direction:column;gap:12px">
-          <div class="timerrow">
-            <span class="l">남은 시간</span>
-            <span class="t" id="clock">${mmss(this.left)}</span>
-          </div>
-          ${meter(100, 'onDark')}
-          <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
-        </div>
+        <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
       </div>
     </div>`;
 
@@ -153,16 +133,9 @@ const Play = {
       exit: () => this.confirmExit(),
       drop: () => this.drop(),
       wallet: () => go('mission'),
-      view: el => {
-        this.view = el.dataset.v;
-        $$('.views button', root).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === this.view)));
-        $('#cabinet', root).dataset.view = this.view;
-        this.paintPit();
-        this.paintClaw();
-      },
     });
 
-    // Hold-to-move on the d-pad.
+    // Hold-to-move on the two direction buttons.
     $$('.dpad', root).forEach(btn => {
       let hold = null;
       const begin = ev => {
@@ -181,41 +154,37 @@ const Play = {
 
     this.keys = ev => {
       if (!this.canMove()) return;
-      const map = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-      if (map[ev.key]) { ev.preventDefault(); this.nudge(map[ev.key]); }
+      if (ev.key === 'ArrowLeft')  { ev.preventDefault(); this.nudge('left'); }
+      if (ev.key === 'ArrowRight') { ev.preventDefault(); this.nudge('right'); }
       if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); this.drop(); }
     };
     window.addEventListener('keydown', this.keys);
   },
 
-  /** Dragging the knob steers continuously, like leaning on a real stick. */
+  /** The lever slides along its track; how far you push it sets the speed. */
   bindStick(stick, knob) {
-    let dragging = false, raf = null, vx = 0, vy = 0;
+    let dragging = false, raf = null, vx = 0;
 
     const apply = () => {
       if (!dragging) { raf = null; return; }
-      if (Math.abs(vx) > 0.02) this.move('x', vx * 0.022);
-      if (Math.abs(vy) > 0.02) this.move('depth', vy * 0.022);
+      if (Math.abs(vx) > 0.04) this.move(vx * 0.020);
       raf = requestAnimationFrame(apply);
     };
 
     const track = ev => {
       if (!dragging) return;
       const r = stick.getBoundingClientRect();
-      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      const max = r.width / 2 - 22;
-      let dx = ev.clientX - cx, dy = ev.clientY - cy;
-      const len = Math.hypot(dx, dy) || 1;
-      const clamped = Math.min(len, max);
-      dx = (dx / len) * clamped; dy = (dy / len) * clamped;
-      knob.style.transform = `translate(${dx}px, ${dy}px)`;
-      vx = dx / max; vy = -dy / max;              // pushing up sends the claw back
+      const cx = r.left + r.width / 2;
+      const max = r.width / 2 - 26;
+      const dx = Math.max(-max, Math.min(max, ev.clientX - cx));
+      knob.style.transform = `translateX(${dx}px)`;
+      vx = dx / max;
       if (!raf) raf = requestAnimationFrame(apply);
     };
 
     const release = () => {
       if (!dragging) return;
-      dragging = false; this.stickActive = false; vx = vy = 0;
+      dragging = false; this.stickActive = false; vx = 0;
       if (raf) { cancelAnimationFrame(raf); raf = null; }
       this.paintKnob();
     };
@@ -232,20 +201,13 @@ const Play = {
 
   canMove() { return !this.busy && !this.over && !this.dropped; },
 
-  nudge(dir) {
-    const step = 0.042;
-    if (dir === 'left')  this.move('x', -step);
-    if (dir === 'right') this.move('x', step);
-    if (dir === 'up')    this.move('depth', -step * 1.15);
-    if (dir === 'down')  this.move('depth', step * 1.15);
-  },
+  nudge(dir) { this.move(dir === 'left' ? -0.038 : 0.038); },
 
-  move(axis, delta) {
+  move(delta) {
     if (!this.canMove()) return;
-    const range = axis === 'x' ? [0.08, 0.92] : [0.06, 0.96];
-    const next = Math.max(range[0], Math.min(range[1], this[axis] + delta));
-    if (next === this[axis]) return;
-    this[axis] = next;
+    const next = Math.max(0.08, Math.min(0.92, this.x + delta));
+    if (next === this.x) return;
+    this.x = next;
     haptic(5);
     this.paintClaw();
     this.paintOdds();
@@ -255,59 +217,50 @@ const Play = {
 
   paintClaw() {
     const rig = document.getElementById('rig');
-    const rail = document.getElementById('rail');
-    if (!rig || !rail) return;
-    const top = CAB.railTop(this.depth) * this.depthGain();
-    rail.style.top = top + 'px';
-    rig.style.top = (top + 8) + 'px';
+    const mount = document.getElementById('railMount');
+    if (!rig) return;
     rig.style.left = (this.x * 100) + '%';
-    rig.style.setProperty('--claw-scale', CAB.clawScale(this.depth));
+    if (mount) mount.style.left = (this.x * 100) + '%';
     this.paintKnob();
   },
 
   paintKnob() {
-    // While the stick is held, the knob follows the finger, not the claw.
+    // While the lever is held, the knob follows the finger, not the claw.
     if (this.stickActive) return;
     const knob = document.getElementById('knob');
-    if (!knob) return;
-    knob.style.transform =
-      `translate(${(this.x - 0.5) * 30}px, ${-(this.depth - 0.5) * 30}px)`;
+    const stick = document.getElementById('stick');
+    if (!knob || !stick) return;
+    const max = stick.getBoundingClientRect().width / 2 - 26;
+    knob.style.transform = `translateX(${(this.x - 0.5) * 2 * max}px)`;
   },
-
-  /** 측면 view exaggerates depth so it is easier to judge the back row. */
-  depthGain() { return this.view === 'side' ? 1.55 : 1; },
 
   paintPit() {
     const pit = document.getElementById('pit');
     if (!pit) return;
-    const spread = this.view === 'side' ? 92 : 58;
     // Rotation lives on the image so the wrapper's transform stays free for
     // the drop-back animation.
-    pit.innerHTML = this.dolls.map((d, i) => {
-      const size = CAB.dollSize(d.depth);
-      return `<div class="doll ${d.taken ? 'taken' : ''}" data-i="${i}"
-        style="left:calc(${d.x * 100}% - ${size / 2}px);bottom:${CAB.dollBottom(d.depth, spread)}px;
-               z-index:${Math.round(d.depth * 10)}">
-        ${dollImg(d.dollId, size, `transform:rotate(${d.rot}deg)`)}
-      </div>`;
-    }).join('');
+    pit.innerHTML = this.dolls.map((d, i) => `
+      <div class="doll ${d.taken ? 'taken' : ''}" data-i="${i}"
+        style="left:calc(${d.x * 100}% - ${d.size / 2}px);bottom:${14 + d.lift}px;z-index:${d.lift ? 3 : 2}">
+        ${dollImg(d.dollId, d.size, `transform:rotate(${d.rot}deg)`)}
+      </div>`).join('');
   },
 
   /** Live odds = machine odds scaled by how well the claw is lined up. */
   liveOdds() {
     const base = Store.odds(this.machine);
     const near = this.nearest();
-    if (!near || near.dist > GRAB_RADIUS * 2.4) return 0;
-    const aim = Math.max(0, 1 - near.dist / (GRAB_RADIUS * 1.6));
-    return Math.round(base * (0.28 + 0.72 * aim));
+    if (!near || near.dist > AIM_FALLOFF) return 0;
+    const aim = Math.max(0, 1 - near.dist / AIM_FALLOFF);
+    return Math.round(base * (0.25 + 0.75 * aim));
   },
 
-  /** Nearest untaken doll in cabinet space (x and depth weigh equally). */
+  /** Nearest untaken doll along the rail. */
   nearest() {
     let best = null;
     this.dolls.forEach((d, i) => {
       if (d.taken) return;
-      const dist = Math.hypot(d.x - this.x, (d.depth - this.depth) * 0.8);
+      const dist = Math.abs(d.x - this.x);
       if (!best || dist < best.dist) best = { i, d, dist };
     });
     return best;
@@ -379,7 +332,7 @@ const Play = {
     }
     const grips = won || failMode !== 'miss';
 
-    // Lower until the prongs reach the doll (or the pit floor on a clean miss).
+    // Lower until the talon tips reach the doll (or the bed on a clean miss).
     const reach = this.reachFor(near, inRange);
     cord.style.transition = 'height .55s cubic-bezier(.4,0,.6,1)';
     cord.style.height = reach + 'px';
@@ -387,14 +340,14 @@ const Play = {
 
     rig.dataset.grip = '1';
     haptic(14);
-    await wait(280);
+    await wait(300);
 
     let carried = null;
     if (grips) {
       this.dolls[near.i].taken = true;
       this.paintPit();
       carried = near.d;
-      document.getElementById('held').innerHTML = dollImg(carried.dollId, CAB.dollSize(carried.depth));
+      document.getElementById('held').innerHTML = dollImg(carried.dollId, carried.size);
     }
 
     // Lift.
@@ -403,7 +356,7 @@ const Play = {
       cord.style.transition = 'height .3s ease-out';
       cord.style.height = (reach * 0.55) + 'px';
       await wait(340);
-      await this.releaseInto(carried, this.x, near.d.depth, 'slip');
+      await this.releaseInto(carried, this.x, 'slip');
       cord.style.transition = 'height .45s ease-out';
       cord.style.height = REST_CORD + 'px';
       await wait(500);
@@ -419,13 +372,15 @@ const Play = {
 
     // Carry to the chute.
     this.setState('CARRYING');
-    rig.style.transition = 'left .75s ease-in-out, top .75s ease-in-out';
+    rig.style.transition = 'left .75s ease-in-out';
     rig.style.left = '18%';
+    const mount = document.getElementById('railMount');
+    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = '18%'; }
 
     if (failMode === 'slipCarry') {
       await wait(430);                       // let go partway across
       const dropX = 0.18 + (this.x - 0.18) * 0.45;
-      await this.releaseInto(carried, dropX, near.d.depth, 'slip');
+      await this.releaseInto(carried, dropX, 'slip');
       await wait(360);
       this.finish(false, null);
       return;
@@ -442,30 +397,34 @@ const Play = {
     this.finish(true, carried.dollId);
   },
 
-  /** How far the cord must extend for the prongs to meet the target. */
+  /** How far the cord must extend for the talon tips to meet the target. */
   reachFor(near, inRange) {
     const cabinet = document.getElementById('cabinet');
-    const rig = document.getElementById('rig');
-    if (!cabinet || !rig) return 150;
-    const cabRect = cabinet.getBoundingClientRect();
-    const rigTop = rig.getBoundingClientRect().top - cabRect.top;
+    const claw = document.getElementById('claw');
+    const cord = document.getElementById('cord');
+    if (!cabinet || !claw) return 170;
 
-    let targetTop;
+    const cabRect = cabinet.getBoundingClientRect();
+    // Measure the talon itself — the SVG box extends past the tips.
+    const talon = $('.claw-svg .t-right', claw);
+    const tipsNow = (talon || claw).getBoundingClientRect().bottom;
+
+    let targetY;
     if (inRange && near) {
       const el = $(`.doll[data-i="${near.i}"]`, cabinet);
-      targetTop = el
-        ? el.getBoundingClientRect().top - cabRect.top
-        : cabRect.height - 200;
+      // Sink the tips a little into the doll so the grip looks committed.
+      targetY = el ? el.getBoundingClientRect().top + 18 : cabRect.bottom - 190;
     } else {
-      targetTop = cabRect.height - 190;          // clean miss: reach the bed
+      targetY = cabRect.bottom - 176;          // clean miss: reach the bed
     }
-    // The prongs hang ~52px below the cord's end at rest scale.
-    const reach = targetTop - rigTop - 30;
-    return Math.max(REST_CORD + 20, Math.min(reach, cabRect.height - 150));
+
+    const current = parseFloat(cord.style.height) || REST_CORD;
+    const reach = current + (targetY - tipsNow);
+    return Math.max(REST_CORD + 20, Math.min(reach, cabRect.height - 120));
   },
 
-  /** Opens the claw and drops `doll` back into the pit at (x, depth). */
-  async releaseInto(doll, x, depth, reason) {
+  /** Opens the claw and drops `doll` back onto the bed at `x`. */
+  async releaseInto(doll, x, reason) {
     const rig = document.getElementById('rig');
     delete rig.dataset.grip;
     document.getElementById('held').innerHTML = '';
@@ -473,8 +432,7 @@ const Play = {
     const idx = this.dolls.findIndex(d => d === doll);
     if (idx >= 0) {
       this.dolls[idx].taken = false;
-      this.dolls[idx].x = Math.max(0.12, Math.min(0.88, x));
-      this.dolls[idx].depth = depth;
+      this.dolls[idx].x = Math.max(0.11, Math.min(0.89, x));
       this.dolls[idx].rot = Math.round((Math.random() - 0.5) * 26);
       this.paintPit();
       const el = $(`.doll[data-i="${idx}"]`, screenEl());
@@ -511,17 +469,17 @@ const Play = {
       { scrim: 'black' });
   },
 
-  /** First-run coach mark over the joystick (screen 25). */
+  /** First-run coach mark over the lever (screen 25). */
   coach() {
     const steps = [
-      { t: '조이스틱으로 집게를 움직여요', d: '좌우로 밀면 집게가 옆으로, 위아래로 밀면 기계 안쪽과 앞쪽으로 이동해요.' },
+      { t: '레버로 집게를 움직여요', d: '좌우로 밀거나 화살표를 눌러 집게를 인형 위에 맞추세요.' },
       { t: '확률을 보고 타이밍을 잡아요', d: '집게가 인형에 정확히 겹칠수록 이번 판 확률이 올라가요.' },
       { t: '집게는 한 번만 내려가요', d: `${PLAY_SECONDS}초 안에 위치를 잡고 내리세요. 잡아도 올리다가 놓칠 수 있어요.` },
     ];
     let i = 0;
     const { node, close } = Overlay.open(`<div class="coach">
-      <div class="hole" style="left:20px;bottom:calc(30px + var(--safe-b));width:132px;height:132px"></div>
-      <div class="bubble" style="left:24px;bottom:calc(186px + var(--safe-b))">
+      <div class="hole coach-lever"></div>
+      <div class="bubble" style="left:24px;bottom:calc(180px + var(--safe-b))">
         <div class="step"></div><div class="t"></div><div class="d"></div>
         <div class="ft">
           <div class="dots"></div>
@@ -549,5 +507,48 @@ const Play = {
     paint();
   },
 };
+
+/** A three-talon crane claw: spindle, housing, and hooked arms.
+    Talons pivot at the housing rim (x 40 / 60 / 80, y 38) so that open they
+    clear a doll and closed they bite into its shoulders. */
+function clawSvg() {
+  const arm = 'M0 0 C 4 15, 6 31, 1 44';
+  const tip = 'M1 44 l -7 12 l 9.5 -3 z';
+  return `<svg class="claw-svg" width="${CLAW_W}" viewBox="0 0 120 116" aria-hidden="true">
+    <defs>
+      <linearGradient id="clawArm" x1="0" y1="0" x2="1" y2="0.4">
+        <stop offset="0" stop-color="#FFEE9B"/><stop offset=".5" stop-color="#FFD400"/><stop offset="1" stop-color="#B98F00"/>
+      </linearGradient>
+      <linearGradient id="clawHead" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#B98F00"/><stop offset=".26" stop-color="#FFE87A"/>
+        <stop offset=".6" stop-color="#FFD400"/><stop offset="1" stop-color="#9E7700"/>
+      </linearGradient>
+      <linearGradient id="clawCap" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#FFF3B8"/><stop offset=".55" stop-color="#FFDE3D"/><stop offset="1" stop-color="#D9A800"/>
+      </linearGradient>
+    </defs>
+
+    <!-- spindle -->
+    <rect x="54" y="0" width="12" height="18" rx="5" fill="url(#clawCap)"/>
+    <!-- rear talon, tucked behind the housing -->
+    <g class="talon t-back">
+      <path d="${arm}" fill="none" stroke="#9A7600" stroke-width="10" stroke-linecap="round"/>
+      <path d="${tip}" fill="#876600"/>
+    </g>
+    <!-- housing -->
+    <path d="M32 20 v14 a28 10 0 0 0 56 0 V20 z" fill="url(#clawHead)"/>
+    <ellipse cx="60" cy="20" rx="28" ry="10" fill="url(#clawCap)"/>
+    <ellipse cx="60" cy="34" rx="20" ry="7" fill="#9E7700" opacity=".5"/>
+    <!-- front talons -->
+    <g class="talon t-left">
+      <path d="${arm}" fill="none" stroke="url(#clawArm)" stroke-width="12" stroke-linecap="round"/>
+      <path d="${tip}" fill="#C79A00"/>
+    </g>
+    <g class="talon t-right">
+      <path d="${arm}" fill="none" stroke="url(#clawArm)" stroke-width="12" stroke-linecap="round"/>
+      <path d="${tip}" fill="#C79A00"/>
+    </g>
+  </svg>`;
+}
 
 const wait = ms => new Promise(r => setTimeout(r, ms));

@@ -469,7 +469,7 @@ a:hover { color: var(--green-deep); }
 .cabinet .views button { padding: 5px 10px; border-radius: var(--r-chip); background: rgba(255, 255, 255, .14); color: #fff; font-size: 10px; font-weight: 700; }
 .cabinet .views button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); }
 
-/* The back wall gives the cabinet a sense of depth for the gantry to move in. */
+/* Soft glow down the back wall so the cabinet reads as a lit box. */
 .cabinet .backwall {
   position: absolute; top: 0; left: 0; right: 0; height: 62%;
   background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .07), transparent 70%);
@@ -477,49 +477,55 @@ a:hover { color: var(--green-deep); }
 }
 
 .rail {
-  position: absolute; left: 16px; right: 16px; height: 10px; border-radius: 5px;
-  background: rgba(255, 255, 255, .16);
-  transition: top .16s ease-out;
+  position: absolute; top: 46px; left: 16px; right: 16px; height: 10px; border-radius: 5px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .1));
+}
+/* The trolley that rides the rail, directly above the claw. */
+.rail .rail-mount {
+  position: absolute; top: -3px; width: 26px; height: 16px; margin-left: -13px;
+  border-radius: 5px; background: rgba(255, 255, 255, .38);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
+  transition: left .16s ease-out;
 }
 .claw-rig {
-  position: absolute; width: 68px; margin-left: -34px; z-index: 4;
-  --claw-scale: 1;
-  transition: left .16s ease-out, top .16s ease-out;
+  position: absolute; top: 56px; width: 104px; margin-left: -52px; z-index: 4;
+  transition: left .16s ease-out;
 }
-.claw-rig .cord { width: 2px; height: 82px; background: rgba(255, 255, 255, .28); margin: 0 auto; }
+.claw-rig .cord { width: 3px; height: 76px; background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.38)); margin: 0 auto; }
 .claw-rig .claw {
   position: relative;
-  transform: scale(var(--claw-scale));
-  transform-origin: 50% 0;
   animation: clawSwing 2.6s ease-in-out infinite;
+  transform-origin: 50% -70px;
 }
 .claw-rig[data-busy] .claw { animation: none; }
-.claw-rig .bar { width: 68px; height: 20px; border-radius: 6px; background: linear-gradient(180deg, var(--yellow), var(--yellow-pressed)); position: relative; z-index: 2; }
-.claw-rig .prongs { display: flex; justify-content: space-between; width: 68px; position: relative; z-index: 2; }
-.claw-rig .prongs i {
-  width: 12px; height: 42px; background: var(--yellow); border-radius: 0 0 10px 10px;
-  transform-origin: 50% 0;
-  transition: transform .22s ease;
-}
-.claw-rig .prongs i:first-child { transform: rotate(-16deg); }
-.claw-rig .prongs i:last-child  { transform: rotate(16deg); }
-/* Closed grip: the prongs swing inward under the doll. */
-.claw-rig[data-grip] .prongs i:first-child { transform: rotate(14deg); }
-.claw-rig[data-grip] .prongs i:last-child  { transform: rotate(-14deg); }
+.claw-svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .45)); }
 
-/* A carried doll hangs between the prongs and rides with the claw. */
+/* Talons pivot at the housing rim. Open by default, swinging shut on grip. */
+.claw-svg .talon {
+  transform-box: view-box; transform-origin: 0 0;
+  transition: transform .26s cubic-bezier(.3, .9, .4, 1);
+}
+.claw-svg .t-left  { transform: translate(40px, 38px) scale(-1, 1) rotate(-26deg); }
+.claw-svg .t-right { transform: translate(80px, 38px) rotate(-26deg); }
+.claw-svg .t-back  { transform: translate(60px, 33px) rotate(-12deg); }
+[data-grip] .claw-svg .t-left  { transform: translate(40px, 38px) scale(-1, 1) rotate(-4deg); }
+[data-grip] .claw-svg .t-right { transform: translate(80px, 38px) rotate(-4deg); }
+[data-grip] .claw-svg .t-back  { transform: translate(60px, 33px) rotate(-2deg); }
+
+/* A carried doll hangs from the talon tips and rides with the claw.
+   `top` puts the doll's crown just above the tips so the talons bite into it. */
 .claw-rig .held {
-  position: absolute; top: 26px; left: 50%;
+  position: absolute; top: 62px; left: 50%;
   transform: translateX(-50%);
-  z-index: 1; pointer-events: none;
+  z-index: 0; pointer-events: none;
   line-height: 0;
 }
 /* The claw box is narrower than the doll, so the global max-width would
-   squash it — the prongs are meant to overlap the doll, not contain it. */
+   squash it — the talons are meant to overlap the doll, not contain it. */
 .claw-rig .held img { max-width: none; animation: pop .28s ease-out both; }
 
 .pit {
-  position: absolute; bottom: 118px; left: 20px; right: 20px; height: 162px;
+  position: absolute; bottom: 118px; left: 20px; right: 20px; height: 118px;
   border-radius: var(--r-lg) var(--r-lg) 0 0;
   background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
 }
@@ -552,17 +558,36 @@ a:hover { color: var(--green-deep); }
 .odds .meter { margin-top: 10px; height: 5px; }
 .odds .meter > i { background: var(--green-signal); }
 
-.controls { flex-shrink: 0; padding: 18px 20px calc(30px + var(--safe-b)); display: flex; align-items: center; gap: 16px; }
+.controls {
+  flex-shrink: 0; padding: 16px 20px calc(26px + var(--safe-b));
+  display: flex; flex-direction: column; gap: 12px;
+}
+/* Single-axis lever: the claw only travels left and right. */
 .stick {
-  width: 132px; height: 132px; border-radius: 50%; position: relative; flex-shrink: 0;
+  width: 100%; height: 66px; border-radius: 33px; position: relative; flex-shrink: 0;
   background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
   display: flex; align-items: center; justify-content: center;
+  touch-action: none;
 }
-.stick .dpad { position: absolute; color: rgba(255, 255, 255, .4); display: flex; align-items: center; justify-content: center; width: 34px; height: 34px; }
-.stick .dpad.up { top: 2px; } .stick .dpad.down { bottom: 2px; }
-.stick .dpad.left { left: 2px; } .stick .dpad.right { right: 2px; }
-.stick .dpad:active, .stick .dpad[data-active] { color: #fff; }
-.stick .knob { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(180deg, var(--green-lit), #00863F); box-shadow: 0 6px 16px rgba(0, 166, 80, .45); transition: transform .1s ease; }
+.stick .track {
+  position: absolute; left: 44px; right: 44px; height: 6px; border-radius: 3px;
+  background: rgba(255, 255, 255, .1);
+}
+.stick .dpad {
+  position: absolute; top: 50%; margin-top: -22px;
+  width: 44px; height: 44px; border-radius: 50%;
+  color: rgba(255, 255, 255, .45);
+  display: flex; align-items: center; justify-content: center;
+}
+.stick .dpad.left { left: 4px; } .stick .dpad.right { right: 4px; }
+.stick .dpad:active, .stick .dpad[data-active] { color: #fff; background: rgba(255, 255, 255, .1); }
+.stick .knob {
+  position: relative; z-index: 1;
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(180deg, var(--green-lit), #00863F);
+  box-shadow: 0 6px 16px rgba(0, 166, 80, .45), inset 0 2px 0 rgba(255, 255, 255, .25);
+  transition: transform .1s ease;
+}
 .timerrow { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
 .timerrow .l { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, .5); }
 .timerrow .t { font-size: 20px; font-weight: 700; color: var(--yellow); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
@@ -814,6 +839,11 @@ a:hover { color: var(--green-deep); }
 
 .coach { position: absolute; inset: 0; }
 .coach .hole { position: absolute; border-radius: 50%; box-shadow: 0 0 0 4px var(--yellow), 0 0 0 9999px rgba(0, 0, 0, .72); }
+/* Cut-out shaped to the single-axis lever. */
+.coach .hole.coach-lever {
+  left: 20px; right: 20px; height: 66px; border-radius: 33px;
+  bottom: calc(96px + var(--safe-b));
+}
 .coach .bubble { position: absolute; width: 250px; background: #fff; border-radius: var(--r-xl); padding: 16px 18px; }
 .coach .bubble .step { font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: .06em; }
 .coach .bubble .t { margin-top: 7px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
