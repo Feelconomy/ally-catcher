@@ -5,6 +5,25 @@
 
 빌드 도구·프레임워크·의존성 없이 정적 파일만으로 돌아갑니다.
 
+## 미리보기
+
+<p>
+  <img src="assets/ollie.png" alt="집게에 매달린 올리 — 온보딩 1페이지 일러스트" width="240">
+  <img src="assets/wonhee.png" alt="인형뽑기 기계를 조작하는 원이 — 홈 데일리 미션 카드 일러스트" width="200">
+</p>
+
+왼쪽은 온보딩 첫 화면, 오른쪽은 홈의 데일리 미션 카드에 쓰이는 캐릭터입니다.
+인형 6종은 `dolls/`에 SVG로 들어 있습니다.
+
+<p>
+  <img src="dolls/bear.svg" alt="말랑 곰돌이" width="64">
+  <img src="dolls/dog.svg" alt="쫀득 푸딩독" width="64">
+  <img src="dolls/rabbit.svg" alt="한정판 우주토끼" width="64">
+  <img src="dolls/cat.svg" alt="뚱냥이" width="64">
+  <img src="dolls/penguin.svg" alt="솜사탕펭" width="64">
+  <img src="dolls/duck.svg" alt="레몬덕" width="64">
+</p>
+
 ## 실행
 
 ### 1. 내려받기
@@ -81,7 +100,8 @@ js/
   play.js           집게 게임 (화면 03)
   screens.js        나머지 전체 화면
   app.js            해시 라우터 + 부팅
-dolls/              인형 SVG 6종
+dolls/              인형 SVG 6종 (곰·개·토끼·고양이·펭귄·오리)
+assets/             캐릭터 일러스트 — ollie.png (온보딩), wonhee.png (미션 카드)
 ```
 
 ## 디자인 시스템
