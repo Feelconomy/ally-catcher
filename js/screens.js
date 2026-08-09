@@ -132,7 +132,7 @@ const Screens = {
     const slides = [
       { k: '기다림 없는 가상 인형뽑기', h: '한 손으로<br>집게를 내려요',
         p: '대기 없이 바로 시작. 뽑은 인형은 보관함에 모으고, 포인트는 교환소에서 바꿔요.',
-        art: ['bear', 'rabbit', 'penguin', 'duck'] },
+        art: ['ollie'] },
       { k: '티켓은 미션으로만', h: '현금 결제가<br>없는 뽑기',
         p: '티켓은 데일리 미션과 출석으로만 모아요. 결제 없이도 매일 도전할 수 있어요.',
         art: ['ticket'] },
@@ -144,6 +144,9 @@ const Screens = {
 
     /** Each slide illustrates its own promise rather than repeating the tray. */
     const artFor = s => {
+      if (s.art[0] === 'ollie') {
+        return '<img class="onb-art-hero" src="assets/ollie.png" alt="집게에 매달린 올리" width="480" height="720">';
+      }
       if (s.art[0] === 'ticket') {
         return `<div class="onb-art tickets">
           ${[0, 1, 2].map(k => `<span style="animation-delay:${k * .18}s">${icon('ticketFill', k === 1 ? 68 : 52)}</span>`).join('')}
@@ -170,7 +173,7 @@ const Screens = {
           <div class="kicker">${s.k}</div>
           <h2>${s.h}</h2>
           <p>${esc(s.p)}</p>
-          <div class="tray ${s.art.length === 1 ? 'single' : ''}">${artFor(s)}</div>
+          <div class="tray ${s.art.length === 1 ? 'single' : ''} ${s.art[0] === 'ollie' ? 'bare' : ''}">${artFor(s)}</div>
           <div class="foot">
             <div class="dots">${slides.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
             <button class="btn btn--primary" data-act="next">
@@ -206,8 +209,8 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <div class="brandmark s"><i></i></div>
-        <span class="wordmark">뽑기왕</span>
+        <button class="brandmark s" data-act="egg" aria-label="뽑기왕"><i></i></button>
+        <button class="wordmark" data-act="egg">뽑기왕</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
       </div>
@@ -215,15 +218,15 @@ const Screens = {
         ${HOME_FILTERS.map(f => `<button class="chip" data-act="filter" data-f="${f}" aria-pressed="${f === filter}">${f}</button>`).join('')}
       </div>
       <div class="scroll pad">
-        <button class="promo" data-tab="mission" style="display:block;width:100%;text-align:left">
-          <div class="shine"></div>
-          <div class="body">
-            <div style="flex:1">
-              <div class="eyebrow">DAILY MISSION</div>
-              <div class="title">${left ? `오늘 미션 ${left}개 남음<br>티켓 ${Store.claimableTickets()}장 더 받기` : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요'}</div>
-            </div>
-            <div class="art">${dollImg('cat', 64)}</div>
-          </div>
+        <button class="promo" data-tab="mission">
+          <span class="shine"></span>
+          <span class="body">
+            <span class="copy">
+              <span class="eyebrow">DAILY MISSION</span>
+              <span class="title">${left ? `오늘 미션 ${left}개 남음<br>티켓 ${Store.claimableTickets()}장 더 받기` : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요'}</span>
+            </span>
+            <img class="mascot" src="assets/wonhee.png" alt="" width="360" height="540">
+          </span>
         </button>
 
         <div class="section-head">
@@ -241,6 +244,7 @@ const Screens = {
       wallet: () => go('mission'),
       filter: el => { App.homeFilter = el.dataset.f; Screens.home(); },
       machine: el => go('machine', el.dataset.id),
+      egg: () => tapEasterEgg(),
     });
   },
 
@@ -1186,6 +1190,27 @@ function machineCard(m) {
       <span class="cost">티켓 ${m.cost}장</span>
     </span>
   </button>`;
+}
+
+/** Five taps on the wordmark within three seconds opens the test panel. */
+const EGG_TAPS = 5;
+let eggCount = 0;
+let eggTimer = null;
+
+function tapEasterEgg() {
+  clearTimeout(eggTimer);
+  eggCount += 1;
+  eggTimer = setTimeout(() => { eggCount = 0; }, 3000);
+
+  const left = EGG_TAPS - eggCount;
+  if (left <= 0) {
+    eggCount = 0;
+    haptic(30);
+    Sheets.devTools();
+  } else if (left <= 2) {
+    haptic(8);
+    toast(`${left}번 더!`, { mini: true, duration: 900 });
+  }
 }
 
 function resultRow(m, term) {

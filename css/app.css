@@ -348,6 +348,15 @@ a:hover { color: var(--green-deep); }
 }
 .onb .tray img { width: 96px; height: 96px; }
 .onb .tray.single { display: flex; align-items: center; justify-content: center; }
+/* The 올리 illustration carries its own framing, so drop the tray plate. */
+.onb .tray.bare { background: none; box-shadow: none; padding: 0; height: auto; width: 100%; margin-top: 10px; }
+.onb .tray.bare img {
+  width: auto; height: 300px; margin: 0 auto;
+  /* The source art is cropped flat at the bottom of the pile — fade the cut
+     so it dissolves into the slide instead of showing a hard edge. */
+  -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 97%);
+  mask-image: linear-gradient(180deg, #000 74%, transparent 97%);
+}
 
 .onb-art { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; }
 .onb-art.tickets { color: var(--yellow-pressed); }
@@ -375,18 +384,35 @@ a:hover { color: var(--green-deep); }
 /* Home (02) */
 .home-head { flex-shrink: 0; padding: 6px 20px 14px; display: flex; align-items: center; gap: 10px; }
 .home-head .wordmark { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.home-head .wordmark:active, .home-head .brandmark:active { transform: scale(.94); }
+
+/* Test panel (easter egg) */
+.dev-amt {
+  width: 52px; text-align: center;
+  font-size: 15px; font-weight: 700; color: var(--ink);
+  outline: none; background: none;
+}
+.dev-amt:focus { color: var(--green); }
 
 .promo {
   position: relative; border-radius: var(--r-2xl); overflow: hidden;
   background: linear-gradient(120deg, var(--green), var(--green-lit));
   padding: 20px; margin-bottom: 18px;
+  display: block; width: 100%; text-align: left;
+  min-height: 122px;
 }
 .promo .shine { position: absolute; inset: 0; width: 60px; background: rgba(255, 255, 255, .22); animation: shine 3.6s linear infinite; }
-.promo .body { position: relative; display: flex; align-items: center; gap: 14px; }
-.promo .eyebrow { color: var(--yellow); letter-spacing: .06em; }
-.promo .title { margin-top: 7px; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.35; }
-.promo .art { width: 78px; height: 78px; border-radius: 20px; background: rgba(255, 255, 255, .9); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-.promo .art img { width: 64px; height: 64px; }
+.promo .body { position: relative; display: flex; align-items: center; gap: 10px; }
+.promo .copy { flex: 1; display: block; }
+.promo .eyebrow { color: var(--yellow); letter-spacing: .06em; display: block; }
+.promo .title { margin-top: 7px; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.35; display: block; }
+/* 원이 sits straight on the gradient — no plate behind it — and overhangs
+   the card so it reads as a sticker. */
+.promo .mascot {
+  width: 132px; height: auto; flex-shrink: 0;
+  margin: -30px -14px -34px 0;
+  filter: drop-shadow(0 8px 14px rgba(0, 70, 34, .35));
+}
 
 .machine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 24px; }
 .mcard { background: var(--surface); border-radius: var(--r-xl); padding: 10px; box-shadow: var(--shadow-card); text-align: left; }

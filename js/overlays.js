@@ -245,6 +245,65 @@ const Sheets = {
       });
   },
 
+  /* --- 테스트 도구 (이스터 에그) -----------------------------------------
+     Hidden behind five taps on the 뽑기왕 wordmark. Not part of the product
+     spec — tickets are otherwise earned only through missions and attendance. */
+  devTools() {
+    let amount = 10;
+
+    sheet(`
+      <div style="display:flex;align-items:center;gap:11px">
+        <div style="width:44px;height:44px;border-radius:14px;background:var(--info-bg);color:var(--info-ink);display:flex;align-items:center;justify-content:center;font-size:20px">🧪</div>
+        <div style="flex:1">
+          <h3 style="margin:0;font-size:19px">테스트 도구</h3>
+          <div style="margin-top:4px;font-size:12px;font-weight:600;color:var(--ink-50)">숨겨진 메뉴예요. 실제 서비스에는 없습니다.</div>
+        </div>
+      </div>
+
+      <div class="entry-calc" style="margin-top:18px">
+        <div class="ln" style="height:28px">
+          <span class="l">충전할 티켓</span>
+          <span class="stepper">
+            <button data-act="minus" aria-label="줄이기">${icon('minus', 14)}</button>
+            <input id="devAmt" class="dev-amt" type="tel" inputmode="numeric" value="10" aria-label="충전할 티켓 수">
+            <button class="on" data-act="plus" aria-label="늘리기">${icon('plusThick', 14)}</button>
+          </span>
+        </div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">보유 티켓</span><span class="v" id="devHave">${Store.state.tickets}장</span></div>
+      </div>
+      <button class="btn btn--primary" style="margin-top:14px" data-act="charge">티켓 충전하기</button>
+
+      <div style="margin-top:22px" class="group-label">화면 바로가기</div>
+      <button class="btn md btn--outline" data-act="onboarding">온보딩 처음부터 보기</button>
+
+      <button class="btn md btn--text" style="margin-top:10px" data-close>닫기</button>`,
+      (node, close) => {
+        const input = $('#devAmt', node);
+        const clamp = () => {
+          amount = Math.max(1, Math.min(999, parseInt(input.value, 10) || 1));
+          input.value = amount;
+        };
+        input.addEventListener('input', () => {
+          input.value = input.value.replace(/\D/g, '').slice(0, 3);
+        });
+        input.addEventListener('blur', clamp);
+
+        bind(node, {
+          minus: () => { clamp(); amount = Math.max(1, amount - 5); input.value = amount; },
+          plus:  () => { clamp(); amount = Math.min(999, amount + 5); input.value = amount; },
+          charge: () => {
+            clamp();
+            Store.addTickets(amount);
+            $('#devHave', node).textContent = Store.state.tickets + '장';
+            toast(`티켓 ${amount}장을 충전했어요`, { tone: 'ok' });
+            if (['home', 'mission', 'play'].includes(App.route)) Screens[App.route] && Screens[App.route]();
+          },
+          onboarding: () => { close(); go('onboarding'); },
+        });
+      });
+  },
+
   /* --- 닉네임 변경 ------------------------------------------------------- */
   rename() {
     const cur = Store.state.account ? Store.state.account.nickname : '';
