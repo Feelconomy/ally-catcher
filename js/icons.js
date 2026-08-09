@@ -1,4 +1,4 @@
-// Icon set for 뽑기왕.
+// Icon set for 올리캐쳐.
 // Glyphs marked `ds` are extracted from the Wanted Design System bundle used by the
 // source design; the rest are drawn to match it (24x24, solid fill, currentColor).
 const ICONS = {

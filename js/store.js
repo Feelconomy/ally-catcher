@@ -49,9 +49,12 @@ const Store = {
 
   save() {
     try { localStorage.setItem(STORE_KEY, JSON.stringify(this.state)); } catch (_) { /* private mode */ }
+    // 서버 저장(티켓·포인트). hydrate 중에는 되쓰기 방지를 위해 스킵.
+    if (window.Sync && Sync.enabled && !Sync.suspended) Sync.savePlayer();
   },
 
   reset() {
+    if (window.Sync && Sync.enabled) Sync.wipe(); // 서버 데이터도 삭제
     try { localStorage.removeItem(STORE_KEY); } catch (_) {}
     this.load();
   },
@@ -84,6 +87,7 @@ const Store = {
     this.state.prizes.push({ dollId, at: Date.now() });
     this.addPoints(DOLLS[dollId].points);
     this.save();
+    if (window.Sync && Sync.enabled) Sync.recordPrize(dollId); // 서버에 인형 1개 추가
   },
 
   /** Counts per doll id, e.g. { bear: 3, duck: 1 }. */
@@ -106,6 +110,7 @@ const Store = {
     const gained = DOLLS[dollId].points;
     this.addPoints(gained);
     this.save();
+    if (window.Sync && Sync.enabled) Sync.reconcilePrizes(); // 서버 인형 목록 맞추기
     return gained;
   },
 

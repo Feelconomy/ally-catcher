@@ -1,5 +1,5 @@
 /* ==========================================================================
-   뽑기왕 — component + screen styles
+   올리캐쳐 — component + screen styles
    ========================================================================== */
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -399,19 +399,19 @@ a:hover { color: var(--green-deep); }
   background: linear-gradient(120deg, var(--green), var(--green-lit));
   padding: 20px; margin-bottom: 18px;
   display: block; width: 100%; text-align: left;
+  min-height: 122px;
 }
 .promo .shine { position: absolute; inset: 0; width: 60px; background: rgba(255, 255, 255, .22); animation: shine 3.6s linear infinite; }
 .promo .body { position: relative; display: flex; align-items: center; gap: 10px; }
 .promo .copy { flex: 1; display: block; }
 .promo .eyebrow { color: var(--yellow); letter-spacing: .06em; display: block; }
 .promo .title { margin-top: 7px; font-size: 19px; font-weight: 700; color: #fff; letter-spacing: -.02em; line-height: 1.35; display: block; }
-/* 원이 sits straight on the gradient — no plate behind it. Sized to the card's
-   original 78px art slot: the negative margins let the art read larger without
-   growing the card. */
+/* 원이 sits straight on the gradient — no plate behind it — and overhangs the
+   card top and bottom so the whole machine reads as a sticker on the banner. */
 .promo .mascot {
-  width: auto; height: 96px; flex-shrink: 0;
-  margin: -9px -4px -9px 0;
-  filter: drop-shadow(0 6px 12px rgba(0, 70, 34, .32));
+  width: 132px; height: auto; flex-shrink: 0;
+  margin: -30px -14px -34px 0;
+  filter: drop-shadow(0 8px 14px rgba(0, 70, 34, .35));
 }
 
 .machine-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding-bottom: 24px; }

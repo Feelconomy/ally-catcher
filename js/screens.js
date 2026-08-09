@@ -8,7 +8,7 @@ const Screens = {
     setTheme('green');
     screenEl().innerHTML = `<div class="screen splash">
       <div class="mark"><i></i></div>
-      <div class="name">뽑기왕</div>
+      <div class="name">올리캐쳐</div>
       <div class="bar">${meter(8, 'onGreen')}</div>
       <div class="ver">v1.0.0</div>
     </div>`;
@@ -57,7 +57,7 @@ const Screens = {
   /* --- 12 프로필 설정 ---------------------------------------------------- */
   profile() {
     setTheme('');
-    const taken = ['뽑기왕', '집게왕', 'admin'];
+    const taken = ['올리캐쳐', '집게왕', 'admin'];
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('프로필 설정', { meta: '2/3' })}
@@ -209,8 +209,8 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="뽑기왕"><i></i></button>
-        <button class="wordmark" data-act="egg">뽑기왕</button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><i></i></button>
+        <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
       </div>

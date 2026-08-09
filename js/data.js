@@ -1,4 +1,4 @@
-/* Static catalogue for 뽑기왕. Names, tags, costs and palettes come from the
+/* Static catalogue for 올리캐쳐. Names, tags, costs and palettes come from the
    Claude Design spec's `renderVals()` block; grades and point values come from
    the doll-detail and exchange screens (SR 400P, 레어 +120P). */
 
@@ -125,7 +125,7 @@ const PLAY_SECONDS = 20;
 const FAIL_BONUS = 8;         // 연속 실패 시 성공률 가산 (설계 22번 화면)
 const MAX_RATE = 90;
 
-const NICK_SUGGESTIONS = ['뽑기왕77', '집게마스터', '인형수집가'];
+const NICK_SUGGESTIONS = ['올리캐쳐77', '집게마스터', '인형수집가'];
 const RECENT_SEEDS = ['곰돌이', '한정판', '펭귄'];
 
 const PLAY_TIPS = [
