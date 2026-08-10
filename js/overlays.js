@@ -132,7 +132,7 @@ const Sheets = {
         ${dupes ? `중복 ${dupes}개 포인트로 교환` : '교환할 중복이 없어요'}
       </button>`,
       (node, close) => bind(node, {
-        brag: () => { Store.bumpMission('share'); close(); toast('자랑 카드를 복사했어요', { tone: 'ok' }); },
+        brag: () => { close(); Dialogs.brag(d.id); },
         rep: () => {
           if (Store.state.account) { Store.state.account.avatar = d.id; Store.save(); }
           close(); toast('프로필 대표 인형을 바꿨어요', { mini: true }); go('my');
@@ -331,7 +331,194 @@ const Sheets = {
   },
 };
 
+/* ---------------------------------------------------------- 자랑 카드 ----
+   Draws a share card on a canvas so it can be shown and saved as a real
+   image. Everything is same-origin, so the canvas stays untainted and
+   toDataURL works. */
+
+function roundRectPath(c, x, y, w, h, r) {
+  c.beginPath();
+  c.moveTo(x + r, y);
+  c.arcTo(x + w, y, x + w, y + h, r);
+  c.arcTo(x + w, y + h, x, y + h, r);
+  c.arcTo(x, y + h, x, y, r);
+  c.arcTo(x, y, x + w, y, r);
+  c.closePath();
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('이미지를 불러오지 못했어요: ' + src));
+    img.src = src;
+  });
+}
+
+/** Renders the brag card for `dollId` and resolves with the canvas. */
+async function makeBragCard(dollId) {
+  const d = DOLLS[dollId];
+  const W = 1080, H = 1350;
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const c = canvas.getContext('2d');
+
+  // Wait for Pretendard so the card matches the app's typography.
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready; } catch (_) {} }
+  const font = (weight, size) => `${weight} ${size}px "Pretendard JP", Pretendard, -apple-system, sans-serif`;
+
+  // Background
+  const bg = c.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, '#00A650');
+  bg.addColorStop(1, '#00C462');
+  c.fillStyle = bg;
+  c.fillRect(0, 0, W, H);
+
+  c.fillStyle = 'rgba(255,212,0,.26)';
+  c.beginPath(); c.arc(W - 90, 150, 300, 0, Math.PI * 2); c.fill();
+  c.fillStyle = 'rgba(255,255,255,.12)';
+  c.beginPath(); c.arc(80, H - 120, 240, 0, Math.PI * 2); c.fill();
+
+  // Header
+  c.textAlign = 'center';
+  c.fillStyle = '#FFD400';
+  c.font = font(700, 34);
+  c.letterSpacing = '6px';
+  c.fillText('GOT IT!', W / 2, 150);
+  c.letterSpacing = '0px';
+  c.fillStyle = '#fff';
+  c.font = font(700, 68);
+  c.fillText('인형을 뽑았어요', W / 2, 236);
+
+  // Prize plate
+  const plate = { x: (W - 660) / 2, y: 300, w: 660, h: 660, r: 84 };
+  c.save();
+  c.shadowColor = 'rgba(0,60,30,.35)';
+  c.shadowBlur = 60; c.shadowOffsetY = 24;
+  c.fillStyle = '#fff';
+  roundRectPath(c, plate.x, plate.y, plate.w, plate.h, plate.r);
+  c.fill();
+  c.restore();
+
+  const art = await loadImage(dollArt(dollId, 'win'));
+  const box = 470;
+  const scale = Math.min(box / art.width, box / art.height);
+  const dw = art.width * scale, dh = art.height * scale;
+  c.drawImage(art, plate.x + (plate.w - dw) / 2, plate.y + (plate.h - dh) / 2, dw, dh);
+
+  // Name
+  c.fillStyle = '#fff';
+  c.font = font(700, 66);
+  c.fillText(d.name, W / 2, 1058);
+
+  // Grade + points chips
+  const chips = [
+    { text: `${d.grade} 등급`, bg: 'rgba(255,255,255,.22)', fg: '#fff' },
+    { text: `+${d.points}P`,   bg: '#FFD400',               fg: '#171717' },
+  ];
+  c.font = font(700, 36);
+  const gap = 20;
+  const widths = chips.map(ch => c.measureText(ch.text).width + 68);
+  let x = (W - (widths[0] + widths[1] + gap)) / 2;
+  chips.forEach((ch, i) => {
+    c.fillStyle = ch.bg;
+    roundRectPath(c, x, 1104, widths[i], 76, 38);
+    c.fill();
+    c.fillStyle = ch.fg;
+    c.fillText(ch.text, x + widths[i] / 2, 1155);
+    x += widths[i] + gap;
+  });
+
+  // Footer
+  c.fillStyle = 'rgba(255,255,255,.85)';
+  c.font = font(700, 40);
+  c.fillText('올리캐쳐', W / 2, 1268);
+  c.fillStyle = 'rgba(255,255,255,.6)';
+  c.font = font(600, 28);
+  c.fillText(dateLabel(Date.now()), W / 2, 1312);
+
+  return canvas;
+}
+
 const Dialogs = {
+
+  /* --- 자랑 카드 --------------------------------------------------------- */
+  async brag(dollId) {
+    const d = DOLLS[dollId];
+    if (!d) return;
+
+    const { node, close } = dialog(`
+      <h3 style="margin-top:0">자랑 카드</h3>
+      <div class="brag-frame" id="bragFrame">
+        <div class="brag-loading"><span class="spinner-lg brand" style="width:38px;height:38px;border-width:4px"></span></div>
+      </div>
+      <p id="bragHint">카드를 만드는 중이에요…</p>
+      <div class="actions">
+        <button class="btn md btn--primary" id="bragSave" data-act="save" disabled>이미지 저장</button>
+        <button class="btn sm btn--text" data-close>닫기</button>
+      </div>`,
+      null, { wide: true, scrim: 'deep' });
+
+    let dataUrl = null;
+    const fileName = `올리캐쳐_${d.name.replace(/\s+/g, '')}.png`;
+
+    try {
+      const canvas = await makeBragCard(dollId);
+      dataUrl = canvas.toDataURL('image/png');
+      $('#bragFrame', node).innerHTML =
+        `<img src="${dataUrl}" alt="${esc(d.name)} 자랑 카드">`;
+      $('#bragHint', node).textContent =
+        '저장을 누르면 사진으로 내려받아요. 모바일에서는 이미지를 길게 눌러 저장할 수도 있어요.';
+      const save = $('#bragSave', node);
+      save.disabled = false;
+      save.classList.remove('btn--disabled');
+    } catch (e) {
+      $('#bragFrame', node).innerHTML = `<div class="brag-loading">${icon('circleExclamation', 28)}</div>`;
+      $('#bragHint', node).textContent = '카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
+      return;
+    }
+
+    bind(node, {
+      save: () => {
+        const a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        Store.bumpMission('share');
+        close();
+        toast('자랑 카드를 저장했어요', { tone: 'ok' });
+      },
+    });
+  },
+
+  /* --- 레벨 업 ----------------------------------------------------------- */
+  levelUp(level) {
+    const title = Store.levelTitle(level);
+    const prog = Store.levelProgress();
+    dialog(`
+      <div class="levelup-badge">
+        <span class="ring"></span>
+        <span class="n">Lv.${level}</span>
+      </div>
+      <div class="eyebrow" style="margin-top:16px">LEVEL UP</div>
+      <h3 style="margin-top:8px;font-size:23px">${esc(title)}가 됐어요!</h3>
+      <p>인형 ${Store.state.wins}마리를 뽑아 레벨 ${level}에 올랐어요.<br>다음 레벨까지 ${prog.left}마리 남았어요.</p>
+      <div style="margin-top:16px;padding:14px;border-radius:14px;background:var(--surface-sunken)">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:12px;font-weight:600;color:var(--ink-50)">다음 레벨까지</span>
+          <span style="font-size:13px;font-weight:700">${prog.done} / ${prog.need}</span>
+        </div>
+        <div style="margin-top:10px">${meter(prog.percent)}</div>
+      </div>
+      <div class="actions">
+        <button class="btn md btn--primary" data-act="my">내 프로필 보기</button>
+        <button class="btn sm btn--text" data-close>계속 뽑기</button>
+      </div>`,
+      (node, close) => bind(node, { my: () => { close(); go('my'); } }),
+      { wide: true, scrim: 'deep' });
+  },
 
   /* --- 13 알림 권한 ------------------------------------------------------ */
   permission(fromMission) {

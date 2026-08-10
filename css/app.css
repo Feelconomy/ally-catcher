@@ -320,6 +320,15 @@ a:hover { color: var(--green-deep); }
 .splash .mark { width: 88px; height: 88px; border-radius: 28px; background: var(--yellow); display: flex; align-items: center; justify-content: center; animation: bob 2.4s ease-in-out infinite; }
 .splash .mark > i { width: 38px; height: 38px; border-radius: 50%; background: var(--green); }
 .splash .name { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -.02em; }
+.splash .splash-art {
+  width: auto; height: 210px; margin-top: 4px;
+  -webkit-mask-image: linear-gradient(180deg, #000 72%, transparent 97%);
+  mask-image: linear-gradient(180deg, #000 72%, transparent 97%);
+}
+.splash .pitch { padding: 0 34px; text-align: center; min-height: 74px; animation: fadeIn .45s ease-out; }
+.splash .pitch.in { animation: fadeIn .45s ease-out; }
+.splash .pitch .k { font-size: 13px; font-weight: 700; color: var(--yellow); letter-spacing: .04em; }
+.splash .pitch .p { margin-top: 8px; font-size: 13px; font-weight: 600; line-height: 1.6; color: rgba(255, 255, 255, .82); }
 .splash .bar { width: 132px; }
 .splash .ver { position: absolute; bottom: 44px; font-size: 11px; font-weight: 600; color: var(--on-dark-60); }
 
@@ -680,6 +689,19 @@ a:hover { color: var(--green-deep); }
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1); animation: none;
 }
 .result.fail .prize img { width: 150px; height: 150px; opacity: .4; filter: grayscale(.7); }
+/* A doll that was actually in the claw keeps its colour — it is the prize the
+   player nearly had, not a generic stand-in. */
+.result.fail .prize.slipped { box-shadow: inset 0 0 0 1px rgba(255, 212, 0, .28); }
+.result.fail .prize.slipped img { opacity: 1; filter: none; animation: dropShake .5s ease-out both; }
+.result.fail .slip-name {
+  margin-top: 14px; font-size: 15px; font-weight: 700; color: var(--yellow);
+  letter-spacing: -.01em; position: relative;
+}
+@keyframes dropShake {
+  0%   { transform: translateY(-24px) rotate(-8deg); }
+  55%  { transform: translateY(4px) rotate(4deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
 .streak { margin-top: 24px; width: 100%; padding: 16px 18px; border-radius: var(--r-xl); background: rgba(255, 255, 255, .06); position: relative; }
 .streak .top { display: flex; align-items: center; justify-content: space-between; }
 .streak .top .l { font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, .55); }
@@ -895,6 +917,46 @@ a:hover { color: var(--green-deep); }
 .toast .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; padding: 12px 0; }
 .toast .act { font-size: 13px; font-weight: 700; color: var(--yellow); flex-shrink: 0; }
 .toast.mini { align-self: center; min-height: 0; padding: 12px 20px; border-radius: 14px; background: rgba(23, 23, 23, .88); }
+
+/* Brag card preview */
+.brag-frame {
+  margin-top: 16px; border-radius: var(--r-lg); overflow: hidden;
+  background: var(--surface-sunken);
+  aspect-ratio: 1080 / 1350;
+  display: flex; align-items: center; justify-content: center;
+}
+.brag-frame img { width: 100%; height: 100%; object-fit: contain; }
+.brag-loading { color: var(--ink-30); display: flex; align-items: center; justify-content: center; }
+
+/* Level-up badge */
+.levelup-badge {
+  width: 108px; height: 108px; margin: 0 auto; position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+.levelup-badge .ring {
+  position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(from 210deg, var(--yellow), var(--green-lit), var(--yellow));
+  animation: spin 4s linear infinite;
+}
+.levelup-badge::after {
+  content: ''; position: absolute; inset: 7px; border-radius: 50%; background: #fff;
+}
+.levelup-badge .n {
+  position: relative; z-index: 1;
+  font-size: 26px; font-weight: 700; letter-spacing: -.02em; color: var(--ink);
+}
+
+/* Level card on 마이페이지 */
+.level-card { margin: 0 20px 18px; padding: 16px 18px; }
+.level-card .top { display: flex; align-items: center; gap: 10px; }
+.level-card .lv {
+  padding: 5px 11px; border-radius: var(--r-chip);
+  background: var(--green); color: #fff; font-size: 12px; font-weight: 700;
+}
+.level-card .title { font-size: 14px; font-weight: 700; letter-spacing: -.01em; }
+.level-card .count { margin-left: auto; font-size: 12px; font-weight: 700; color: var(--ink-45); }
+.level-card .cap { margin-top: 9px; font-size: 12px; font-weight: 600; color: var(--ink-50); }
+.level-card .meter { margin-top: 10px; }
 
 .coach { position: absolute; inset: 0; }
 .coach .hole { position: absolute; border-radius: 50%; box-shadow: 0 0 0 4px var(--yellow), 0 0 0 9999px rgba(0, 0, 0, .72); }

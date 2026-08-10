@@ -137,6 +137,31 @@ const PLAY_SECONDS = 20;
 const FAIL_BONUS = 8;         // 연속 실패 시 성공률 가산 (설계 22번 화면)
 const MAX_RATE = 90;
 
+/* Onboarding value props. Shared by the onboarding screen and the splash,
+   which cycles the same lines while the app loads. */
+const ONBOARDING = [
+  { k: '기다림 없는 가상 인형뽑기', h: '한 손으로<br>집게를 내려요',
+    p: '대기 없이 바로 시작. 뽑은 인형은 보관함에 모으고, 포인트는 교환소에서 바꿔요.',
+    art: ['ollie'] },
+  { k: '티켓은 미션으로만', h: '현금 결제가<br>없는 뽑기',
+    p: '티켓은 데일리 미션과 출석으로만 모아요. 결제 없이도 매일 도전할 수 있어요.',
+    art: ['ticket'] },
+  { k: '모으고 바꾸고', h: '포인트는<br>진짜로 써요',
+    p: '중복 인형은 포인트로 교환하고, 추첨 응모나 NH멤버스 포인트 전환에 사용하세요.',
+    art: ['exchange'] },
+];
+
+/* Levelling. Every WINS_PER_LEVEL successful grabs is one level; the title
+   changes as the player climbs. */
+const WINS_PER_LEVEL = 6;
+const LEVEL_TITLES = [
+  { from: 1,  title: '뽑기 입문' },
+  { from: 3,  title: '뽑기 견습' },
+  { from: 6,  title: '뽑기 고수' },
+  { from: 10, title: '뽑기 마스터' },
+  { from: 16, title: '집게의 전설' },
+];
+
 const NICK_SUGGESTIONS = ['올리캐쳐77', '집게마스터', '인형수집가'];
 const RECENT_SEEDS = ['곰돌이', '한정판', '펭귄'];
 

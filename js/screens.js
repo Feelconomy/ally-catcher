@@ -6,9 +6,15 @@ const Screens = {
   /* --- 09 스플래시 ------------------------------------------------------- */
   splash() {
     setTheme('green');
+    // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
       <div class="mark"><i></i></div>
       <div class="name">올리캐쳐</div>
+      <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
+      <div class="pitch">
+        <div class="k" id="splashK">${esc(ONBOARDING[0].k)}</div>
+        <div class="p" id="splashP">${esc(ONBOARDING[0].p)}</div>
+      </div>
       <div class="bar">${meter(8, 'onGreen')}</div>
       <div class="ver">v1.0.0</div>
     </div>`;
@@ -16,16 +22,34 @@ const Screens = {
     const bar = $('.splash .meter > i');
     let pct = 8;
     const load = setInterval(() => {
-      pct = Math.min(100, pct + 12 + Math.random() * 14);
+      pct = Math.min(100, pct + 7 + Math.random() * 9);
       if (bar) bar.style.width = pct + '%';
       if (pct >= 100) clearInterval(load);
-    }, 130);
+    }, 150);
+
+    // Rotate through the value props while it loads.
+    let i = 0;
+    const rotate = setInterval(() => {
+      const k = document.getElementById('splashK');
+      const p = document.getElementById('splashP');
+      if (!k || !p) { clearInterval(rotate); return; }
+      i = (i + 1) % ONBOARDING.length;
+      const pitch = $('.splash .pitch');
+      pitch.classList.remove('in');
+      // Restart the fade by forcing a reflow between class swaps.
+      void pitch.offsetWidth;
+      k.textContent = ONBOARDING[i].k;
+      p.textContent = ONBOARDING[i].p;
+      pitch.classList.add('in');
+    }, 1500);
+
+    App.splashTimers = [load, rotate];
 
     setTimeout(() => {
-      clearInterval(load);
+      clearInterval(load); clearInterval(rotate);
       if (App.route !== 'splash') return;
       go(Store.state.account ? 'home' : 'login');
-    }, 1300);
+    }, 4600);
   },
 
   /* --- 10 로그인 --------------------------------------------------------- */
@@ -129,17 +153,7 @@ const Screens = {
   /* --- 01 온보딩 --------------------------------------------------------- */
   onboarding() {
     setTheme('yellow');
-    const slides = [
-      { k: '기다림 없는 가상 인형뽑기', h: '한 손으로<br>집게를 내려요',
-        p: '대기 없이 바로 시작. 뽑은 인형은 보관함에 모으고, 포인트는 교환소에서 바꿔요.',
-        art: ['ollie'] },
-      { k: '티켓은 미션으로만', h: '현금 결제가<br>없는 뽑기',
-        p: '티켓은 데일리 미션과 출석으로만 모아요. 결제 없이도 매일 도전할 수 있어요.',
-        art: ['ticket'] },
-      { k: '모으고 바꾸고', h: '포인트는<br>진짜로 써요',
-        p: '중복 인형은 포인트로 교환하고, 추첨 응모나 NH멤버스 포인트 전환에 사용하세요.',
-        art: ['exchange'] },
-    ];
+    const slides = ONBOARDING;
     let i = 0;
 
     /** Each slide illustrates its own promise rather than repeating the tray. */
@@ -486,28 +500,41 @@ const Screens = {
 
     bind(screenEl(), {
       keep: () => { go('storage'); toast('보관함에 담았어요', { tone: 'ok', action: '보기', onAction: () => go('storage') }); },
-      brag: () => { Store.bumpMission('share'); toast('자랑 카드를 복사했어요', { tone: 'ok' }); },
+      brag: () => Dialogs.brag(d.id),
       again: () => {
         const m = Play.machine || MACHINES[0];
         if (!Store.canAfford(m.cost)) { Sheets.ticketShort(m); return; }
         go('loading', m.id);
       },
     });
+
+    // If this win pushed the player up a level, celebrate over the prize.
+    if (App.levelUpTo) {
+      const lv = App.levelUpTo;
+      App.levelUpTo = 0;
+      setTimeout(() => { if (App.route === 'win') Dialogs.levelUp(lv); }, 900);
+    }
   },
 
   /* --- 22 뽑기 실패 ------------------------------------------------------ */
-  lose() {
+  lose(slippedId) {
     setTheme('dark');
     const m = Play.machine || MACHINES[0];
-    const target = DOLLS[m.pool[0]];
     const next = Store.odds(m);
+    // If the claw actually had hold of a doll, show that one in its dropped
+    // pose. A clean miss falls back to a machine prize, dimmed.
+    const slipped = slippedId && DOLLS[slippedId];
+    const target = slipped || DOLLS[m.pool[0]];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center;background:var(--dark-soft)">
       ${statusbar()}
       <div class="result fail">
         <div class="kicker">SO CLOSE</div>
-        <h2>아깝게 놓쳤어요</h2>
-        <div class="prize">${dollImg(target.id, 150)}</div>
+        <h2>${slipped ? '집게에서 놓쳤어요' : '아깝게 놓쳤어요'}</h2>
+        <div class="prize ${slipped ? 'slipped' : ''}">
+          ${dollImg(target.id, 150, '', slipped ? 'drop' : 'idle')}
+        </div>
+        ${slipped ? `<div class="slip-name">${esc(target.name)}</div>` : ''}
         <div class="streak">
           <div class="top">
             <span class="l">연속 실패 보너스</span>
@@ -858,10 +885,20 @@ const Screens = {
         <span class="av">${dollImg(acc ? acc.avatar : 'penguin', 48)}</span>
         <span style="flex:1;text-align:left">
           <span class="nm" style="display:block">${esc(acc ? acc.nickname : '게스트')}</span>
-          <span class="lv">뽑기 마스터 Lv.${Store.level()}</span>
+          <span class="lv">${esc(Store.levelTitle())} Lv.${Store.level()}</span>
         </span>
         <span style="color:var(--ink-30);display:flex">${icon('chevronRight3', 20)}</span>
       </button>
+
+      <div class="card level-card">
+        <div class="top">
+          <span class="lv">Lv.${Store.level()}</span>
+          <span class="title">${esc(Store.levelTitle())}</span>
+          <span class="count">인형 ${Store.state.wins}마리</span>
+        </div>
+        ${meter(Store.levelProgress().percent)}
+        <div class="cap">${Store.levelProgress().left}마리 더 뽑으면 Lv.${Store.level() + 1} · ${esc(Store.levelTitle(Store.level() + 1))}</div>
+      </div>
 
       <div class="card statgrid" style="margin:0 20px 18px;padding:18px">
         <div class="st"><div class="n">${Store.state.plays}</div><div class="l">총 플레이</div></div>

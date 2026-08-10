@@ -393,7 +393,7 @@ const Play = {
       cord.style.transition = 'height .45s ease-out';
       cord.style.height = REST_CORD + 'px';
       await wait(500);
-      this.finish(false, null);
+      this.finish(false, carried.dollId);
       return;
     }
 
@@ -417,7 +417,7 @@ const Play = {
       const dropX = Math.max(BED_MIN_X, CHUTE_X + (this.x - CHUTE_X) * 0.5);
       await this.releaseInto(carried, dropX, 'slip');
       await wait(360);
-      this.finish(false, null);
+      this.finish(false, carried.dollId);
       return;
     }
 
@@ -498,7 +498,8 @@ const Play = {
     if (this.over) return;
     this.over = true;
     this.stop();
-    Store.recordPlay(this.machine, won, dollId);
+    // `dollId` on a loss is the doll that slipped, so the fail screen can show it.
+    App.levelUpTo = Store.recordPlay(this.machine, won, won ? dollId : null);
     go(won ? 'win' : 'lose', dollId || '');
   },
 

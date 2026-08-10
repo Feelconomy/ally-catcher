@@ -174,7 +174,9 @@ const Store = {
     return Math.min(MAX_RATE, machine.baseRate + this.state.failStreak * FAIL_BONUS);
   },
 
+  /** Returns the new level if this play pushed the player up one, else 0. */
   recordPlay(machine, won, dollId) {
+    const before = this.level();
     this.state.plays += 1;
     this.bumpMission('plays');
     if (won) {
@@ -186,6 +188,8 @@ const Store = {
       this.state.failStreak += 1;
     }
     this.save();
+    const after = this.level();
+    return after > before ? after : 0;
   },
 
   // --- raffles -----------------------------------------------------------
@@ -229,7 +233,28 @@ const Store = {
     this.save();
   },
 
-  level() { return Math.max(1, Math.floor(this.state.wins / 6) + 1); },
+  // --- levelling ---------------------------------------------------------
+
+  level() { return Math.max(1, Math.floor(this.state.wins / WINS_PER_LEVEL) + 1); },
+
+  /** Rank name for `lv` (defaults to the current level). */
+  levelTitle(lv) {
+    const n = lv || this.level();
+    let title = LEVEL_TITLES[0].title;
+    for (const t of LEVEL_TITLES) if (n >= t.from) title = t.title;
+    return title;
+  },
+
+  /** Progress inside the current level: wins done, wins needed, percent. */
+  levelProgress() {
+    const done = this.state.wins % WINS_PER_LEVEL;
+    return {
+      done,
+      need: WINS_PER_LEVEL,
+      left: WINS_PER_LEVEL - done,
+      percent: Math.round((done / WINS_PER_LEVEL) * 100),
+    };
+  },
 
   codexOwned() { return this.ownedIds().length; },
 
