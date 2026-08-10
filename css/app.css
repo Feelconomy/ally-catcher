@@ -333,7 +333,7 @@ a:hover { color: var(--green-deep); }
 .splash .ver { position: absolute; bottom: 44px; font-size: 11px; font-weight: 600; color: var(--on-dark-60); }
 
 /* Login (10) */
-.login { flex: 1; padding: 60px 28px 34px; display: flex; flex-direction: column; align-items: center; }
+.login { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 60px 28px calc(34px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; }
 .login h2 { margin-top: 22px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .login p { margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--ink-50); text-align: center; line-height: 1.6; }
 .login .mascot { width: 150px; height: 150px; margin-top: 34px; animation: bob 3.4s ease-in-out infinite; }
