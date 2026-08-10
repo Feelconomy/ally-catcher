@@ -13,14 +13,33 @@
 </p>
 
 왼쪽은 온보딩 첫 화면, 오른쪽은 홈의 데일리 미션 카드에 쓰이는 캐릭터입니다.
-인형은 `dolls/`에 들어 있습니다. 기본 6종은 SVG 한 장이고, 마스코트 **말랑 올리**만
-플레이 순간마다 포즈가 바뀌는 4장짜리입니다.
+인형은 `dolls/`에 들어 있습니다. 기본 6종은 SVG 한 장이고, 마스코트 **말랑 올리**와
+**토끼모자 올리**는 플레이 순간마다 포즈가 바뀌는 4장짜리입니다.
+
+### 포즈 시트 자르기
+
+4포즈가 2×2로 한 장에 들어 있는 시트는 아래 스크립트로 잘라 넣습니다.
+알파 채널에서 빈 행·열을 찾아 격자선을 잡고, 각 칸을 그림 경계에 맞춰 다듬습니다.
+
+```bash
+python3 tools/split_sheet.py <시트.png> dolls/<인형id>
+```
+
+`<인형id>-idle.png` / `-grabbed.png` / `-drop.png` / `-win.png` 네 장이 나옵니다.
+시트는 **배경이 투명한 PNG**여야 합니다 — 체커보드가 픽셀로 구워진 스크린샷은 잘리지 않습니다.
 
 <p>
   <img src="dolls/olly-idle.png" alt="말랑 올리 — 기계 안에 있을 때" width="88">
   <img src="dolls/olly-grabbed.png" alt="말랑 올리 — 집게에 잡혔을 때" width="88">
   <img src="dolls/olly-drop.png" alt="말랑 올리 — 떨어질 때" width="88">
   <img src="dolls/olly-win.png" alt="말랑 올리 — 뽑았을 때" width="88">
+</p>
+
+<p>
+  <img src="dolls/bunny-idle.png" alt="토끼모자 올리 — 기계 안에 있을 때" width="88">
+  <img src="dolls/bunny-grabbed.png" alt="토끼모자 올리 — 집게에 잡혔을 때" width="88">
+  <img src="dolls/bunny-drop.png" alt="토끼모자 올리 — 떨어질 때" width="88">
+  <img src="dolls/bunny-win.png" alt="토끼모자 올리 — 뽑았을 때" width="88">
 </p>
 
 <p>
@@ -108,7 +127,8 @@ js/
   play.js           집게 게임 (화면 03)
   screens.js        나머지 전체 화면
   app.js            해시 라우터 + 부팅
-dolls/              인형 아트 — SVG 6종 + 말랑 올리 4포즈 PNG
+dolls/              인형 아트 — SVG 6종 + 올리 2종 각 4포즈 PNG
+tools/              포즈 시트 분할 스크립트
 assets/             캐릭터 일러스트 — ollie.png (온보딩), wonhee.png (미션 카드)
 ```
 
@@ -156,7 +176,8 @@ assets/             캐릭터 일러스트 — ollie.png (온보딩), wonhee.png
 - **중복 교환** 같은 인형이 2개 이상이면 1개를 포인트로 교환 (되돌릴 수 없음)
 - **NH멤버스 전환** 100P → 80멤버스P, 최소 1,000P, 00:00~04:00 점검 시간에는 실패 처리
 
-조작은 조이스틱(좌우 = 집게 위치, 상하 = 깊이)과 `집게 내리기` 버튼. 키보드는 방향키 + 스페이스.
+조작은 좌우 레버 하나와 `집게 내리기` 버튼. 키보드는 ←→ + 스페이스.
+크레딧당 집게는 한 번만 내려가고, 잡아도 올리다가 미끄러지거나 옮기다 떨어뜨릴 수 있습니다.
 
 ## 데이터
 

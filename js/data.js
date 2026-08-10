@@ -10,7 +10,7 @@ const DOLLS = {
   penguin: { id: 'penguin', name: '솜사탕펭',   grade: 'R',  points: 120, bg: '#EAF1F7', rate: 6 },
   duck:    { id: 'duck',    name: '레몬덕',     grade: 'N',  points: 60,  bg: '#FFF7D6', rate: 18 },
 
-  /* The mascot. Unlike the SVG dolls it carries a pose per moment of a play —
+  /* The mascots. Unlike the SVG dolls these carry a pose per moment of a play —
      see dollArt() in ui.js for how the states are picked. */
   olly: {
     id: 'olly', name: '말랑 올리', grade: 'SR', points: 400, bg: '#EAF7DE', rate: 1.8,
@@ -19,6 +19,15 @@ const DOLLS = {
       grabbed: 'dolls/olly-grabbed.png',  // 집게에 잡혔을 때
       drop:    'dolls/olly-drop.png',     // 미끄러지거나 배출구로 떨어질 때
       win:     'dolls/olly-win.png',      // 성공적으로 뽑았을 때
+    },
+  },
+  bunny: {
+    id: 'bunny', name: '토끼모자 올리', grade: 'SR', points: 400, bg: '#F2F7E6', rate: 2.0,
+    art: {
+      idle:    'dolls/bunny-idle.png',
+      grabbed: 'dolls/bunny-grabbed.png',
+      drop:    'dolls/bunny-drop.png',
+      win:     'dolls/bunny-win.png',
     },
   },
 };
@@ -48,9 +57,9 @@ const MACHINES = [
     tag: '쉬움', tagClass: 'badge--easy',
     cost: 2, difficulty: '쉬움', baseRate: 44, grip: '보통',
     bg: '#FFF8E3', hero: 'dog',
-    blurb: '넓은 배출구 덕분에 실수해도 인형이 잘 떨어져요. 첫 도전에 추천하는 기계입니다.',
-    contents: ['dog', 'duck', 'cat', 'bear'],
-    pool: ['dog', 'dog', 'dog', 'duck', 'cat'],
+    blurb: '넓은 배출구 덕분에 실수해도 인형이 잘 떨어져요. 토끼모자 올리도 한 자리 섞여 있어요.',
+    contents: ['bunny', 'dog', 'duck', 'cat', 'bear'],
+    pool: ['dog', 'bunny', 'duck', 'dog', 'cat'],
     reward: 80,
     open: true,
   },
@@ -62,8 +71,8 @@ const MACHINES = [
     cost: 3, difficulty: '어려움', baseRate: 22, grip: '약',
     bg: '#EEF1FF', hero: 'rabbit',
     blurb: '시즌1 한정 SR 인형이 들어 있는 기계예요. 집게 힘이 약해 위치를 정확히 맞춰야 해요.',
-    contents: ['rabbit', 'olly', 'penguin', 'cat', 'bear'],
-    pool: ['rabbit', 'olly', 'penguin', 'cat', 'bear'],
+    contents: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear'],
+    pool: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear'],
     reward: 400,
     open: false,
     downNote: '오늘 오후 6시에 다시 열려요. 알림을 켜두면 열리는 즉시 알려드릴게요.',
