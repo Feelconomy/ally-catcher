@@ -14,8 +14,21 @@
 
 const GRAB_RADIUS = 0.07;    // how close in x the claw must be to close on a doll
 const AIM_FALLOFF = 0.10;    // distance over which the displayed odds decay
-const REST_CORD = 76;        // idle cord length, px
 const CLAW_W = 104;          // rendered claw width, px
+const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
+
+/* Roomy defaults. Play.layout() shrinks these to fit short viewports — a
+   phone browser with visible toolbars gives the cabinet far less height than
+   a desktop window, and fixed pixels put the claw inside the bed. */
+const CAB = {
+  railTop:  { min: 14, max: 46, share: 0.11 },
+  bedH:     { min: 72, max: 118, share: 0.27 },
+  footH:    { min: 84, max: 118, share: 0.31 },
+  cordMax: 76,
+  cordMin: 16,
+  clearance: 12,             // gap kept between the claw tips and the bed top
+  clawMin: 30,               // the claw never shrinks below this, in px of height
+};
 
 /* The heap. Two overlapping rows — a back row and a front row nestled into its
    gaps — so the bed reads as a pile of plush rather than a tidy line. Every
@@ -50,6 +63,10 @@ const Play = {
   timer: null,
   keys: null,
   stickActive: false,
+  restCord: CAB.cordMax,
+  clawScale: 1,
+  dollScale: 1,
+  onResize: null,
 
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
   start(machine) {
@@ -75,6 +92,11 @@ const Play = {
   stop() {
     clearInterval(this.timer); this.timer = null;
     if (this.keys) { window.removeEventListener('keydown', this.keys); this.keys = null; }
+    if (this.onResize) {
+      window.removeEventListener('resize', this.onResize);
+      window.removeEventListener('orientationchange', this.onResize);
+      this.onResize = null;
+    }
   },
 
   render() {
@@ -108,6 +130,7 @@ const Play = {
             <span class="arrow">${icon('caretDown', 16)}</span>
           </div>
         </div>
+        <div class="aim" id="aim"></div>
         <div class="pit" id="pit"></div>
         <div class="play-foot">
           <div class="chute" id="chute">
@@ -139,6 +162,7 @@ const Play = {
       </div>
     </div>`;
 
+    this.layout();
     this.paintPit();
     this.paintClaw();
     this.paintOdds();
@@ -146,6 +170,58 @@ const Play = {
     this.tick();
 
     if (!Store.state.coachDone) this.coach();
+  },
+
+  /** Fits the cabinet's vertical parts to the height actually available.
+
+      The claw hangs from the rail and must finish clear of the bed, but a
+      phone browser with visible toolbars can leave the cabinet barely 260px
+      tall — with fixed pixels the claw ends up sitting inside the pile, which
+      makes it impossible to tell what you are aiming at. Everything below is
+      derived from the measured height and re-derived whenever it changes. */
+  layout() {
+    const cab = document.getElementById('cabinet');
+    if (!cab) return;
+    const H = cab.getBoundingClientRect().height;
+    if (!H) return;
+
+    const fit = spec =>
+      Math.round(Math.max(spec.min, Math.min(spec.max, H * spec.share)));
+
+    const railTop = fit(CAB.railTop);
+    const bedH    = fit(CAB.bedH);
+    const footH   = fit(CAB.footH);
+
+    /* Everything between the rail and the bed has to hold the cord plus the
+       claw plus a little clearance. Rather than hope a fixed-size claw fits,
+       size the claw from the space that is actually there — so the tips are
+       always above the pile, on any device. */
+    const bedTop = H - footH - bedH;
+    const available = bedTop - (railTop + 10) - CAB.clearance;
+    const clawH = Math.min(CLAW_H, Math.max(CAB.clawMin, Math.round(available * 0.72)));
+    this.clawScale = clawH / CLAW_H;
+    this.restCord = Math.max(CAB.cordMin, Math.min(CAB.cordMax, available - clawH));
+    // Dolls shrink with the bed so the heap keeps its proportions.
+    this.dollScale = Math.max(0.66, Math.min(1, bedH / CAB.bedH.max));
+
+    cab.style.setProperty('--rail-top', railTop + 'px');
+    cab.style.setProperty('--bed-h', bedH + 'px');
+    cab.style.setProperty('--foot-h', footH + 'px');
+    cab.style.setProperty('--claw-scale', this.clawScale.toFixed(3));
+
+    const cord = document.getElementById('cord');
+    // Never fight an in-flight drop animation.
+    if (cord && !this.busy) cord.style.height = this.restCord + 'px';
+
+    if (!this.onResize) {
+      this.onResize = () => {
+        if (App.route !== 'play') return;
+        this.layout();
+        this.paintClaw();
+      };
+      window.addEventListener('resize', this.onResize);
+      window.addEventListener('orientationchange', this.onResize);
+    }
   },
 
   wire() {
@@ -242,7 +318,24 @@ const Play = {
     if (!rig) return;
     rig.style.left = (this.x * 100) + '%';
     if (mount) mount.style.left = (this.x * 100) + '%';
+    this.paintAim();
     this.paintKnob();
+  },
+
+  /** Beam down the claw's column, and a spotlight under the doll it would
+      close on — so the alignment reads the same on any screen height. */
+  paintAim() {
+    const aim = document.getElementById('aim');
+    if (aim) {
+      aim.style.left = (this.x * 100) + '%';
+      if (this.busy || this.over || this.dropped) aim.dataset.off = '1';
+      else delete aim.dataset.off;
+    }
+    const near = this.nearest();
+    const hit = near && near.dist < GRAB_RADIUS ? near.i : -1;
+    $$('.pit .doll', screenEl()).forEach(el => {
+      el.classList.toggle('targeted', Number(el.dataset.i) === hit && !this.busy && !this.dropped);
+    });
   },
 
   paintKnob() {
@@ -260,11 +353,16 @@ const Play = {
     if (!pit) return;
     // Rotation lives on the image so the wrapper's transform stays free for
     // the drop-back animation.
-    pit.innerHTML = this.dolls.map((d, i) => `
+    const k = this.dollScale || 1;
+    pit.innerHTML = this.dolls.map((d, i) => {
+      const size = Math.round(d.size * k);
+      return `
       <div class="doll ${d.taken ? 'taken' : ''}" data-i="${i}"
-        style="left:calc(${d.x * 100}% - ${d.size / 2}px);bottom:${d.bottom}px;z-index:${2 + d.layer * 2}">
-        ${dollImg(d.dollId, d.size, `transform:rotate(${d.rot}deg)`)}
-      </div>`).join('');
+        style="left:calc(${d.x * 100}% - ${size / 2}px);bottom:${Math.round(d.bottom * k)}px;z-index:${2 + d.layer * 2}">
+        ${dollImg(d.dollId, size, `transform:rotate(${d.rot}deg)`)}
+      </div>`;
+    }).join('');
+    this.paintAim();
   },
 
   /** Live odds = machine odds scaled by how well the claw is lined up. */
@@ -380,7 +478,8 @@ const Play = {
       this.dolls[near.i].taken = true;
       this.paintPit();
       carried = near.d;
-      document.getElementById('held').innerHTML = dollImg(carried.dollId, carried.size, '', 'grabbed');
+      document.getElementById('held').innerHTML =
+        dollImg(carried.dollId, Math.round(carried.size * (this.dollScale || 1)), '', 'grabbed');
     }
 
     // Lift.
@@ -391,14 +490,14 @@ const Play = {
       await wait(340);
       await this.releaseInto(carried, this.x, 'slip');
       cord.style.transition = 'height .45s ease-out';
-      cord.style.height = REST_CORD + 'px';
+      cord.style.height = this.restCord + 'px';
       await wait(500);
       this.finish(false, carried.dollId);
       return;
     }
 
     cord.style.transition = 'height .55s ease-out';
-    cord.style.height = REST_CORD + 'px';
+    cord.style.height = this.restCord + 'px';
     await wait(600);
 
     if (!grips) { this.finish(false, null); return; }
@@ -453,9 +552,9 @@ const Play = {
       targetY = cabRect.bottom - 152;          // clean miss: reach the bed floor
     }
 
-    const current = parseFloat(cord.style.height) || REST_CORD;
+    const current = parseFloat(cord.style.height) || this.restCord;
     const reach = current + (targetY - tipsNow);
-    return Math.max(REST_CORD + 20, Math.min(reach, cabRect.height - 120));
+    return Math.max(this.restCord + 16, Math.min(reach, cabRect.height - 60));
   },
 
   /** Opens the claw and drops `doll` back onto the bed at `x`. */

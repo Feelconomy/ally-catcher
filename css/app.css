@@ -490,7 +490,15 @@ a:hover { color: var(--green-deep); }
 .play-head .mt { font-size: 11px; font-weight: 600; color: var(--on-dark-45); }
 
 .cabinet {
-  margin: 0 16px; border-radius: var(--r-2xl); overflow: hidden; position: relative; flex: 1; min-height: 300px;
+  margin: 0 16px; border-radius: var(--r-2xl); overflow: hidden; position: relative; flex: 1; min-height: 260px;
+  /* Vertical metrics are recomputed from the measured height by Play.layout()
+     so the claw never lands inside the bed on short viewports (Safari's
+     collapsing toolbars change this mid-session). These are the roomy
+     defaults used before the first measurement. */
+  --rail-top: 46px;
+  --bed-h: 118px;
+  --foot-h: 118px;
+  --claw-scale: 1;
   background: linear-gradient(180deg, #1F1F1F, #0D0D0D);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
 }
@@ -512,7 +520,7 @@ a:hover { color: var(--green-deep); }
 }
 
 .rail {
-  position: absolute; top: 46px; left: 16px; right: 16px; height: 10px; border-radius: 5px;
+  position: absolute; top: var(--rail-top); left: 16px; right: 16px; height: 10px; border-radius: 5px;
   background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .1));
 }
 /* The trolley that rides the rail, directly above the claw. */
@@ -523,7 +531,9 @@ a:hover { color: var(--green-deep); }
   transition: left .16s ease-out;
 }
 .claw-rig {
-  position: absolute; top: 56px; width: 104px; margin-left: -52px; z-index: 4;
+  position: absolute; top: calc(var(--rail-top) + 10px); z-index: 4;
+  width: calc(104px * var(--claw-scale, 1));
+  margin-left: calc(-52px * var(--claw-scale, 1));
   transition: left .16s ease-out;
 }
 .claw-rig .cord { width: 3px; height: 76px; background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.38)); margin: 0 auto; }
@@ -562,7 +572,7 @@ a:hover { color: var(--green-deep); }
 /* The bed is the visual backdrop. Dolls live in `.pit`, which spans the full
    cabinet width so doll x and claw x share one coordinate space. */
 .bed {
-  position: absolute; bottom: 118px; left: 20px; right: 20px; height: 118px;
+  position: absolute; bottom: var(--foot-h); left: 20px; right: 20px; height: var(--bed-h);
   border-radius: var(--r-lg) var(--r-lg) 0 0;
   background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
   overflow: hidden;
@@ -585,7 +595,23 @@ a:hover { color: var(--green-deep); }
   animation: bob 2s ease-in-out infinite;
 }
 
-.pit { position: absolute; bottom: 118px; left: 0; right: 0; height: 118px; pointer-events: none; }
+.pit { position: absolute; bottom: var(--foot-h); left: 0; right: 0; height: var(--bed-h); pointer-events: none; }
+
+/* Aim guide: a beam down the claw's column plus a spotlight under the doll it
+   would close on. Alignment stays readable whatever the device height. */
+.aim {
+  position: absolute; bottom: var(--foot-h); height: var(--bed-h);
+  width: 2px; margin-left: -1px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 212, 0, 0), rgba(255, 212, 0, .38));
+  transition: left .16s ease-out, opacity .2s ease;
+}
+.aim[data-off] { opacity: 0; }
+.pit .doll.targeted::before {
+  content: ''; position: absolute; left: 50%; bottom: -7px;
+  transform: translateX(-50%);
+  width: 84%; height: 14px; border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(255, 212, 0, .55), transparent);
+}
 .pit .doll { position: absolute; transition: opacity .2s ease, transform .3s ease, bottom .3s ease, left .3s ease; }
 .pit .doll.taken { opacity: 0; transform: scale(.4) !important; }
 .pit .doll.dropping { animation: dropIn .34s cubic-bezier(.4, 1.5, .6, 1) both; }
@@ -596,9 +622,14 @@ a:hover { color: var(--green-deep); }
   100% { transform: translateY(0) scale(1); }
 }
 
-.play-foot { position: absolute; bottom: 0; left: 0; right: 0; height: 118px; display: flex; align-items: flex-end; gap: 10px; padding: 0 20px 14px; }
+/* The chute and odds panel fill the foot rather than being a fixed 96px, so a
+   short cabinet cannot push them up into the bed. */
+.play-foot {
+  position: absolute; bottom: 0; left: 0; right: 0; height: var(--foot-h);
+  display: flex; align-items: stretch; gap: 10px; padding: 6px 20px 12px;
+}
 .chute {
-  width: 112px; height: 96px; border-radius: 14px; background: #0A0A0A; position: relative;
+  width: 112px; border-radius: 14px; background: #0A0A0A; position: relative;
   box-shadow: inset 0 0 0 2px rgba(255, 212, 0, .55), inset 0 14px 26px rgba(0, 0, 0, .9);
   display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px;
 }
@@ -618,12 +649,17 @@ a:hover { color: var(--green-deep); }
   100% { transform: translateY(0) rotate(0); }
 }
 
-.odds { flex: 1; height: 96px; border-radius: 14px; background: rgba(255, 255, 255, .04); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08); padding: 12px 14px; }
+.odds {
+  flex: 1; border-radius: 14px; background: rgba(255, 255, 255, .04);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  padding: 10px 14px;
+  display: flex; flex-direction: column; justify-content: center;
+}
 .odds .l { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: rgba(255, 255, 255, .4); }
-.odds .v { margin-top: 8px; display: flex; align-items: baseline; gap: 6px; }
-.odds .v b { font-size: 24px; font-weight: 700; color: #fff; }
+.odds .v { margin-top: 6px; display: flex; align-items: baseline; gap: 6px; }
+.odds .v b { font-size: clamp(19px, 5.4vw, 24px); font-weight: 700; color: #fff; }
 .odds .v span { font-size: 11px; font-weight: 600; color: var(--on-dark-45); }
-.odds .meter { margin-top: 10px; height: 5px; }
+.odds .meter { margin-top: 8px; height: 5px; flex-shrink: 0; }
 .odds .meter > i { background: var(--green-signal); }
 
 .controls {
