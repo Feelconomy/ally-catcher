@@ -201,8 +201,10 @@ const Play = {
     const clawH = Math.min(CLAW_H, Math.max(CAB.clawMin, Math.round(available * 0.72)));
     this.clawScale = clawH / CLAW_H;
     this.restCord = Math.max(CAB.cordMin, Math.min(CAB.cordMax, available - clawH));
-    // Dolls shrink with the bed so the heap keeps its proportions.
-    this.dollScale = Math.max(0.66, Math.min(1, bedH / CAB.bedH.max));
+    /* Dolls shrink with the bed, but never so much bigger than the claw that
+       a carried doll stops looking gripped. */
+    this.dollScale = Math.max(0.6, Math.min(
+      1, bedH / CAB.bedH.max, this.clawScale * 1.15));
 
     cab.style.setProperty('--rail-top', railTop + 'px');
     cab.style.setProperty('--bed-h', bedH + 'px');
@@ -426,6 +428,7 @@ const Play = {
         clearInterval(this.timer);
         this.setState('TIME UP');
         toast('시간이 다 됐어요', { tone: 'error', duration: 1400 });
+        App.lastAttempt = { dollId: null, accuracy: 0, kind: 'timeout' };
         setTimeout(() => this.finish(false, null), 700);
       }
     }, 100);
@@ -453,6 +456,13 @@ const Play = {
     const chance = this.liveOdds();
     const inRange = !!near && near.dist < GRAB_RADIUS;
     const won = inRange && Math.random() * 100 < chance;
+
+    // How well the claw was lined up, for the fail screen's feedback.
+    App.lastAttempt = {
+      dollId: near ? near.d.dollId : null,
+      accuracy: near ? Math.max(0, Math.round((1 - near.dist / GRAB_RADIUS) * 100)) : 0,
+      kind: 'miss',
+    };
 
     // A miss is not always a clean miss — a real claw often closes on the doll
     // and then loses it on the way up or on the way across.
@@ -492,6 +502,7 @@ const Play = {
       cord.style.transition = 'height .45s ease-out';
       cord.style.height = this.restCord + 'px';
       await wait(500);
+      App.lastAttempt.kind = 'slip';
       this.finish(false, carried.dollId);
       return;
     }
@@ -500,7 +511,7 @@ const Play = {
     cord.style.height = this.restCord + 'px';
     await wait(600);
 
-    if (!grips) { this.finish(false, null); return; }
+    if (!grips) { this.finish(false, near ? near.d.dollId : null); return; }
 
     // Carry to the chute.
     this.setState('CARRYING');
@@ -516,6 +527,7 @@ const Play = {
       const dropX = Math.max(BED_MIN_X, CHUTE_X + (this.x - CHUTE_X) * 0.5);
       await this.releaseInto(carried, dropX, 'slip');
       await wait(360);
+      App.lastAttempt.kind = 'slip';
       this.finish(false, carried.dollId);
       return;
     }

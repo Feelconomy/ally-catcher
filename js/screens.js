@@ -517,24 +517,50 @@ const Screens = {
   },
 
   /* --- 22 뽑기 실패 ------------------------------------------------------ */
-  lose(slippedId) {
+  lose(dollId) {
     setTheme('dark');
     const m = Play.machine || MACHINES[0];
     const next = Store.odds(m);
-    // If the claw actually had hold of a doll, show that one in its dropped
-    // pose. A clean miss falls back to a machine prize, dimmed.
-    const slipped = slippedId && DOLLS[slippedId];
-    const target = slipped || DOLLS[m.pool[0]];
+    const attempt = App.lastAttempt || {};
+    const doll = dollId && DOLLS[dollId];
+
+    /* Three different failures, three different screens. A slip shows the doll
+       you had in its dropped pose; a miss shows the doll you were going for
+       with how close the aim was, so there is something to learn from; running
+       out of time shows neither. */
+    const kind = !doll ? 'timeout' : (attempt.kind === 'slip' ? 'slip' : 'miss');
+    const copy = {
+      slip:    { k: 'SO CLOSE',  h: '집게에서 놓쳤어요' },
+      miss:    { k: 'JUST MISSED', h: '집게가 빗나갔어요' },
+      timeout: { k: 'TIME UP',   h: '시간이 다 됐어요' },
+    }[kind];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center;background:var(--dark-soft)">
       ${statusbar()}
       <div class="result fail">
-        <div class="kicker">SO CLOSE</div>
-        <h2>${slipped ? '집게에서 놓쳤어요' : '아깝게 놓쳤어요'}</h2>
-        <div class="prize ${slipped ? 'slipped' : ''}">
-          ${dollImg(target.id, 150, '', slipped ? 'drop' : 'idle')}
-        </div>
-        ${slipped ? `<div class="slip-name">${esc(target.name)}</div>` : ''}
+        <div class="kicker">${copy.k}</div>
+        <h2>${copy.h}</h2>
+
+        ${kind === 'timeout' ? `
+          <div class="prize empty-claw">
+            ${icon('circleExclamation', 64)}
+          </div>
+          <div class="slip-name" style="color:var(--on-dark-45)">집게를 내리지 못했어요</div>`
+        : `
+          <div class="prize ${kind === 'slip' ? 'slipped' : 'aimed'}">
+            ${dollImg(doll.id, 150, '', kind === 'slip' ? 'drop' : 'idle')}
+          </div>
+          <div class="slip-name">${esc(doll.name)}</div>
+          ${kind === 'miss' ? `
+            <div class="aim-report">
+              <div class="top">
+                <span class="l">조준 정확도</span>
+                <span class="v">${attempt.accuracy || 0}%</span>
+              </div>
+              ${meter(attempt.accuracy || 0, 'onDark')}
+              <div class="cap">${aimHint(attempt.accuracy || 0)}</div>
+            </div>` : ''}`}
+
         <div class="streak">
           <div class="top">
             <span class="l">연속 실패 보너스</span>
@@ -1227,6 +1253,14 @@ function machineCard(m) {
       <span class="cost">티켓 ${m.cost}장</span>
     </span>
   </button>`;
+}
+
+/** Turns a 0–100 aim score into advice the player can act on. */
+function aimHint(accuracy) {
+  if (accuracy >= 70) return '거의 다 왔어요. 아주 조금만 더 맞추면 잡혀요.';
+  if (accuracy >= 40) return '조금 빗나갔어요. 인형 한가운데에 집게를 맞춰보세요.';
+  if (accuracy > 0)   return '많이 빗나갔어요. 확률 숫자가 올라갈 때까지 레버를 움직여보세요.';
+  return '집게 아래에 인형이 없었어요. 노란 빔이 인형에 닿도록 맞춰보세요.';
 }
 
 /** Five taps on the wordmark within three seconds opens the test panel. */
