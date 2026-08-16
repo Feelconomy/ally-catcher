@@ -20,6 +20,7 @@ const DEFAULT_STATE = {
   adsWatchedToday: 0,
   attendance: 5,
   entries: [],            // raffle entries
+  stock: {},              // machineId -> 남아 있는 인형 [dollId] (뽑으면 줄고, 비면 리필)
   bookmarks: [],
   recent: RECENT_SEEDS.slice(),
   nhLinked: false,
@@ -183,6 +184,7 @@ const Store = {
       this.state.wins += 1;
       this.state.failStreak = 0;
       this.addPrize(dollId);
+      this.takeFromMachine(machine, dollId);
       if (DOLLS[dollId].grade !== 'N') this.bumpMission('rare');
     } else {
       this.state.failStreak += 1;
@@ -190,6 +192,39 @@ const Store = {
     this.save();
     const after = this.level();
     return after > before ? after : 0;
+  },
+
+  // --- machine stock -----------------------------------------------------
+
+  /* Each machine keeps its own bed between visits: dolls you have already won
+     are gone when you come back, and the machine is restocked once emptied.
+     `slots` is how many the bed can hold. */
+  machineStock(machine, slots) {
+    const cur = this.state.stock[machine.id];
+    if (Array.isArray(cur) && cur.length) return { dolls: cur, refilled: false };
+    // Only call it a restock if the player actually emptied it — a first visit
+    // is just the machine being stocked for the first time.
+    const emptied = Array.isArray(cur) && cur.length === 0;
+    return { dolls: this.refillMachine(machine, slots), refilled: emptied };
+  },
+
+  refillMachine(machine, slots) {
+    const n = Math.max(1, slots || 9);
+    const filled = [];
+    for (let i = 0; i < n; i++) filled.push(machine.pool[i % machine.pool.length]);
+    shuffle(filled);
+    this.state.stock[machine.id] = filled;
+    this.save();
+    return filled;
+  },
+
+  /** Removes one won doll from that machine's bed. */
+  takeFromMachine(machine, dollId) {
+    const cur = this.state.stock[machine.id];
+    if (!Array.isArray(cur)) return;
+    const i = cur.indexOf(dollId);
+    if (i >= 0) cur.splice(i, 1);
+    this.save();
   },
 
   // --- raffles -----------------------------------------------------------
@@ -264,6 +299,15 @@ const Store = {
     return this.state.points >= NH_MIN ? Math.floor(this.state.points / 10) * 10 : 0;
   },
 };
+
+/** Fisher-Yates, in place. */
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
 
 /** 1234 → "1,234" */
 function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); }

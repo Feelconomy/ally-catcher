@@ -15,6 +15,7 @@ const App = {
   heroTimer: null,
   splashTimers: null,
   levelUpTo: 0,
+  lastAttempt: null,   // { dollId, accuracy, kind } from the last drop
 
   /** Routes that need an account before they will render. */
   guarded: ['play', 'loading', 'mission', 'exchange', 'entries', 'nh-link', 'settings', 'notif'],
