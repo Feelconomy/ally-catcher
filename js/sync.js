@@ -139,8 +139,9 @@ const Sync = (function () {
   // 회원 탈퇴/초기화: 서버 행 삭제 + 새 기기 ID 발급
   function wipe() {
     if (!enabled) return Promise.resolve();
-    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-    pending = null;
+    // 저장 큐를 비운다. 진행 중인 PATCH가 있어도 아래에서 playerId를 지우므로
+    // savePlayer()가 조기 반환하고, dirty를 내려 재시도도 막는다.
+    dirty = false;
     const dev = deviceId;
     const done = () => {
       playerId = null; deviceId = null;

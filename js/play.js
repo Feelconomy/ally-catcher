@@ -64,28 +64,47 @@ const Play = {
   keys: null,
   stickActive: false,
   restCord: CAB.cordMax,
+  refilled: false,
+  session: 0,          // bumped per play; a drop from an older session must not write
+
   clawScale: 1,
   dollScale: 1,
   onResize: null,
 
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
   start(machine) {
+    // Any drop still animating from a previous play belongs to an older
+    // session and must stop touching the screen once this one begins.
+    this.session += 1;
     this.machine = machine;
     this.x = START_X;
     this.busy = false; this.over = false; this.dropped = false;
     this.left = PLAY_SECONDS;
     this.stickActive = false;
 
-    const pool = machine.pool;
-    this.dolls = BED.map((slot, i) => ({
-      dollId: pool[i % pool.length],
-      x: slot.x,
-      layer: slot.layer,
-      size: slot.size,
-      bottom: slot.bottom,
-      rot: (i % 2 ? 1 : -1) * (5 + (i * 7) % 14),
-      taken: false,
-    }));
+    /* The bed carries over between visits: dolls already won are missing, and
+       the machine restocks only once it has been emptied. Which slot each doll
+       sits in is reshuffled every time, so the pile never looks identical. */
+    const { dolls: stock, refilled } = Store.machineStock(machine, BED.length);
+    this.refilled = refilled;
+
+    const slots = shuffle(BED.map((_, i) => i))
+      .slice(0, Math.min(stock.length, BED.length))
+      .sort((a, b) => a - b);
+    const order = shuffle(stock.slice());
+
+    this.dolls = slots.map((slotIdx, k) => {
+      const slot = BED[slotIdx];
+      return {
+        dollId: order[k],
+        x: slot.x,
+        layer: slot.layer,
+        size: slot.size,
+        bottom: slot.bottom,
+        rot: Math.round((Math.random() - 0.5) * 26),
+        taken: false,
+      };
+    });
     this.render();
   },
 
@@ -170,6 +189,7 @@ const Play = {
     this.tick();
 
     if (!Store.state.coachDone) this.coach();
+    else if (this.refilled) toast('인형을 새로 채운 기계예요', { tone: 'ok', duration: 2200 });
   },
 
   /** Fits the cabinet's vertical parts to the height actually available.
@@ -429,7 +449,8 @@ const Play = {
         this.setState('TIME UP');
         toast('시간이 다 됐어요', { tone: 'error', duration: 1400 });
         App.lastAttempt = { dollId: null, accuracy: 0, kind: 'timeout' };
-        setTimeout(() => this.finish(false, null), 700);
+        const session = this.session;
+        setTimeout(() => { if (this.session === session) this.finish(false, null); }, 700);
       }
     }, 100);
   },
@@ -439,6 +460,8 @@ const Play = {
   async drop() {
     if (this.busy || this.over || this.dropped) return;
 
+    const session = this.session;
+    const alive = () => this.session === session;
     const near = this.nearest();
     this.dropped = true;
     this.busy = true;
@@ -478,10 +501,12 @@ const Play = {
     cord.style.transition = 'height .55s cubic-bezier(.4,0,.6,1)';
     cord.style.height = reach + 'px';
     await wait(600);
+    if (!alive()) return;
 
     rig.dataset.grip = '1';
     haptic(14);
     await wait(300);
+    if (!alive()) return;
 
     let carried = null;
     if (grips) {
@@ -499,9 +524,11 @@ const Play = {
       cord.style.height = (reach * 0.55) + 'px';
       await wait(340);
       await this.releaseInto(carried, this.x, 'slip');
+      if (!alive()) return;
       cord.style.transition = 'height .45s ease-out';
       cord.style.height = this.restCord + 'px';
       await wait(500);
+      if (!alive()) return;
       App.lastAttempt.kind = 'slip';
       this.finish(false, carried.dollId);
       return;
@@ -510,6 +537,7 @@ const Play = {
     cord.style.transition = 'height .55s ease-out';
     cord.style.height = this.restCord + 'px';
     await wait(600);
+    if (!alive()) return;
 
     if (!grips) { this.finish(false, near ? near.d.dollId : null); return; }
 
@@ -523,16 +551,20 @@ const Play = {
 
     if (failMode === 'slipCarry') {
       await wait(430);                       // let go partway across
+      if (!alive()) return;
       // Never land a slipped doll on the chute mouth — it would look like a win.
       const dropX = Math.max(BED_MIN_X, CHUTE_X + (this.x - CHUTE_X) * 0.5);
       await this.releaseInto(carried, dropX, 'slip');
+      if (!alive()) return;
       await wait(360);
+      if (!alive()) return;
       App.lastAttempt.kind = 'slip';
       this.finish(false, carried.dollId);
       return;
     }
 
     await wait(800);
+    if (!alive()) return;
     delete rig.dataset.grip;
     document.getElementById('held').innerHTML = '';
     const chute = document.getElementById('chute');
@@ -540,6 +572,7 @@ const Play = {
     this.setState('GOT IT');
     haptic(40);
     await wait(620);
+    if (!alive()) return;
     this.finish(true, carried.dollId);
   },
 
