@@ -47,14 +47,12 @@ const Auth = {
 };
 window.Auth = Auth;
 
-let lastUserId = null;
-
-// 세션이 있으면 계정을 채우고, 로그인 계정으로 데이터를 연결한 뒤 홈으로 보낸다.
+// 세션이 있으면 계정을 채우고, 로그인·스플래시 화면이면 홈으로 보낸다.
+// (계정으로의 데이터 연결은 sync.js 의 부팅 hydrate 가 __authReady 후 담당 — 여기선 라우팅만)
 function applySession(session) {
-  const u = session ? session.user : null;
-  Auth.user = u;
-  if (!u || !window.Store || !Store.state) { lastUserId = u ? u.id : lastUserId; return; }
-
+  Auth.user = session ? session.user : null;
+  // Store 는 const 전역이라 window.Store 로는 안 잡힘 → bare 로 확인
+  if (!Auth.user || typeof Store === 'undefined' || !Store.state) return;
   const prev = Store.state.account;
   Store.state.account = {
     provider: '카카오',
@@ -63,17 +61,8 @@ function applySession(session) {
   };
   Store.state.onboarded = true;
   Store.save();
-
   const curRoute = (typeof App !== 'undefined') ? App.route : null;
-  const isNewLogin = u.id !== lastUserId;
-  lastUserId = u.id;
-
-  if (isNewLogin && window.Sync && Sync.enabled && Sync.hydrate) {
-    // 로그인 순간: 서버 데이터를 이 계정으로 연결(익명 데이터 승계 포함)한 뒤 홈으로
-    Sync.hydrate()
-      .then(() => { if (typeof go === 'function') go('home'); })
-      .catch(() => { if (typeof go === 'function') go('home'); });
-  } else if (typeof go === 'function' && ['login', 'splash', null, undefined].includes(curRoute)) {
+  if (typeof go === 'function' && ['login', 'splash', null, undefined].includes(curRoute)) {
     go('home');
   }
 }
