@@ -33,6 +33,8 @@ const Auth = {
   loginKakao() {
     if (!sb) return Promise.resolve();
     // 로그인 후 돌아올 주소 (현재 페이지). GitHub Pages·localhost 모두 동작.
+    // 요청 스코프(닉네임/프로필/이메일)는 Supabase 기본값을 따르며,
+    // 카카오 개발자콘솔의 '동의항목'에 등록돼 있어야 KOE205가 안 난다.
     const redirectTo = location.origin + location.pathname;
     return sb.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo } });
   },
@@ -45,10 +47,14 @@ const Auth = {
 };
 window.Auth = Auth;
 
-// 세션이 있으면 계정을 채우고, 로그인·스플래시 화면이면 홈으로 보낸다.
+let lastUserId = null;
+
+// 세션이 있으면 계정을 채우고, 로그인 계정으로 데이터를 연결한 뒤 홈으로 보낸다.
 function applySession(session) {
-  Auth.user = session ? session.user : null;
-  if (!Auth.user || !window.Store || !Store.state) return;
+  const u = session ? session.user : null;
+  Auth.user = u;
+  if (!u || !window.Store || !Store.state) { lastUserId = u ? u.id : lastUserId; return; }
+
   const prev = Store.state.account;
   Store.state.account = {
     provider: '카카오',
@@ -57,7 +63,17 @@ function applySession(session) {
   };
   Store.state.onboarded = true;
   Store.save();
-  if (typeof go === 'function' && ['login', 'splash', undefined, null].includes(window.App && App.route)) {
+
+  const curRoute = (typeof App !== 'undefined') ? App.route : null;
+  const isNewLogin = u.id !== lastUserId;
+  lastUserId = u.id;
+
+  if (isNewLogin && window.Sync && Sync.enabled && Sync.hydrate) {
+    // 로그인 순간: 서버 데이터를 이 계정으로 연결(익명 데이터 승계 포함)한 뒤 홈으로
+    Sync.hydrate()
+      .then(() => { if (typeof go === 'function') go('home'); })
+      .catch(() => { if (typeof go === 'function') go('home'); });
+  } else if (typeof go === 'function' && ['login', 'splash', null, undefined].includes(curRoute)) {
     go('home');
   }
 }
@@ -70,6 +86,10 @@ async function boot() {
     applySession(data.session || null);
   } catch (e) {
     console.warn('auth getSession 실패:', e && e.message);
+  }
+  // OAuth 흔적(code/error) 제거 — 새로고침 시 '사용된 code' 재교환으로 꼬이는 것 방지
+  if (/[?&](code|error|error_description)=/.test(location.search)) {
+    history.replaceState(null, '', location.origin + location.pathname + location.hash);
   }
   // 로그인/로그아웃 상태 변화 반영
   sb.auth.onAuthStateChange((_evt, session) => { applySession(session); });
