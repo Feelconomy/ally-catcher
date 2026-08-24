@@ -13,6 +13,7 @@ const Sync = (function () {
   const DEVICE_KEY = 'ppopgiwang.device';
   let deviceId = null;
   let playerId = null;
+  let authUserId = null;   // 카카오 로그인 시 Supabase Auth 사용자 id
   let suspended = false;   // hydrate 중 서버 되쓰기(피드백 루프) 방지
 
   function getDeviceId() {
@@ -55,8 +56,9 @@ const Sync = (function () {
   let dirty = false;
 
   function doWrite(keepalive) {
+    // 행 id로 저장 → 로그인 후 다른 기기에서도(다른 device_id) 같은 계정 행을 정확히 갱신
     const body = { tickets: Store.state.tickets | 0, points: Store.state.points | 0 };
-    return req('PATCH', 'players?device_id=eq.' + encodeURIComponent(getDeviceId()),
+    return req('PATCH', 'players?id=eq.' + encodeURIComponent(playerId),
       body, null, { keepalive: !!keepalive })
       .catch((e) => console.warn('플레이어 저장 실패:', e.message));
   }
@@ -98,42 +100,69 @@ const Sync = (function () {
       .catch((e) => console.warn('인형 목록 동기화 실패:', e.message));
   }
 
-  // ── 로그인 시(=지금은 부팅 시) 서버에서 불러오기 ────────────────────
+  // 서버 행 하나를 로컬 상태로 채움 (인형 목록 포함)
+  function applyRow(p) {
+    playerId = p.id;
+    return req('GET', 'prizes?player_id=eq.' + encodeURIComponent(playerId) +
+      '&select=doll_id,won_at&order=won_at.asc&limit=1000')
+      .then((prizes) => {
+        suspended = true;
+        Store.state.tickets = p.tickets | 0;
+        Store.state.points = p.points | 0;
+        Store.state.prizes = (prizes || []).map((r) => ({
+          dollId: r.doll_id, at: Date.parse(r.won_at) || Date.now(),
+        }));
+        Store.save();            // 로컬에도 반영(서버 push는 suspended로 스킵)
+        suspended = false;
+        return 'existing';
+      });
+  }
+
+  // 현재 로컬 상태로 새 행 생성 (extra로 auth_user_id 등 추가)
+  function createRow(extra) {
+    const acc = Store.state.account;
+    const body = Object.assign({
+      device_id: getDeviceId(),
+      nickname: acc ? acc.nickname : null,
+      tickets: Store.state.tickets | 0,
+      points: Store.state.points | 0,
+    }, extra || {});
+    return req('POST', 'players', body, { Prefer: 'return=representation' })
+      .then((created) => {
+        playerId = created[0].id;
+        return (Store.state.prizes.length ? reconcilePrizes() : Promise.resolve()).then(() => 'created');
+      });
+  }
+
+  // ── 부팅/로그인 시 서버에서 불러오기 ────────────────────────────────
   function hydrate() {
     if (!enabled) return Promise.resolve('disabled');
     const dev = getDeviceId();
-    return req('GET', 'players?device_id=eq.' + encodeURIComponent(dev) + '&select=*')
-      .then((rows) => {
-        if (rows && rows.length) {
-          // 기존 기기: 서버가 원본. 로컬 상태를 서버 값으로 채움.
-          const p = rows[0];
-          playerId = p.id;
-          return req('GET', 'prizes?player_id=eq.' + encodeURIComponent(playerId) +
-            '&select=doll_id,won_at&order=won_at.asc&limit=1000')
-            .then((prizes) => {
-              suspended = true;
-              Store.state.tickets = p.tickets | 0;
-              Store.state.points = p.points | 0;
-              Store.state.prizes = (prizes || []).map((r) => ({
-                dollId: r.doll_id, at: Date.parse(r.won_at) || Date.now(),
-              }));
-              Store.save();          // 로컬에도 반영(서버 push는 suspended로 스킵)
-              suspended = false;
-              return 'existing';
+    authUserId = (window.Auth && Auth.user) ? Auth.user.id : null;
+
+    if (authUserId) {
+      // 로그인 상태: 인증 계정의 행을 우선 조회
+      return req('GET', 'players?auth_user_id=eq.' + encodeURIComponent(authUserId) + '&select=*')
+        .then((rows) => {
+          if (rows && rows.length) return applyRow(rows[0]);
+          // 계정 행이 없으면: 이 기기의 익명 행을 계정으로 승계, 없으면 새로 생성
+          return req('GET', 'players?device_id=eq.' + encodeURIComponent(dev) + '&select=*')
+            .then((drows) => {
+              if (drows && drows.length) {
+                playerId = drows[0].id;
+                const nick = (window.Auth && Auth.nickname && Auth.nickname()) || drows[0].nickname;
+                return req('PATCH', 'players?id=eq.' + encodeURIComponent(playerId),
+                  { auth_user_id: authUserId, nickname: nick })
+                  .then(() => applyRow(drows[0]));
+              }
+              return createRow({ auth_user_id: authUserId });
             });
-        }
-        // 새 기기: 현재 로컬 상태로 행 생성 (기존 로컬 진행분이 있으면 업로드)
-        const acc = Store.state.account;
-        return req('POST', 'players', {
-          device_id: dev,
-          nickname: acc ? acc.nickname : null,
-          tickets: Store.state.tickets | 0,
-          points: Store.state.points | 0,
-        }, { Prefer: 'return=representation' }).then((created) => {
-          playerId = created[0].id;
-          return Store.state.prizes.length ? reconcilePrizes().then(() => 'created') : 'created';
         });
-      });
+    }
+
+    // 비로그인(익명): 기기 행 조회 → 없으면 생성
+    return req('GET', 'players?device_id=eq.' + encodeURIComponent(dev) + '&select=*')
+      .then((rows) => (rows && rows.length) ? applyRow(rows[0]) : createRow({}));
   }
 
   // 회원 탈퇴/초기화: 서버 행 삭제 + 새 기기 ID 발급
@@ -142,13 +171,15 @@ const Sync = (function () {
     // 저장 큐를 비운다. 진행 중인 PATCH가 있어도 아래에서 playerId를 지우므로
     // savePlayer()가 조기 반환하고, dirty를 내려 재시도도 막는다.
     dirty = false;
-    const dev = deviceId;
+    const pid = playerId, dev = deviceId;
     const done = () => {
-      playerId = null; deviceId = null;
+      playerId = null; deviceId = null; authUserId = null;
       try { localStorage.removeItem(DEVICE_KEY); } catch (_) {}
     };
-    if (!dev) { done(); return Promise.resolve(); }
-    return req('DELETE', 'players?device_id=eq.' + encodeURIComponent(dev))
+    const target = pid ? 'players?id=eq.' + encodeURIComponent(pid)
+      : (dev ? 'players?device_id=eq.' + encodeURIComponent(dev) : null);
+    if (!target) { done(); return Promise.resolve(); }
+    return req('DELETE', target)
       .catch((e) => console.warn('서버 초기화 실패:', e.message))
       .then(done);
   }
@@ -176,7 +207,9 @@ window.Sync = Sync;
 // 서버 데이터를 불러와 화면을 갱신한다.
 document.addEventListener('DOMContentLoaded', () => {
   if (!Sync.enabled) return;
-  Sync.hydrate().then((res) => {
+  // 로그인 상태를 알아야 계정 기준으로 불러오므로 auth 준비를 기다린다.
+  const ready = window.__authReady || Promise.resolve();
+  ready.then(() => Sync.hydrate()).then((res) => {
     if (res !== 'existing') return;
     const refreshable = ['home', 'storage', 'mine', 'codex', 'exchange', 'mission'];
     if (typeof render === 'function' && refreshable.includes(App.route)) {

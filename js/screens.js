@@ -73,7 +73,12 @@ const Screens = {
     $('.login img').classList.add('mascot');
 
     bind(screenEl(), {
-      sso: el => { App.pendingProvider = el.dataset.p; Sheets.terms(); },
+      sso: el => {
+        const p = el.dataset.p;
+        // 카카오는 실제 Supabase Auth 로그인(리다이렉트). 나머지는 기존 데모 흐름.
+        if (p === '카카오' && window.Auth && Auth.enabled) { Auth.loginKakao(); return; }
+        App.pendingProvider = p; Sheets.terms();
+      },
       peek: () => { App.guest = true; go('home'); },
     });
   },
