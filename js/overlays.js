@@ -454,16 +454,14 @@ const Dialogs = {
       </div>
       <p id="bragHint">카드를 만드는 중이에요…</p>
       <div class="actions">
-        <div style="display:flex;gap:9px">
-          <button class="btn md btn--neutral" id="bragShare" data-act="share" disabled style="flex:1">공유하기</button>
-          <button class="btn md btn--primary" id="bragSave" data-act="save" disabled style="flex:1">이미지 저장</button>
-        </div>
+        <button class="btn md btn--primary" id="bragShare" data-act="share" aria-disabled="true" style="opacity:.55;pointer-events:none">공유하기</button>
         <button class="btn sm btn--text" data-close>닫기</button>
       </div>`,
       null, { wide: true, scrim: 'deep' });
 
     let dataUrl = null;
     let shareFile = null;   // 모바일: 네이티브 공유 시트로 '사진 앱에 저장'
+    let cardReady = false;  // 카드 생성 완료 전 공유 클릭 방지
     const fileName = `올리캐쳐_${d.name.replace(/\s+/g, '')}.png`;
     const canShareImage = () =>
       !!(shareFile && navigator.canShare && navigator.canShare({ files: [shareFile] }));
@@ -478,12 +476,13 @@ const Dialogs = {
       $('#bragFrame', node).innerHTML =
         `<img src="${dataUrl}" alt="${esc(d.name)} 자랑 카드">`;
       $('#bragHint', node).textContent = canShareImage()
-        ? '저장은 사진 앱에, 공유는 친구에게 자랑할 수 있어요.'
-        : '저장은 이미지로 내려받고, 공유는 링크를 보낼 수 있어요.';
-      ['#bragSave', '#bragShare'].forEach((sel) => {
-        const b = $(sel, node);
-        if (b) { b.disabled = false; b.classList.remove('btn--disabled'); }
-      });
+        ? '공유하기로 친구에게 자랑하거나 사진 앱에 저장할 수 있어요.'
+        : '공유하기로 카드 문구와 앱 링크를 보낼 수 있어요.';
+      const shareBtn = $('#bragShare', node);
+      shareBtn.style.opacity = '';
+      shareBtn.style.pointerEvents = '';
+      shareBtn.removeAttribute('aria-disabled');
+      cardReady = true;
     } catch (e) {
       $('#bragFrame', node).innerHTML = `<div class="brag-loading">${icon('circleExclamation', 28)}</div>`;
       $('#bragHint', node).textContent = '카드를 만들지 못했어요. 잠시 후 다시 시도해 주세요.';
@@ -491,33 +490,10 @@ const Dialogs = {
     }
 
     bind(node, {
-      save: async () => {
-        // 모바일: 네이티브 공유 시트 → '이미지 저장'으로 사진 앱에 바로 저장
-        if (canShareImage()) {
-          try {
-            await navigator.share({ files: [shareFile], title: '올리캐쳐', text: `${d.name} 자랑 카드` });
-            Store.bumpMission('share');
-            close();
-            return;
-          } catch (e) {
-            if (e && e.name === 'AbortError') return; // 사용자가 취소 — 조용히
-            /* 그 외 실패 → 아래 다운로드로 폴백 */
-          }
-        }
-        // 데스크톱 등: 직접 다운로드
-        const a = document.createElement('a');
-        a.href = dataUrl;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        Store.bumpMission('share');
-        close();
-        toast('자랑 카드를 저장했어요', { tone: 'ok' });
-      },
-
       // 공유하기: 카톡·인스타 등으로 이미지+문구+앱 링크를 친구에게
+      // (모바일 공유 시트에는 '이미지 저장'도 포함되어 저장까지 커버)
       share: async () => {
+        if (!cardReady) return;   // 카드 생성 중엔 무시
         const url = location.origin + location.pathname;
         const text = `올리캐쳐에서 '${d.name}'를 뽑았어요! 🎉`;
         // 1) 이미지까지 공유 가능하면 카드 이미지 + 문구 + 링크
