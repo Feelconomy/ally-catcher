@@ -48,17 +48,11 @@ a:hover { color: var(--green-deep); }
 
 /* --- Status bar ---------------------------------------------------------- */
 
+/* 상단 스페이서: 노치/안전영역 + 약간의 여백만. (가짜 시간·LTE 표시 제거됨) */
 .statusbar {
-  height: 54px; flex-shrink: 0;
+  height: calc(var(--safe-t) + 14px); flex-shrink: 0;
   width: 100%; align-self: stretch;      /* centred screens must not shrink it */
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 26px;
-  font-size: 13px; font-weight: 700;
-  color: var(--ink);
 }
-.statusbar .net { opacity: .65; font-size: 11px; letter-spacing: .08em; }
-[data-theme="dark"] .statusbar, [data-theme="green"] .statusbar { color: #fff; }
-[data-theme="dark"] .statusbar .net { opacity: .6; }
 
 /* --- App bar ------------------------------------------------------------- */
 

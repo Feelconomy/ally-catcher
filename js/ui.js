@@ -43,8 +43,10 @@ function setTheme(name) {
   if (meta) meta.content = { dark: '#141414', green: '#00A650', yellow: '#FFD400' }[name] || '#FFFBEF';
 }
 
+// 상단 여백 스페이서 (노치/안전영역 확보용). 가짜 시간·통신 표시는 제거함.
+// offline 인자는 호출부 호환용으로 남겨둠(현재 미사용).
 function statusbar(offline) {
-  return `<div class="statusbar"><span>9:41</span><span class="net">${offline ? '✕' : 'LTE'} ▮▮▮</span></div>`;
+  return `<div class="statusbar"></div>`;
 }
 
 function appbar(title, opts) {
