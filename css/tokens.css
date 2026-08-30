@@ -75,7 +75,7 @@
 
   /* Layout */
   --shell-w: 420px;
-  --tabbar-h: 82px;
+  --tabbar-h: 62px;
   --safe-b: env(safe-area-inset-bottom, 0px);
   --safe-t: env(safe-area-inset-top, 0px);
 }

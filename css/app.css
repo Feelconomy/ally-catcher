@@ -88,16 +88,15 @@ a:hover { color: var(--green-deep); }
 .tabbar {
   flex-shrink: 0;
   height: calc(var(--tabbar-h) + var(--safe-b));
-  padding: 10px 12px var(--safe-b);
+  padding: 0 12px var(--safe-b);
   background: var(--surface);
-  box-shadow: var(--shadow-sheet);
+  border-top: 1px solid var(--line);   /* 스크롤 콘텐츠에 묻히지 않는 실선 구분선 */
   display: flex;
 }
 .tab {
-  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px;
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
   color: rgba(23, 23, 23, .38);
   font-size: 10px; font-weight: 600;
-  padding-top: 2px;
 }
 .tab span { color: var(--ink-45); }
 .tab[aria-current="page"] { color: var(--green); }
