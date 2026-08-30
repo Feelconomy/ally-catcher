@@ -460,15 +460,23 @@ const Dialogs = {
       null, { wide: true, scrim: 'deep' });
 
     let dataUrl = null;
+    let shareFile = null;   // 모바일: 네이티브 공유 시트로 '사진 앱에 저장'
     const fileName = `올리캐쳐_${d.name.replace(/\s+/g, '')}.png`;
+    const canShareImage = () =>
+      !!(shareFile && navigator.canShare && navigator.canShare({ files: [shareFile] }));
 
     try {
       const canvas = await makeBragCard(dollId);
       dataUrl = canvas.toDataURL('image/png');
+      try {
+        const blob = await new Promise((r) => canvas.toBlob(r, 'image/png'));
+        if (blob) shareFile = new File([blob], fileName, { type: 'image/png' });
+      } catch (_) { /* toBlob 미지원 → 다운로드로 폴백 */ }
       $('#bragFrame', node).innerHTML =
         `<img src="${dataUrl}" alt="${esc(d.name)} 자랑 카드">`;
-      $('#bragHint', node).textContent =
-        '저장을 누르면 사진으로 내려받아요. 모바일에서는 이미지를 길게 눌러 저장할 수도 있어요.';
+      $('#bragHint', node).textContent = canShareImage()
+        ? '저장을 누르면 사진 앱에 바로 저장할 수 있어요.'
+        : '저장을 누르면 이미지로 내려받아요.';
       const save = $('#bragSave', node);
       save.disabled = false;
       save.classList.remove('btn--disabled');
@@ -479,7 +487,20 @@ const Dialogs = {
     }
 
     bind(node, {
-      save: () => {
+      save: async () => {
+        // 모바일: 네이티브 공유 시트 → '이미지 저장'으로 사진 앱에 바로 저장
+        if (canShareImage()) {
+          try {
+            await navigator.share({ files: [shareFile], title: '올리캐쳐', text: `${d.name} 자랑 카드` });
+            Store.bumpMission('share');
+            close();
+            return;
+          } catch (e) {
+            if (e && e.name === 'AbortError') return; // 사용자가 취소 — 조용히
+            /* 그 외 실패 → 아래 다운로드로 폴백 */
+          }
+        }
+        // 데스크톱 등: 직접 다운로드
         const a = document.createElement('a');
         a.href = dataUrl;
         a.download = fileName;
