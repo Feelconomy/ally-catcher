@@ -62,6 +62,7 @@ const Play = {
   left: PLAY_SECONDS,
   timer: null,
   keys: null,
+  coaching: false,     // 튜토리얼(코치마크) 표시 중엔 타이머를 멈춘다
   stickActive: false,
   restCord: CAB.cordMax,
   refilled: false,
@@ -80,6 +81,7 @@ const Play = {
     this.x = START_X;
     this.busy = false; this.over = false; this.dropped = false;
     this.left = PLAY_SECONDS;
+    this.coaching = false;
     this.stickActive = false;
 
     /* The bed carries over between visits: dolls already won are missing, and
@@ -435,7 +437,7 @@ const Play = {
   tick() {
     clearInterval(this.timer);
     this.timer = setInterval(() => {
-      if (this.over || this.dropped) return;
+      if (this.over || this.dropped || this.coaching) return; // 튜토리얼 중엔 시간 정지
       this.left -= 0.1;
       const clock = document.getElementById('clock');
       if (clock) {
@@ -670,6 +672,7 @@ const Play = {
       { t: '집게는 한 번만 내려가요', d: `${PLAY_SECONDS}초 안에 위치를 잡고 내리세요. 잡아도 올리다가 놓칠 수 있어요.` },
     ];
     let i = 0;
+    this.coaching = true;   // 튜토리얼이 뜬 동안 타이머 정지
     const { node, close } = Overlay.open(`<div class="coach">
       <div class="hole coach-lever"></div>
       <div class="bubble" style="left:24px;bottom:calc(180px + var(--safe-b))">
@@ -691,7 +694,7 @@ const Play = {
       $('.dots', node).innerHTML = steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
       $('.next', node).textContent = i === steps.length - 1 ? '시작' : '다음';
     };
-    const done = () => { Store.state.coachDone = true; Store.save(); close(); };
+    const done = () => { this.coaching = false; Store.state.coachDone = true; Store.save(); close(); };
 
     bind(node, {
       skip: done,
