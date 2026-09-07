@@ -30,7 +30,34 @@ const DOLLS = {
       win:     'dolls/bunny-win.png',
     },
   },
+  ...poseDolls([
+    { id: 'tiger',   name: '호랑이모자 올리', grade: 'SR', points: 400, bg: '#FFF3D2', rate: 1.8 },
+    { id: 'hanbok',  name: '한복 원이',      grade: 'R',  points: 120, bg: '#EAF2F7', rate: 2.4 },
+    { id: 'spring',  name: '벚꽃 원이',      grade: 'R',  points: 120, bg: '#FDEDF2', rate: 2.4 },
+    { id: 'snorkel', name: '물놀이 원이',    grade: 'R',  points: 120, bg: '#E6F3FB', rate: 2.6 },
+    { id: 'summer',  name: '수박 원이',      grade: 'R',  points: 120, bg: '#FFF0EC', rate: 2.6 },
+    { id: 'autumn',  name: '단풍 원이',      grade: 'R',  points: 120, bg: '#FBEFE2', rate: 2.4 },
+    { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4 },
+    { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
+    { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
+  ]),
 };
+
+/* 4포즈 세트를 쓰는 인형은 파일명 규칙이 같으므로 art 맵을 만들어 붙인다. */
+function poseDolls(list) {
+  const out = {};
+  for (const d of list) {
+    out[d.id] = Object.assign({}, d, {
+      art: {
+        idle:    `dolls/${d.id}-idle.png`,
+        grabbed: `dolls/${d.id}-grabbed.png`,
+        drop:    `dolls/${d.id}-drop.png`,
+        win:     `dolls/${d.id}-win.png`,
+      },
+    });
+  }
+  return out;
+}
 
 const DOLL_IDS = Object.keys(DOLLS);
 
@@ -45,8 +72,8 @@ const MACHINES = [
     cost: 2, difficulty: '쉬움', baseRate: 38, grip: '강',
     bg: '#FFF3DC', hero: 'bear',
     blurb: '집게 힘이 강해 초보자도 잡기 쉬운 기계예요. 레어 등급 곰돌이가 3마리 들어 있어요.',
-    contents: ['bear', 'duck', 'cat', 'dog', 'penguin', 'rabbit'],
-    pool: ['bear', 'bear', 'bear', 'duck', 'cat', 'dog'],
+    contents: ['bear', 'duck', 'cat', 'dog', 'penguin', 'rabbit', 'tiger', 'hanbok'],
+    pool: ['bear', 'bear', 'bear', 'duck', 'cat', 'dog', 'tiger', 'hanbok'],
     reward: 120,
     open: true,
   },
@@ -58,8 +85,8 @@ const MACHINES = [
     cost: 2, difficulty: '쉬움', baseRate: 44, grip: '보통',
     bg: '#FFF8E3', hero: 'dog',
     blurb: '넓은 배출구 덕분에 실수해도 인형이 잘 떨어져요. 토끼모자 올리도 한 자리 섞여 있어요.',
-    contents: ['bunny', 'dog', 'duck', 'cat', 'bear'],
-    pool: ['dog', 'bunny', 'duck', 'dog', 'cat'],
+    contents: ['bunny', 'dog', 'duck', 'cat', 'bear', 'summer', 'snorkel'],
+    pool: ['dog', 'bunny', 'duck', 'dog', 'cat', 'summer', 'snorkel'],
     reward: 80,
     open: true,
   },
@@ -71,8 +98,8 @@ const MACHINES = [
     cost: 3, difficulty: '어려움', baseRate: 22, grip: '약',
     bg: '#EEF1FF', hero: 'rabbit',
     blurb: '시즌1 한정 SR 인형이 들어 있는 기계예요. 집게 힘이 약해 위치를 정확히 맞춰야 해요.',
-    contents: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear'],
-    pool: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear'],
+    contents: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear', 'spring', 'santa'],
+    pool: ['rabbit', 'bunny', 'olly', 'penguin', 'cat', 'bear', 'spring', 'santa'],
     reward: 400,
     open: false,
     downNote: '오늘 오후 6시에 다시 열려요. 알림을 켜두면 열리는 즉시 알려드릴게요.',
@@ -85,8 +112,8 @@ const MACHINES = [
     cost: 1, difficulty: '보통', baseRate: 34, grip: '보통',
     bg: '#EAF1F7', hero: 'penguin',
     blurb: '이번 주 새로 문을 연 기계예요. 마스코트 말랑 올리가 딱 한 자리 섞여 있어요.',
-    contents: ['olly', 'penguin', 'duck', 'rabbit', 'cat'],
-    pool: ['penguin', 'olly', 'duck', 'penguin', 'cat', 'rabbit'],
+    contents: ['olly', 'penguin', 'duck', 'rabbit', 'cat', 'autumn', 'acorn', 'ski'],
+    pool: ['penguin', 'olly', 'duck', 'penguin', 'cat', 'rabbit', 'autumn', 'acorn', 'ski'],
     reward: 120,
     open: true,
   },

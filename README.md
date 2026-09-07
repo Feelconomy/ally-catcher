@@ -13,8 +13,8 @@
 </p>
 
 왼쪽은 온보딩 첫 화면, 오른쪽은 홈의 데일리 미션 카드에 쓰이는 캐릭터입니다.
-인형은 `dolls/`에 들어 있습니다. 기본 6종은 SVG 한 장이고, 마스코트 **말랑 올리**와
-**토끼모자 올리**는 플레이 순간마다 포즈가 바뀌는 4장짜리입니다.
+인형은 `dolls/`에 들어 있습니다. 기본 6종은 SVG 한 장이고, 마스코트 올리·원이 11종은
+플레이 순간마다 포즈가 바뀌는 4장짜리입니다.
 
 ### 포즈 시트 자르기
 
@@ -40,6 +40,20 @@ python3 tools/split_sheet.py <시트.png> dolls/<인형id>
   <img src="dolls/bunny-grabbed.png" alt="토끼모자 올리 — 집게에 잡혔을 때" width="88">
   <img src="dolls/bunny-drop.png" alt="토끼모자 올리 — 떨어질 때" width="88">
   <img src="dolls/bunny-win.png" alt="토끼모자 올리 — 뽑았을 때" width="88">
+</p>
+
+시즌 인형 9종(`js/data.js`의 `poseDolls()`)도 같은 4포즈 규칙을 씁니다.
+
+<p>
+  <img src="dolls/tiger-win.png" alt="호랑이모자 올리" width="72">
+  <img src="dolls/hanbok-win.png" alt="한복 원이" width="72">
+  <img src="dolls/spring-win.png" alt="벚꽃 원이" width="72">
+  <img src="dolls/snorkel-win.png" alt="물놀이 원이" width="72">
+  <img src="dolls/summer-win.png" alt="수박 원이" width="72">
+  <img src="dolls/autumn-win.png" alt="단풍 원이" width="72">
+  <img src="dolls/acorn-win.png" alt="도토리 원이" width="72">
+  <img src="dolls/ski-win.png" alt="눈싸움 원이" width="72">
+  <img src="dolls/santa-win.png" alt="산타 원이" width="72">
 </p>
 
 <p>
@@ -127,7 +141,7 @@ js/
   play.js           집게 게임 (화면 03)
   screens.js        나머지 전체 화면
   app.js            해시 라우터 + 부팅
-dolls/              인형 아트 — SVG 6종 + 올리 2종 각 4포즈 PNG
+dolls/              인형 아트 — SVG 6종 + 올리·원이 11종 각 4포즈 PNG
 tools/              포즈 시트 분할 스크립트
 assets/             캐릭터 일러스트 — ollie.png (온보딩), wonhee.png (미션 카드)
 ```
