@@ -276,6 +276,7 @@ const Sheets = {
 
       <div style="margin-top:22px" class="group-label">화면 바로가기</div>
       <button class="btn md btn--outline" data-act="onboarding">온보딩 처음부터 보기</button>
+      <button class="btn md btn--outline" style="margin-top:10px" data-act="admin">관리자 페이지</button>
 
       <button class="btn md btn--text" style="margin-top:10px" data-close>닫기</button>`,
       (node, close) => {
@@ -300,6 +301,7 @@ const Sheets = {
             if (['home', 'mission', 'play'].includes(App.route)) Screens[App.route] && Screens[App.route]();
           },
           onboarding: () => { close(); go('onboarding'); },
+          admin: () => { close(); go('admin'); },
         });
       });
   },

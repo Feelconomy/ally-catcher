@@ -28,6 +28,7 @@ const DEFAULT_STATE = {
   notifications: { osGranted: false, missions: false, raffle: false, newMachine: false, marketing: false },
   coachDone: false,
   day: null,
+  admin: { dolls: {}, machines: {} },   // 관리자 페이지에서 덮어쓴 값만 (이스터 에그)
 };
 
 const Store = {
@@ -44,8 +45,30 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {} }, (saved && saved.admin) || {});
+    this.applyAdmin();
     this.rollDay();
     return this.state;
+  },
+
+  /* --- 관리자 덮어쓰기 ----------------------------------------------------
+     카탈로그(DOLLS·MACHINES)는 상수라 편집값을 그 위에 얹는다. 저장하는 건
+     바뀐 필드뿐이라, 되돌리기는 저장분을 비우고 새로고침하면 끝. */
+  applyAdmin() {
+    const a = this.state.admin;
+    for (const id in a.dolls) if (DOLLS[id]) Object.assign(DOLLS[id], a.dolls[id]);
+    for (const id in a.machines) {
+      const m = MACHINES.find(x => x.id === id);
+      if (m) Object.assign(m, a.machines[id]);
+    }
+  },
+
+  /** `kind`는 'dolls' 또는 'machines'. */
+  setAdmin(kind, id, patch) {
+    const bag = this.state.admin[kind];
+    bag[id] = Object.assign(bag[id] || {}, patch);
+    this.applyAdmin();
+    this.save();
   },
 
   save() {

@@ -1241,6 +1241,100 @@ const Screens = {
       },
     });
   },
+
+  /* --- 관리자 (이스터 에그) ----------------------------------------------
+     테스트 도구 → '관리자 페이지'. 인형 이름과 기계 설정을 그 자리에서 고친다.
+     고친 값은 Store.state.admin 에만 쌓이고 카탈로그 위에 덮인다. */
+  admin() {
+    setTheme('');
+    const dirty = Object.keys(Store.state.admin.dolls).length
+                + Object.keys(Store.state.admin.machines).length;
+
+    screenEl().innerHTML = `<div class="screen">
+      ${statusbar()}
+      ${appbar('관리자', { meta: dirty ? `${dirty}건 수정됨` : '' })}
+      <div class="scroll pad">
+        <div class="settings-group">
+          <div class="group-label">인형 이름 · ${DOLL_IDS.length}종</div>
+          <div class="card list">
+            ${DOLL_IDS.map(id => `<div class="row">
+              <span class="lead" style="background:${DOLLS[id].bg}">${dollImg(id, 26)}</span>
+              <input class="adm-in" value="${esc(DOLLS[id].name)}" maxlength="16"
+                     data-kind="dolls" data-id="${id}" data-f="name" aria-label="${esc(id)} 이름">
+              <span class="value">${DOLLS[id].grade}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="group-label">인형뽑기 기계 · ${MACHINES.length}대</div>
+          ${MACHINES.map(m => `<div class="card list" style="margin-bottom:12px">
+            <div class="row">
+              <span class="label" style="flex:0 0 52px">이름</span>
+              <input class="adm-in" value="${esc(m.name)}" maxlength="20"
+                     data-kind="machines" data-id="${m.id}" data-f="name" aria-label="${esc(m.id)} 이름">
+            </div>
+            <div class="row">
+              <span class="label" style="flex:0 0 52px">티켓</span>
+              <input class="adm-in num" type="tel" inputmode="numeric" value="${m.cost}"
+                     data-kind="machines" data-id="${m.id}" data-f="cost" aria-label="티켓 수">
+              <span class="label" style="flex:0 0 52px">확률</span>
+              <input class="adm-in num" type="tel" inputmode="numeric" value="${m.baseRate}"
+                     data-kind="machines" data-id="${m.id}" data-f="baseRate" aria-label="기본 확률">
+              <span class="value">%</span>
+            </div>
+            <div class="row">
+              <span class="label">운영중</span>
+              <button class="toggle" role="switch" aria-checked="${!!m.open}" data-act="open"
+                      data-id="${m.id}" aria-label="운영중"><i></i></button>
+            </div>
+            <button class="row" style="width:100%" data-act="empty" data-id="${m.id}">
+              <span class="label" style="text-align:left">인형통 비우기</span>
+              <span class="value">${Store.state.stock[m.id] ? Store.state.stock[m.id].length + '개 남음' : '아직 없음'}</span>
+            </button>
+          </div>`).join('')}
+        </div>
+
+        <button class="btn md btn--outline" data-act="reset">수정한 값 되돌리기</button>
+        <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
+          이 기기에만 적용돼요. 서버에는 저장되지 않습니다.
+        </div>
+      </div>
+    </div>`;
+
+    // 입력은 한 곳에서 위임 처리 — 필드마다 리스너를 달 이유가 없다.
+    screenEl().addEventListener('change', ev => {
+      const el = ev.target.closest('.adm-in');
+      if (!el) return;
+      const num = el.classList.contains('num');
+      let v = el.value.trim();
+      if (num) v = Math.max(0, Math.min(el.dataset.f === 'cost' ? 99 : 100, parseInt(v, 10) || 0));
+      else if (!v) { el.value = el.defaultValue; return toast('이름은 비울 수 없어요', { tone: 'error' }); }
+      el.value = v;
+      Store.setAdmin(el.dataset.kind, el.dataset.id, { [el.dataset.f]: v });
+      toast('저장했어요', { mini: true, duration: 900 });
+    });
+
+    bind(screenEl(), {
+      back: () => go('home'),
+      open: el => {
+        const m = MACHINES.find(x => x.id === el.dataset.id);
+        Store.setAdmin('machines', m.id, { open: !m.open });
+        el.setAttribute('aria-checked', String(m.open));
+      },
+      empty: el => {
+        delete Store.state.stock[el.dataset.id];
+        Store.save();
+        Screens.admin();
+        toast('다음 입장 때 새로 채워져요', { tone: 'ok' });
+      },
+      reset: () => {
+        Store.state.admin = { dolls: {}, machines: {} };
+        Store.save();
+        location.reload();   // 카탈로그를 원본으로 되돌리려면 다시 읽는 게 제일 싸다
+      },
+    });
+  },
 };
 
 /* ------------------------------------------------------------- fragments */
