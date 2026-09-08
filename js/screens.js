@@ -244,7 +244,7 @@ const Screens = {
               <span class="eyebrow">DAILY MISSION</span>
               <span class="title">${left ? `오늘 미션 ${left}개 남음<br>티켓 ${Store.claimableTickets()}장 더 받기` : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요'}</span>
             </span>
-            <img class="mascot" src="assets/wonhee.png" alt="" width="360" height="540">
+            <img class="mascot" src="assets/pixel/arcade.svg" alt="" width="360" height="540">
           </span>
         </button>
 

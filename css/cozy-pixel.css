@@ -1,0 +1,119 @@
+/* Cozy Pixel Core + Claw. Presentation only; game geometry stays in app.css. */
+:root {
+  --pixel-ink:#62465c; --pixel-pink:#efa9c3; --pixel-mint:#9ddfc5;
+  --pixel-lilac:#c8b4e9; --pixel-sky:#86b8e8; --pixel-butter:#f3d979;
+  --green:#925071; --green-pressed:#773d5d; --green-deep:#743751;
+  --green-lit:#ad6a8c; --green-signal:#9ddfc5;
+  --yellow:#f3d979; --yellow-pressed:#ddb14e; --yellow-soft:#fff0bc; --yellow-ink:#78511f;
+  --canvas:#e9dce7; --canvas-alt:#eadce4; --cream:#fff8e8;
+  --surface:#fffdf5; --surface-sunken:#f5eadf; --surface-muted:#eee3eb;
+  --dark:#334967; --dark-soft:#3f4c72; --ink:#48364a; --ink-2:#624b60; --ink-3:#7c6575;
+  --ink-50:#786674; --ink-45:#786674; --ink-40:#806e7c;
+  --line:#c3a5b6; --line-soft:#e8d3de;
+  --hairline:inset 0 0 0 2px var(--line);
+  --shadow-card:0 3px 0 #d2b9c8; --shadow-raised:0 4px 0 #b89bb1;
+  --shadow-green:0 4px 0 #62465c; --shadow-yellow:0 4px 0 #aa8050;
+  --r-chip:3px; --r-sm:2px; --r-md:3px; --r-lg:4px; --r-xl:4px;
+  --r-2xl:4px; --r-3xl:4px;
+}
+body { background-color:var(--canvas); background-image:linear-gradient(90deg,#fff4 1px,transparent 1px),linear-gradient(#fff4 1px,transparent 1px);background-size:24px 24px; }
+.shell { background-image:radial-gradient(#c8b4e94d 1px,transparent 1px);background-size:12px 12px; }
+button:focus-visible,input:focus-visible { outline:3px solid #516e96;outline-offset:3px; }
+.btn,.chip,.badge,.iconbtn,.wallet,.pillbtn,.pointcard .go { border-radius:3px; }
+.btn { border:2px solid var(--pixel-ink);box-shadow:0 4px 0 var(--pixel-ink),inset 0 2px 0 #ffffff59; }
+.btn:active:not(:disabled) { transform:translateY(2px);box-shadow:0 2px 0 var(--pixel-ink); }
+.btn--text,.btn--danger-text { border:0;box-shadow:none; }
+.btn--outline { background:var(--surface); }
+.iconbtn { width:40px;height:40px;box-shadow:inset 0 0 0 2px var(--line),0 2px 0 var(--line); }
+.chip { min-height:40px;box-shadow:inset 0 0 0 2px var(--line),0 2px 0 #ddc7d5; }
+.chip[aria-pressed="true"] { box-shadow:inset 0 0 0 2px var(--pixel-ink),0 2px 0 var(--pixel-ink); }
+.card,.mcard,.mission,.sheet,.dialog,.pointcard,.ticketcard,.pcard .box,.codex-grid>* { border-radius:4px;box-shadow:inset 0 0 0 2px var(--line),0 4px 0 #cfb4c4; }
+.meter,.meter>i { border-radius:0; }
+.meter { box-shadow:0 0 0 1px var(--line); }
+.field,input[type="text"] { border-radius:3px; }
+.tabbar { border-top:3px solid var(--pixel-ink);background:#fff8e8;padding-top:5px;gap:6px; }
+.tab { margin-bottom:6px;border-radius:2px;color:var(--ink-2);font-size:11px; }
+.tab[aria-current="page"] { background:#f5d4e0;box-shadow:inset 0 -3px 0 var(--green); }
+.appbar-title,.h2,.wordmark,.section-head h3 { font-weight:850;letter-spacing:-.04em; }
+.brandmark,.brandmark.m,.brandmark.l { border-radius:4px;background:var(--pixel-pink);box-shadow:inset 0 0 0 3px var(--pixel-ink),3px 3px 0 var(--pixel-ink); }
+.brandmark>i { border-radius:0;box-shadow:0 0 0 3px var(--pixel-ink); }
+/* 1. Candy welcome: a miniature cabinet around the existing prize. */
+.login { padding-top:28px;background:linear-gradient(#f7dae6 0 36%,transparent 36%); }
+.login .brandmark { width:52px;height:52px; }
+.login .brandmark::after { content:'✦';color:var(--pixel-ink);font-size:27px;position:absolute; }
+.login .brandmark>i { visibility:hidden; }
+.login h2 { margin-top:20px;font-size:28px; }
+.login .mascot { padding:12px;width:150px;height:150px;margin-top:26px;background:#e0f3ee;border:8px solid var(--pixel-pink);outline:3px solid var(--pixel-ink);box-shadow:inset 0 0 0 3px #85b8b0,0 12px 0 #c8b4e9,0 15px 0 var(--pixel-ink);animation:cozy-bob 2.4s steps(2,end) infinite; }
+.login .actions { padding-top:30px; }
+/* 2. Lobby: marquee, machine windows, prize slots. */
+.home-head { padding-bottom:18px; }
+.promo { background:#f3d4e3;border:3px solid var(--pixel-ink);box-shadow:0 4px 0 #bd91ad;overflow:hidden; }
+.promo::before { content:'';position:absolute;inset:5px;pointer-events:none;border:3px dotted #fff8e8; }
+.promo .title { color:var(--ink);font-size:18px; }
+.promo .eyebrow { color:#7e4d67;letter-spacing:.12em;font-size:10px; }
+.promo .shine { display:none; }
+.promo .mascot { filter:none; }
+.section-head h3 { background:var(--pixel-butter);padding:6px 10px;box-shadow:3px 3px 0 #d5ba7a;font-size:15px; }
+.mcard { padding:9px 9px 12px;border:2px solid var(--pixel-ink);box-shadow:0 4px 0 #cbb1c0; }
+.mcard .thumb { border-radius:1px;background:#e0f3ee!important;border:3px solid #c8b4e9;box-shadow:inset 0 -6px 0 #b2d5ce; }
+.mcard:nth-child(2n) .thumb { background:#f8e2cc!important;border-color:#efa9c3; }
+.mcard .thumb::after { content:'';position:absolute;top:0;right:0;width:20px;height:20px;border-top:3px solid #fff;border-right:3px solid #fff;pointer-events:none; }
+.mcard .thumb .badge { border-radius:1px;box-shadow:1px 2px 0 #62465c55; }
+.mcard .name { font-size:13px; }
+.mcard .meta .st { color:#786674; }
+.hero { background:repeating-linear-gradient(90deg,#f8deea 0 24px,#fcebf2 24px 48px);box-shadow:inset 0 -5px 0 #bda2bb; }
+.hero.down { background:var(--canvas-alt); }
+/* 3. Sky machine. Never change the measured chamber, rail, pit or control geometry. */
+.shell:has(.cabinet) { background:#334967; }
+.cabinet { border-radius:3px;background:#b9dbe4;box-shadow:inset 0 0 0 4px #86b8e8,inset 0 0 0 7px #52657b; }
+.cabinet .backwall { background:repeating-linear-gradient(90deg,transparent 0 35px,#ffffff30 35px 38px); }
+.cabinet .state { background:#3f4c72;border-radius:2px; }
+.rail { background:#748da8;border-radius:1px;box-shadow:0 2px 0 #52657b; }
+.bed { background:#92b5c7; }
+.play-foot { background:#52657b; }
+.controls { background:#334967; }
+.stick { border-radius:4px;background:#516986;box-shadow:inset 0 0 0 2px #8eaac6,0 3px 0 #223851; }
+.stick .knob { border-radius:6px;background:var(--pixel-pink);box-shadow:inset 0 3px 0 #fff7,0 4px 0 #704969; }
+.stick .dpad { color:#fff; }
+.timerrow .l,.play-head .mt { color:#e0eaf4; }
+.drop-btn { animation:none; }
+/* 4. Honey reward; quieter Night failure. */
+.shell:has(.result:not(.fail)) { background:#986045; }
+.result:not(.fail) { background:repeating-linear-gradient(90deg,#a46b48 0 32px,#9b6446 32px 64px); }
+.result .blob { border-radius:0;transform:rotate(45deg);opacity:.25; }
+.result h2 { font-size:28px; }
+.result .prize { border-radius:4px;background:#fff8e8;border:4px solid var(--pixel-butter);box-shadow:4px 4px 0 #634654,inset 0 0 0 3px #d8bc87; }
+.result .kicker { padding:6px 16px;border:2px solid currentColor; }
+.result.fail .kicker { color:#dacdec; }
+.result.fail .prize { border:3px solid #a9a2d5; }
+.result .tags span { border-radius:2px; }
+/* 5. Peach collection cabinet, preserving owned/locked/duplicate states. */
+.screen:has(.storage-head),.screen:has(.codex-grid) { background:#fff0e4; }
+.storage-head { border-bottom:2px dashed #dabaa9;margin-bottom:12px; }
+.pcard .box,.codex-grid>.unlocked { background:#fff9ed;box-shadow:inset 0 0 0 2px #c9a789,inset 0 -8px 0 #ead0ad,0 3px 0 #b58a77; }
+.pcard .box .badge,.pcard .box .dupe { border-radius:1px; }
+.codex-grid>.locked { border:2px dashed #cfb5a6;border-radius:3px; }
+.empty .art { border-radius:3px;background:#f5e2ca;box-shadow:0 5px 0 #c5a27a; }
+/* 6. Mission board and attendance stamps. */
+.ticketcard { background:#f3d979;color:var(--ink);box-shadow:inset 0 0 0 3px #bd9054,0 4px 0 #d4bb8c; }
+.ticketcard .top .tk,.ticketcard.done .eyebrow { color:#78511f; }
+.ticketcard .meter { background:#dbc48b; }
+.ticketcard .meter>i { background:#925071; }
+.mission { margin-bottom:4px; }
+.mission .ic,.mission .tick { border-radius:2px;box-shadow:inset 0 0 0 2px #62465c44; }
+.mission .act { min-height:40px;border-radius:3px; }
+.mission .m .pg { color:#786674; }
+/* 7. Collector profile and restrained utility screens. */
+.profile { background:#f0e5f7;border-bottom:3px solid #c6acd8;padding-top:16px;padding-bottom:16px;margin-bottom:16px; }
+.profile .av { border-radius:3px;background:#fff8e8;box-shadow:inset 0 0 0 2px #ad8cb4,3px 3px 0 #c6acd8; }
+.level-card .lv,.row .lead { border-radius:3px; }
+.sheet,.dialog { border:2px solid var(--pixel-ink); }
+.toast { border-radius:3px;box-shadow:3px 3px 0 #634654; }
+@keyframes cozy-bob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-4px); } }
+@media(min-width:480px) { body { background-color:var(--canvas);background-image:linear-gradient(90deg,#fff4 1px,transparent 1px),linear-gradient(#fff4 1px,transparent 1px); }.shell { border-radius:8px;box-shadow:0 0 0 3px #62465c,8px 8px 0 #c4a7be; } }
+@media(prefers-reduced-motion:reduce) { .login .mascot { animation:none; } }
+/* Native pixel scene: shared arcade signage, crisp at source-grid multiples. */
+.promo .mascot { width:128px;height:160px;margin:-12px -10px -12px 0;image-rendering:pixelated; }
+.btn.sm,.btn.md,.btn.lg { border-radius:3px; }
+.chute { border-radius:3px;box-shadow:inset 0 0 0 2px #f3d979; }
+.odds { border-radius:3px; }
