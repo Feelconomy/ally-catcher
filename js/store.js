@@ -28,7 +28,9 @@ const DEFAULT_STATE = {
   notifications: { osGranted: false, missions: false, raffle: false, newMachine: false, marketing: false },
   coachDone: false,
   day: null,
-  admin: { dolls: {}, machines: {} },   // 관리자 페이지에서 덮어쓴 값만 (이스터 에그)
+  // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
+  // custom 은 관리자가 직접 추가한 인형(포즈 이미지는 data URL).
+  admin: { dolls: {}, machines: {}, custom: {} },
 };
 
 const Store = {
@@ -45,7 +47,7 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
-    this.state.admin = Object.assign({ dolls: {}, machines: {} }, (saved && saved.admin) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {} }, (saved && saved.admin) || {});
     this.applyAdmin();
     this.rollDay();
     return this.state;
@@ -56,11 +58,15 @@ const Store = {
      바뀐 필드뿐이라, 되돌리기는 저장분을 비우고 새로고침하면 끝. */
   applyAdmin() {
     const a = this.state.admin;
+    for (const id in a.custom) DOLLS[id] = Object.assign({ id }, a.custom[id]);
     for (const id in a.dolls) if (DOLLS[id]) Object.assign(DOLLS[id], a.dolls[id]);
     for (const id in a.machines) {
       const m = MACHINES.find(x => x.id === id);
       if (m) Object.assign(m, a.machines[id]);
     }
+    // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
+    DOLL_IDS.length = 0;
+    DOLL_IDS.push.apply(DOLL_IDS, Object.keys(DOLLS));
   },
 
   /** `kind`는 'dolls' 또는 'machines'. */
@@ -68,13 +74,47 @@ const Store = {
     const bag = this.state.admin[kind];
     bag[id] = Object.assign(bag[id] || {}, patch);
     this.applyAdmin();
+    return this.save();
+  },
+
+  /** 관리자가 추가한 인형. 실패하면 false (보통 localStorage 용량 초과). */
+  addCustomDoll(doll) {
+    const before = this.state.admin.custom[doll.id];
+    this.state.admin.custom[doll.id] = doll;
+    if (this.save()) { this.applyAdmin(); return true; }
+    if (before) this.state.admin.custom[doll.id] = before;
+    else delete this.state.admin.custom[doll.id];
+    return false;
+  },
+
+  /** 추가한 인형 삭제 — 기계 구성과 이미 뽑은 목록에서도 빼준다. */
+  removeCustomDoll(id) {
+    delete this.state.admin.custom[id];
+    delete this.state.admin.dolls[id];
+    delete DOLLS[id];
+    for (const m of MACHINES) {
+      const keep = x => x !== id;
+      const pool = m.pool.filter(keep);
+      this.setAdmin('machines', m.id, {
+        pool, contents: m.contents.filter(keep),
+        hero: m.hero === id ? (pool[0] || Object.keys(DOLLS)[0]) : m.hero,
+      });
+    }
+    this.state.prizes = this.state.prizes.filter(p => p.dollId !== id);
+    for (const k in this.state.stock) {
+      this.state.stock[k] = this.state.stock[k].filter(x => x !== id);
+    }
+    this.applyAdmin();
     this.save();
   },
 
+  /** 저장 성공 여부를 돌려준다 — 시크릿 모드나 용량 초과면 false. */
   save() {
-    try { localStorage.setItem(STORE_KEY, JSON.stringify(this.state)); } catch (_) { /* private mode */ }
+    let ok = true;
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(this.state)); } catch (_) { ok = false; }
     // 서버 저장(티켓·포인트). hydrate 중에는 되쓰기 방지를 위해 스킵.
     if (window.Sync && Sync.enabled && !Sync.suspended) Sync.savePlayer();
+    return ok;
   },
 
   reset() {
@@ -234,6 +274,7 @@ const Store = {
   refillMachine(machine, slots) {
     const n = Math.max(1, slots || 9);
     const filled = [];
+    if (!machine.pool.length) { this.state.stock[machine.id] = filled; return filled; }
     for (let i = 0; i < n; i++) filled.push(machine.pool[i % machine.pool.length]);
     shuffle(filled);
     this.state.stock[machine.id] = filled;

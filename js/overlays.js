@@ -331,7 +331,216 @@ const Sheets = {
         });
       });
   },
+
+  /* --- 관리자: 인형 편집 / 추가 ------------------------------------------
+     `id`가 없으면 새 인형. 새 인형은 2×2 포즈 시트를 그 자리에서 잘라
+     data URL로 넣는다 (tools/split_sheet.py 와 같은 방식). */
+  adminDoll(id) {
+    const d = id ? DOLLS[id] : null;
+    const custom = id ? !!Store.state.admin.custom[id] : true;
+    let art = d ? DOLL_STATES.reduce((o, s) => (o[s] = dollArt(id, s), o), {}) : null;
+
+    sheet(`
+      <h3>${d ? '인형 정보' : '인형 추가'}</h3>
+
+      <div class="adm-poses" id="poses">
+        ${d ? DOLL_STATES.map((s, i) => `<div class="p">
+             ${dollImg(id, 54, '', s)}<span>${POSE_LABELS[i]}</span></div>`).join('')
+           : POSE_LABELS.map(l => `<div class="p empty"><span>${l}</span></div>`).join('')}
+      </div>
+
+      ${custom ? `<label class="btn md btn--outline" style="margin-top:12px;cursor:pointer">
+        2×2 포즈 시트 고르기
+        <input type="file" accept="image/*" id="sheetFile" hidden>
+      </label>` : `<div class="adm-note">기본 인형의 그림은 파일로 들어 있어 바꿀 수 없어요.</div>`}
+
+      <label class="field" style="margin-top:16px">
+        <span class="lbl">이름</span>
+        <span class="box"><input id="dn" type="text" maxlength="16" value="${esc(d ? d.name : '')}" placeholder="인형 이름"></span>
+      </label>
+
+      <div style="display:flex;gap:8px;margin-top:14px">
+        ${['N', 'R', 'SR'].map(g => `<button class="chip" style="flex:1" data-act="grade" data-g="${g}"
+            aria-pressed="${(d ? d.grade : 'R') === g}">${g} · ${fmt(GRADE_POINTS[g])}P</button>`).join('')}
+      </div>
+
+      <button class="btn btn--primary" style="margin-top:18px" data-act="save">${d ? '저장' : '추가하기'}</button>
+      ${d && custom ? `<button class="btn md btn--text" style="margin-top:6px;color:var(--danger)" data-act="del">이 인형 삭제</button>` : ''}`,
+      (node, close) => {
+        let grade = d ? d.grade : 'R';
+        const paintGrade = () => $$('[data-act="grade"]', node)
+          .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === grade)));
+
+        const file = $('#sheetFile', node);
+        if (file) file.addEventListener('change', () => {
+          const f = file.files && file.files[0];
+          if (!f) return;
+          toast('시트를 자르는 중…', { mini: true });
+          splitSheetFile(f).then(poses => {
+            art = poses;
+            $('#poses', node).innerHTML = DOLL_STATES.map((s, i) => `<div class="p">
+              <img src="${poses[s]}" alt="" width="54" height="54" style="object-fit:contain">
+              <span>${POSE_LABELS[i]}</span></div>`).join('');
+          }).catch(e => toast(e.message, { tone: 'error' }));
+        });
+
+        bind(node, {
+          grade: el => { grade = el.dataset.g; paintGrade(); },
+          del: () => {
+            Store.removeCustomDoll(id);
+            close(); Screens.admin(); toast('삭제했어요', { mini: true });
+          },
+          save: () => {
+            const name = $('#dn', node).value.trim();
+            if (name.length < 1) return toast('이름을 입력해 주세요', { tone: 'error' });
+            if (!art) return toast('포즈 시트를 먼저 고르세요', { tone: 'error' });
+
+            if (d && !custom) {                      // 기본 인형은 필드만 덮어쓰기
+              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade] });
+            } else {
+              const newId = id || 'c' + Date.now().toString(36);
+              const ok = Store.addCustomDoll({
+                id: newId, name, grade, points: GRADE_POINTS[grade],
+                bg: GRADE_BG[grade], rate: d ? d.rate : 2.4, art,
+              });
+              if (!ok) return toast('저장 공간이 부족해요. 인형을 몇 개 지워보세요', { tone: 'error' });
+            }
+            close(); Screens.admin(); toast('저장했어요', { tone: 'ok' });
+          },
+        });
+      });
+  },
+
+  /* --- 관리자: 기계 편집 -------------------------------------------------- */
+  adminMachine(mid) {
+    const m = MACHINES.find(x => x.id === mid);
+    const picked = new Set(m.pool);
+
+    sheet(`
+      <h3>기계 설정</h3>
+      <label class="field" style="margin-top:16px">
+        <span class="lbl">이름</span>
+        <span class="box"><input id="mn" type="text" maxlength="20" value="${esc(m.name)}"></span>
+      </label>
+
+      <div class="entry-calc" style="margin-top:14px">
+        <div class="ln"><span class="l">티켓</span>
+          <input class="adm-in num" id="mc" type="tel" inputmode="numeric" value="${m.cost}" aria-label="티켓 수"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">기본 확률 (%)</span>
+          <input class="adm-in num" id="mr" type="tel" inputmode="numeric" value="${m.baseRate}" aria-label="기본 확률"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">운영중</span>
+          <button class="toggle" role="switch" aria-checked="${!!m.open}" data-act="open" aria-label="운영중"><i></i></button></div>
+      </div>
+
+      <div class="group-label" style="margin:18px 0 8px">넣을 인형 <span id="pn">${picked.size}</span>종</div>
+      <div class="adm-pick" id="pick">
+        ${DOLL_IDS.map(id => `<button class="pk" data-act="pick" data-id="${id}" aria-pressed="${picked.has(id)}">
+          <span class="th" style="background:${DOLLS[id].bg}">${dollImg(id, 38)}</span>
+          <span class="nm">${esc(DOLLS[id].name)}</span>
+        </button>`).join('')}
+      </div>
+
+      <button class="btn btn--primary" style="margin-top:18px" data-act="save">저장</button>
+      <button class="btn md btn--text" style="margin-top:4px" data-act="empty">인형통 비우고 새로 채우기</button>`,
+      (node, close) => {
+        let open = !!m.open;
+        const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
+
+        bind(node, {
+          open: el => { open = !open; el.setAttribute('aria-checked', String(open)); },
+          pick: el => {
+            const id = el.dataset.id;
+            if (picked.has(id)) picked.delete(id); else picked.add(id);
+            el.setAttribute('aria-pressed', String(picked.has(id)));
+            $('#pn', node).textContent = picked.size;
+          },
+          empty: () => {
+            delete Store.state.stock[mid]; Store.save();
+            close(); Screens.admin(); toast('다음 입장 때 새로 채워져요', { tone: 'ok' });
+          },
+          save: () => {
+            const name = $('#mn', node).value.trim();
+            if (!name) return toast('이름을 입력해 주세요', { tone: 'error' });
+            if (!picked.size) return toast('인형을 한 종류 이상 고르세요', { tone: 'error' });
+            const pool = Array.from(picked);
+            Store.setAdmin('machines', mid, {
+              name, open,
+              cost: num($('#mc', node), 99),
+              baseRate: num($('#mr', node), 100),
+              pool, contents: pool,
+              hero: pool.includes(m.hero) ? m.hero : pool[0],
+            });
+            delete Store.state.stock[mid];   // 구성이 바뀌었으니 인형통도 다시 채운다
+            Store.save();
+            close(); Screens.admin(); toast('저장했어요', { tone: 'ok' });
+          },
+        });
+      });
+  },
 };
+
+const POSE_LABELS = ['기본', '집게에 잡힘', '떨어짐', '뽑음'];
+const GRADE_POINTS = { N: 60, R: 120, SR: 400 };
+const GRADE_BG = { N: '#F0F3F6', R: '#FFF3DC', SR: '#EAF7DE' };
+
+/* 2×2 포즈 시트를 브라우저에서 잘라 네 장의 data URL로. 격자선은 알파 채널의
+   가운데 1/3 구간에서 가장 넓은 빈 띠로 잡고, 각 칸은 그림 경계에 맞춰 다듬는다
+   — tools/split_sheet.py 와 같은 방식이다. */
+function splitSheetFile(file, max = 220) {
+  const url = URL.createObjectURL(file);
+  return loadImage(url).then(img => {
+    URL.revokeObjectURL(url);
+    const w = img.naturalWidth, h = img.naturalHeight;
+    const src = document.createElement('canvas');
+    src.width = w; src.height = h;
+    src.getContext('2d').drawImage(img, 0, 0);
+    const px = src.getContext('2d').getImageData(0, 0, w, h).data;
+
+    const col = new Int32Array(w), row = new Int32Array(h);
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (px[(y * w + x) * 4 + 3] > 8) { col[x]++; row[y]++; }
+      }
+    }
+    if (!row.some(Boolean)) throw new Error('배경이 투명한 PNG 시트여야 해요');
+
+    // 가장 넓은 빈 구간의 한가운데를 분할선으로.
+    const line = (p, lo, hi) => {
+      let best = 0, end = -1, run = 0;
+      for (let i = lo; i < hi; i++) {
+        if (!p[i]) { run++; if (run > best) { best = run; end = i; } } else run = 0;
+      }
+      return end < 0 ? (lo + hi) >> 1 : end - (best >> 1);
+    };
+    const gx = line(col, (w / 3) | 0, (w * 2 / 3) | 0);
+    const gy = line(row, (h / 3) | 0, (h * 2 / 3) | 0);
+    const cells = [[0, gx, 0, gy], [gx, w, 0, gy], [0, gx, gy, h], [gx, w, gy, h]];
+
+    const webp = document.createElement('canvas').toDataURL('image/webp').startsWith('data:image/webp');
+    const out = {};
+    cells.forEach(([x0, x1, y0, y1], i) => {
+      let minx = x1, maxx = x0, miny = y1, maxy = y0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          if (px[(y * w + x) * 4 + 3] > 8) {
+            if (x < minx) minx = x; if (x > maxx) maxx = x;
+            if (y < miny) miny = y; if (y > maxy) maxy = y;
+          }
+        }
+      }
+      if (maxx < minx) throw new Error(`${POSE_LABELS[i]} 칸이 비어 있어요`);
+      const cw = maxx - minx + 1, ch = maxy - miny + 1;
+      const k = Math.min(1, max / Math.max(cw, ch));
+      const c = document.createElement('canvas');
+      c.width = Math.round(cw * k); c.height = Math.round(ch * k);
+      c.getContext('2d').drawImage(src, minx, miny, cw, ch, 0, 0, c.width, c.height);
+      out[DOLL_STATES[i]] = c.toDataURL(webp ? 'image/webp' : 'image/png', 0.85);
+    });
+    return out;
+  });
+}
 
 /* ---------------------------------------------------------- 자랑 카드 ----
    Draws a share card on a canvas so it can be shown and saved as a real

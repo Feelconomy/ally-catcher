@@ -184,6 +184,7 @@ const Play = {
     </div>`;
 
     this.layout();
+    this.warm();
     this.paintPit();
     this.paintClaw();
     this.paintOdds();
@@ -370,6 +371,22 @@ const Play = {
     if (!knob || !stick) return;
     const max = stick.getBoundingClientRect().width / 2 - 26;
     knob.style.transform = `translateX(${(this.x - 0.5) * 2 * max}px)`;
+  },
+
+  /* 잡힌·떨어진·뽑힌 포즈는 그 순간에 처음 요청되는데, 폰에서는 내려받고
+     디코딩하는 사이 이미지가 한 프레임 비어 보인다. 판이 시작될 때 이 기계에
+     들어 있는 인형의 네 포즈를 미리 받아 디코딩해두고, 참조를 들고 있어
+     디코딩 결과가 버려지지 않게 한다. */
+  warm() {
+    this.warmed = [];
+    for (const id of new Set(this.dolls.map(d => d.dollId))) {
+      for (const state of DOLL_STATES) {
+        const im = new Image();
+        im.src = dollArt(id, state);
+        if (im.decode) im.decode().catch(() => {});
+        this.warmed.push(im);
+      }
+    }
   },
 
   paintPit() {

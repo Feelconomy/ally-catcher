@@ -5,6 +5,7 @@ const App = {
   route: null,
   arg: null,
   homeFilter: '전체',
+  adminTab: 'dolls',
   storageFilter: 'all',
   entryFilter: 'all',
   searchTerm: '',

@@ -405,6 +405,87 @@ a:hover { color: var(--green-deep); }
 .adm-in:focus { box-shadow: inset 0 0 0 1.5px var(--green); }
 .adm-in.num { flex: 0 0 56px; text-align: center; }
 
+/* 관리자 — 인형 카드 (도감처럼) */
+.adm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-card {
+  background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-card);
+  padding: 10px; display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center;
+}
+.adm-card:active { transform: scale(.97); }
+.adm-card .hero {
+  width: 100%; height: 78px; border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.adm-card .nm { font-size: 13px; font-weight: 700; }
+.adm-card .nm .tag {
+  margin-left: 4px; padding: 1px 5px; border-radius: 5px; font-size: 10px;
+  background: var(--green); color: #fff; vertical-align: 2px;
+}
+.adm-card .mt { font-size: 11px; font-weight: 600; color: var(--ink-45); }
+.adm-card .poses {
+  margin-top: 4px; width: 100%; display: flex; justify-content: center; gap: 2px;
+  padding-top: 7px; box-shadow: inset 0 1px 0 var(--line-soft);
+}
+.adm-card .poses img { width: 26px; height: 26px; }
+.adm-card .poses.one { height: 26px; align-items: center; font-size: 10px; font-weight: 700; color: var(--ink-30); }
+.adm-card.add { justify-content: center; box-shadow: inset 0 0 0 1.5px var(--line-soft); background: none; }
+.adm-card.add .plus {
+  width: 46px; height: 46px; border-radius: 50%; background: var(--surface-sunken);
+  color: var(--green); display: flex; align-items: center; justify-content: center;
+}
+
+/* 관리자 — 기계 카드 */
+.adm-machines { display: flex; flex-direction: column; gap: 10px; }
+.adm-mcard {
+  background: var(--surface); border-radius: 18px; box-shadow: var(--shadow-card);
+  padding: 12px; display: block; width: 100%; text-align: left;
+}
+.adm-mcard:active { transform: scale(.99); }
+.adm-mcard.down { opacity: .62; }
+.adm-mcard .top { display: flex; align-items: center; gap: 11px; }
+.adm-mcard .hero {
+  width: 56px; height: 56px; border-radius: 14px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.adm-mcard .txt { flex: 1; min-width: 0; }
+.adm-mcard .nm { display: block; font-size: 14px; font-weight: 700; }
+.adm-mcard .mt { display: block; margin-top: 2px; font-size: 11px; font-weight: 600; color: var(--ink-45); }
+.adm-mcard .chev { color: var(--ink-25); display: flex; }
+.adm-mcard .pool {
+  margin-top: 10px; padding-top: 10px; display: flex; flex-wrap: wrap; gap: 5px;
+  box-shadow: inset 0 1px 0 var(--line-soft);
+}
+.adm-mcard .pool .p {
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+}
+.adm-mcard .pool .more { align-self: center; font-size: 11px; font-weight: 700; color: var(--ink-40); }
+
+/* 관리자 — 포즈 미리보기 · 인형 고르기 */
+.adm-poses { margin-top: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.adm-poses .p {
+  border-radius: 12px; background: var(--surface-sunken); padding: 8px 2px;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+}
+.adm-poses .p.empty { min-height: 78px; justify-content: flex-end; }
+.adm-poses .p span { font-size: 10px; font-weight: 700; color: var(--ink-45); }
+.adm-note { margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--ink-45); }
+
+/* 시트 자체가 스크롤하므로 여기에 또 스크롤을 두지 않는다 (중첩 스크롤 방지). */
+.adm-pick { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+.adm-pick .pk { display: flex; flex-direction: column; align-items: center; gap: 3px; opacity: .4; }
+.adm-pick .pk[aria-pressed="true"] { opacity: 1; }
+.adm-pick .pk .th {
+  width: 100%; aspect-ratio: 1; border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: inset 0 0 0 2px transparent;
+}
+.adm-pick .pk[aria-pressed="true"] .th { box-shadow: inset 0 0 0 2px var(--green); }
+.adm-pick .pk .nm {
+  font-size: 9px; font-weight: 700; color: var(--ink-45);
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
 .promo {
   position: relative; border-radius: var(--r-2xl); overflow: hidden;
   background: linear-gradient(120deg, var(--green), var(--green-lit));
