@@ -112,6 +112,7 @@ const Sync = (function () {
         Store.state.prizes = (prizes || []).map((r) => ({
           dollId: r.doll_id, at: Date.parse(r.won_at) || Date.now(),
         }));
+        Store.prune();           // 서버에 없는 인형(관리자가 지운 것)이 섞여 오면 턴다
         Store.save();            // 로컬에도 반영(서버 push는 suspended로 스킵)
         suspended = false;
         return 'existing';

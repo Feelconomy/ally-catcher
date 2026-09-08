@@ -67,6 +67,19 @@ const Store = {
     // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
     DOLL_IDS.length = 0;
     DOLL_IDS.push.apply(DOLL_IDS, Object.keys(DOLLS));
+    this.prune();
+  },
+
+  /* 카탈로그에 없는 인형이 보관함이나 인형통에 남아 있으면 그걸 그리는 화면이
+     통째로 죽는다 (관리자가 인형을 지웠거나 되돌린 뒤). 카탈로그를 세울 때마다
+     한 번에 턴다 — 화면 30곳에서 DOLLS[id] 를 방어하는 것보다 여기가 싸다. */
+  prune() {
+    const known = id => !!DOLLS[id];
+    this.state.prizes = this.state.prizes.filter(p => known(p.dollId));
+    for (const k in this.state.stock) {
+      const s = this.state.stock[k];
+      if (Array.isArray(s)) this.state.stock[k] = s.filter(known);
+    }
   },
 
   /** `kind`는 'dolls' 또는 'machines'. */
