@@ -82,19 +82,32 @@ const Store = {
     }
   },
 
+  /* 관리자가 고친 카탈로그는 이 기기만의 것이 아니라 서비스 전체가 공유한다.
+     로컬에 먼저 쓰고(오프라인에서도 바로 보이게) 서버로 밀어 올린다. */
+  pushAdmin() {
+    const ok = this.save();
+    if (!(window.Sync && Sync.enabled)) return Promise.resolve(ok);
+    return Sync.saveCatalog().then(sent => {
+      // 서버에 못 올렸으면 조용히 넘기지 않는다 — 다른 기기에는 안 보이니까.
+      if (!sent) toast('서버 저장 실패 — 이 기기에만 반영됐어요', { tone: 'error' });
+      return ok && sent;
+    });
+  },
+
   /** `kind`는 'dolls' 또는 'machines'. */
   setAdmin(kind, id, patch) {
     const bag = this.state.admin[kind];
     bag[id] = Object.assign(bag[id] || {}, patch);
     this.applyAdmin();
-    return this.save();
+    this.pushAdmin();
+    return true;
   },
 
   /** 관리자가 추가한 인형. 실패하면 false (보통 localStorage 용량 초과). */
   addCustomDoll(doll) {
     const before = this.state.admin.custom[doll.id];
     this.state.admin.custom[doll.id] = doll;
-    if (this.save()) { this.applyAdmin(); return true; }
+    if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
     if (before) this.state.admin.custom[doll.id] = before;
     else delete this.state.admin.custom[doll.id];
     return false;
@@ -105,20 +118,18 @@ const Store = {
     delete this.state.admin.custom[id];
     delete this.state.admin.dolls[id];
     delete DOLLS[id];
+    // 덮어쓰기 묶음을 직접 손봐서 서버에는 한 번만 올린다.
     for (const m of MACHINES) {
       const keep = x => x !== id;
       const pool = m.pool.filter(keep);
-      this.setAdmin('machines', m.id, {
+      const bag = this.state.admin.machines;
+      bag[m.id] = Object.assign(bag[m.id] || {}, {
         pool, contents: m.contents.filter(keep),
         hero: m.hero === id ? (pool[0] || Object.keys(DOLLS)[0]) : m.hero,
       });
     }
-    this.state.prizes = this.state.prizes.filter(p => p.dollId !== id);
-    for (const k in this.state.stock) {
-      this.state.stock[k] = this.state.stock[k].filter(x => x !== id);
-    }
-    this.applyAdmin();
-    this.save();
+    this.applyAdmin();          // 여기서 보관함·인형통의 남은 id 도 정리된다
+    this.pushAdmin();
   },
 
   /** 저장 성공 여부를 돌려준다 — 시크릿 모드나 용량 초과면 false. */

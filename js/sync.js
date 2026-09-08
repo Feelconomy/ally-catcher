@@ -135,6 +135,35 @@ const Sync = (function () {
       });
   }
 
+  // ── 관리자 카탈로그 (인형 · 기계) ───────────────────────────────────
+  // 플레이어별이 아니라 서비스 전체가 공유하는 한 줄. 편집이 드물어 통째로
+  // 주고받고, 마지막에 저장한 쪽이 이긴다. 테이블은 supabase/catalog.sql 참고.
+  const CATALOG_ID = 'admin';
+
+  function loadCatalog() {
+    if (!enabled) return Promise.resolve(false);
+    return req('GET', 'catalog?id=eq.' + CATALOG_ID + '&select=data')
+      .then((rows) => {
+        if (!rows || !rows.length || !rows[0].data) return false;
+        Store.state.admin = Object.assign(
+          { dolls: {}, machines: {}, custom: {} }, rows[0].data);
+        Store.applyAdmin();          // 카탈로그를 덮어쓰고 없는 인형은 정리
+        suspended = true; Store.save(); suspended = false;
+        return true;
+      })
+      .catch((e) => { console.warn('카탈로그 불러오기 실패:', e.message); return false; });
+  }
+
+  /** 성공 여부를 돌려준다 — 테이블이 없으면(catalog.sql 미실행) false. */
+  function saveCatalog() {
+    if (!enabled) return Promise.resolve(false);
+    return req('POST', 'catalog',
+      { id: CATALOG_ID, data: Store.state.admin, updated_at: new Date().toISOString() },
+      { Prefer: 'resolution=merge-duplicates' })
+      .then(() => true)
+      .catch((e) => { console.warn('카탈로그 저장 실패:', e.message); return false; });
+  }
+
   // ── 부팅/로그인 시 서버에서 불러오기 ────────────────────────────────
   function hydrate() {
     if (!enabled) return Promise.resolve('disabled');
@@ -197,6 +226,7 @@ const Sync = (function () {
     enabled,
     get suspended() { return suspended; },
     hydrate, savePlayer, recordPrize, reconcilePrizes, flush, wipe,
+    loadCatalog, saveCatalog,
   };
 })();
 
@@ -210,10 +240,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!Sync.enabled) return;
   // 로그인 상태를 알아야 계정 기준으로 불러오므로 auth 준비를 기다린다.
   const ready = window.__authReady || Promise.resolve();
-  ready.then(() => Sync.hydrate()).then((res) => {
-    if (res !== 'existing') return;
+  ready.then(() => Promise.all([Sync.loadCatalog(), Sync.hydrate()])).then(([cat, res]) => {
+    if (!cat && res !== 'existing') return;
+    // 카탈로그가 바뀌었으면 인형 이름·기계 구성이 달라졌을 수 있어 어느 화면이든
+    // 다시 그린다. 진행 중인 판만은 건드리지 않는다.
     const refreshable = ['home', 'storage', 'mine', 'codex', 'exchange', 'mission'];
-    if (typeof render === 'function' && refreshable.includes(App.route)) {
+    if (typeof render === 'function' && App.route !== 'play' &&
+        (cat || refreshable.includes(App.route))) {
       render(App.route, App.arg);
     }
   }).catch((e) => console.warn('sync hydrate 실패:', e.message));

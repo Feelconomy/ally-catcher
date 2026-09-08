@@ -1264,7 +1264,9 @@ const Screens = {
         ${tab === 'dolls' ? adminDollGrid() : adminMachineList()}
         <button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>
         <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
-          이 기기에만 적용돼요. 서버에는 저장되지 않습니다.
+          ${window.Sync && Sync.enabled
+            ? '서버에 저장돼 모든 기기에 함께 반영돼요.'
+            : '서버가 연결되지 않아 이 기기에만 적용돼요.'}
         </div>
       </div>
     </div>`;
@@ -1277,8 +1279,8 @@ const Screens = {
       machine: el => Sheets.adminMachine(el.dataset.id),
       reset: () => {
         Store.state.admin = { dolls: {}, machines: {}, custom: {} };
-        Store.save();
-        location.reload();   // 카탈로그를 원본으로 되돌리려면 다시 읽는 게 제일 싸다
+        // 서버까지 비운 다음에 새로고침해야 되돌린 게 다시 딸려오지 않는다.
+        Store.pushAdmin().then(() => location.reload());
       },
     });
   },
