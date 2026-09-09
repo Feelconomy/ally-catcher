@@ -145,6 +145,7 @@ const Play = {
 
   stop() {
     clearInterval(this.timer); this.timer = null;
+    clearTimeout(this.flickTimer);
     if (this.keys) { window.removeEventListener('keydown', this.keys); this.keys = null; }
     if (this.onResize) {
       window.removeEventListener('resize', this.onResize);
@@ -324,10 +325,18 @@ const Play = {
         ev.preventDefault();
         if (!this.canMove()) return;
         btn.dataset.active = '1';
+        // 누르고 있는 동안은 손가락이 각도를 쥔 것으로 친다 —
+        // 안 그러면 nudge → paintKnob 이 매번 각도를 0 으로 되돌린다.
+        this.stickActive = true;
+        this.tilt(btn.dataset.dir === 'left' ? -1 : 1);
         this.nudge(btn.dataset.dir);
         hold = setInterval(() => this.nudge(btn.dataset.dir), 60);
       };
-      const end = () => { clearInterval(hold); hold = null; delete btn.dataset.active; };
+      const end = () => {
+        clearInterval(hold); hold = null; delete btn.dataset.active;
+        this.stickActive = false;
+        this.tilt(0);
+      };
       btn.addEventListener('pointerdown', begin);
       ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => btn.addEventListener(e, end));
     });
@@ -336,8 +345,8 @@ const Play = {
 
     this.keys = ev => {
       if (!this.canMove()) return;
-      if (ev.key === 'ArrowLeft')  { ev.preventDefault(); this.nudge('left'); }
-      if (ev.key === 'ArrowRight') { ev.preventDefault(); this.nudge('right'); }
+      if (ev.key === 'ArrowLeft')  { ev.preventDefault(); this.nudge('left'); this.flick('left'); }
+      if (ev.key === 'ArrowRight') { ev.preventDefault(); this.nudge('right'); this.flick('right'); }
       if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); this.drop(); }
     };
     window.addEventListener('keydown', this.keys);
@@ -442,10 +451,17 @@ const Play = {
     if (knob) knob.style.transform = `rotate(${(v * STICK_TILT).toFixed(1)}deg)`;
   },
 
+  /** 실제 스틱처럼, 미는 동안만 기울고 손을 떼면 가운데로 돌아온다. */
   paintKnob() {
-    // While the lever is held, the stick follows the finger, not the claw.
-    if (this.stickActive) return;
-    this.tilt((this.x - 0.5) * 2);
+    if (this.stickActive) return;   // 미는 중엔 손가락이 각도를 쥐고 있다
+    this.tilt(0);
+  },
+
+  /** 화살표 버튼·키보드로 움직일 때도 그쪽으로 잠깐 기울여 준다. */
+  flick(dir) {
+    clearTimeout(this.flickTimer);
+    this.tilt(dir === 'left' ? -1 : 1);
+    this.flickTimer = setTimeout(() => { if (!this.stickActive) this.tilt(0); }, 150);
   },
 
   /* 잡힌·떨어진·뽑힌 포즈는 그 순간에 처음 요청되는데, 폰에서는 내려받고
