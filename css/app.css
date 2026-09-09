@@ -777,29 +777,44 @@ a:hover { color: var(--green-deep); }
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8);
   display: flex; flex-direction: column; align-items: center; gap: 5px;
 }
-/* 단일 축 레버: 집게는 좌우로만 움직인다. */
+/* 단일 축 레버 — 아케이드 스틱처럼 원판에서 봉이 솟고, 밀면 밑동을 축으로
+   기울어진다. 집게는 좌우로만 움직이므로 기울기도 좌우뿐이다. */
 .lever .stick {
-  width: 82px; height: 52px; border-radius: 26px; position: relative; flex-shrink: 0;
-  background: var(--candy-blue);
-  box-shadow: inset 0 2px 4px rgba(122, 60, 87, .2);
-  display: flex; align-items: center; justify-content: center;
+  width: 82px; height: 74px; position: relative; flex-shrink: 0;
+  display: flex; align-items: flex-end; justify-content: center;
   touch-action: none;
 }
-.lever .stick .track {
-  position: absolute; left: 12px; right: 12px; height: 5px; border-radius: 3px;
-  background: rgba(255, 255, 255, .6);
+/* 별이 박힌 원판 */
+.lever .base {
+  position: absolute; bottom: 0; left: 50%; margin-left: -33px;
+  width: 66px; height: 26px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 22% 40%, rgba(255, 255, 255, .9) 0 1.6px, transparent 2px),
+    radial-gradient(circle at 74% 34%, rgba(255, 255, 255, .9) 0 1.4px, transparent 1.8px),
+    radial-gradient(circle at 50% 72%, rgba(255, 255, 255, .75) 0 1.3px, transparent 1.7px),
+    radial-gradient(ellipse at 50% 26%, #D8ECFB, var(--candy-blue));
+  box-shadow: inset 0 -2px 0 rgba(122, 60, 87, .16), 0 2px 0 rgba(122, 60, 87, .12);
 }
-.lever .stick .knob {
-  position: relative; z-index: 1;
-  width: 40px; height: 40px; border-radius: 50%;
-  background: radial-gradient(circle at 34% 30%, #FF8FB4, var(--candy-edge));
-  box-shadow: 0 4px 0 #B85078;
-  transition: transform .1s ease;
+/* 봉 — 밑동이 회전축이라 기울면 실제 스틱처럼 눕는다 */
+.lever .shaft {
+  position: absolute; bottom: 11px; left: 50%; margin-left: -4px;
+  width: 8px; height: 40px; border-radius: 4px;
+  background: linear-gradient(90deg, #B9A7AF, #F2EAEE 40%, #B9A7AF);
+  transform-origin: 50% 100%;
+  transition: transform .12s ease-out;
 }
-.lever .stick .knob > i {
-  position: absolute; top: 9px; left: 10px; width: 11px; height: 8px;
-  border-radius: 50%; background: rgba(255, 255, 255, .6);
+.lever .ball {
+  position: absolute; top: -25px; left: 50%; margin-left: -17px;
+  width: 34px; height: 34px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, #FF9CC0, var(--candy-edge) 72%, #B85078);
+  box-shadow: 0 3px 0 rgba(122, 60, 87, .18);
 }
+.lever .ball::after {
+  content: ''; position: absolute; top: 7px; left: 8px;
+  width: 10px; height: 7px; border-radius: 50%;
+  background: rgba(255, 255, 255, .65);
+}
+
 .padrow { display: flex; align-items: center; gap: 1px; }
 .padrow span { font-size: 10px; font-weight: 700; color: var(--candy-ink-soft); white-space: nowrap; }
 .padrow .dpad {
@@ -879,8 +894,9 @@ a:hover { color: var(--green-deep); }
   .dropwrap { flex: 0 0 72px; }
   .drop-btn .tx { font-size: 15px; }
   .lever { flex: 0 0 88px; }
-  .lever .stick { width: 74px; height: 46px; }
-  .lever .stick .knob { width: 36px; height: 36px; }
+  .lever .stick { width: 74px; height: 62px; }
+  .lever .shaft { height: 32px; }
+  .lever .ball { width: 29px; height: 29px; margin-left: -14.5px; top: -21px; }
   .timerrow .t { font-size: 17px; }
   .tipbar { min-height: 36px; padding: 6px 10px; }
   .play-head { padding-bottom: 8px; }

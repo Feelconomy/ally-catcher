@@ -81,6 +81,7 @@ const PILE_H = Math.max(...BED.map(b => b.bottom + b.size));
 const BED_MIN_X = 0.300;     // leftmost slot — a slipped doll never lands left of this
 const CHUTE_X = 0.155;       // claw position over the chute mouth
 const START_X = 0.60;        // claw starts over the middle of the pile
+const STICK_TILT = 24;       // 레버가 끝까지 기울었을 때의 각도(도)
 
 const Play = {
   machine: null,
@@ -202,8 +203,8 @@ const Play = {
         <div class="console">
           <div class="lever">
             <div class="stick" id="stick">
-              <div class="track"></div>
-              <div class="knob" id="knob"><i></i></div>
+              <span class="base"></span>
+              <span class="shaft" id="knob"><span class="ball"></span></span>
             </div>
             <div class="padrow">
               <button class="dpad left" data-dir="left" aria-label="왼쪽">${icon('chevronLeft3', 14)}</button>
@@ -356,10 +357,10 @@ const Play = {
       if (!dragging) return;
       const r = stick.getBoundingClientRect();
       const cx = r.left + r.width / 2;
-      const max = r.width / 2 - 26;
+      const max = r.width / 2 - 10;
       const dx = Math.max(-max, Math.min(max, ev.clientX - cx));
-      knob.style.transform = `translateX(${dx}px)`;
       vx = dx / max;
+      this.tilt(vx);
       if (!raf) raf = requestAnimationFrame(apply);
     };
 
@@ -435,14 +436,16 @@ const Play = {
       : '원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!';
   },
 
-  paintKnob() {
-    // While the lever is held, the knob follows the finger, not the claw.
-    if (this.stickActive) return;
+  /** 레버가 기우는 각도 — 실제 아케이드 스틱처럼 밑동이 축이다. */
+  tilt(v) {
     const knob = document.getElementById('knob');
-    const stick = document.getElementById('stick');
-    if (!knob || !stick) return;
-    const max = stick.getBoundingClientRect().width / 2 - 26;
-    knob.style.transform = `translateX(${(this.x - 0.5) * 2 * max}px)`;
+    if (knob) knob.style.transform = `rotate(${(v * STICK_TILT).toFixed(1)}deg)`;
+  },
+
+  paintKnob() {
+    // While the lever is held, the stick follows the finger, not the claw.
+    if (this.stickActive) return;
+    this.tilt((this.x - 0.5) * 2);
   },
 
   /* 잡힌·떨어진·뽑힌 포즈는 그 순간에 처음 요청되는데, 폰에서는 내려받고
