@@ -37,6 +37,7 @@ a:hover { color: var(--green-deep); }
 .shell[data-theme="dark"]   { background: var(--dark); }
 .shell[data-theme="green"]  { background: var(--green); }
 .shell[data-theme="yellow"] { background: var(--yellow); }
+.shell[data-theme="candy"]  { background: var(--candy-bg); }
 
 #screen { flex: 1; display: flex; flex-direction: column; min-height: 0; animation: fadeIn .18s ease-out; }
 
@@ -567,68 +568,103 @@ a:hover { color: var(--green-deep); }
   font-size: 12px; font-weight: 600; line-height: 1.6; color: rgba(255, 255, 255, .55); text-align: center;
 }
 
-/* Play (03) */
-.play-head { flex-shrink: 0; padding: 2px 20px 12px; display: flex; align-items: center; gap: 12px; }
-.play-head .nm { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
-.play-head .mt { font-size: 11px; font-weight: 600; color: var(--on-dark-45); }
+/* Play (03) — 캔디 캐비닛.
+   레퍼런스 아트의 분홍 기계를 이미지 없이 코드로만 옮긴다: 몸통·유리·조작대는
+   전부 CSS 도형이고, 인형만 기존 아트를 그대로 쓴다. */
+.screen.candy { background: var(--candy-bg); }
 
+.play-head {
+  flex-shrink: 0; padding: 2px 14px 10px; display: flex; align-items: center; gap: 10px;
+}
+.play-head .candy-btn {
+  flex-shrink: 0; width: 40px; height: 40px; border-radius: 13px;
+  background: var(--candy-body-lit); color: var(--candy-edge);
+  box-shadow: inset 0 0 0 2px var(--candy-body-deep), 0 3px 0 var(--candy-body-deep);
+  display: flex; align-items: center; justify-content: center;
+}
+.play-head .candy-btn:active { transform: translateY(2px); box-shadow: inset 0 0 0 2px var(--candy-body-deep); }
+/* 전구가 박힌 간판. 전구는 반복 그라데이션이라 이미지가 필요 없다. */
+.play-head .marquee {
+  flex: 1; min-width: 0; position: relative; text-align: center;
+  padding: 9px 12px 7px; border-radius: 15px;
+  background: var(--candy-panel);
+  box-shadow: inset 0 0 0 2px var(--candy-body-deep), 0 3px 0 var(--candy-body-deep);
+}
+.play-head .marquee .bulbs {
+  position: absolute; inset: 4px 8px auto 8px; height: 4px;
+  background: radial-gradient(circle, var(--yellow) 0 1.6px, transparent 1.9px) 0 0 / 9px 4px repeat-x;
+}
+.play-head .marquee .nm {
+  display: block; margin-top: 4px; font-size: 15px; font-weight: 700;
+  color: var(--candy-ink); letter-spacing: -.01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.play-head .marquee .mt { display: block; font-size: 10px; font-weight: 600; color: var(--candy-ink-soft); }
+
+/* 기계 몸통. 세로 수치는 Play.layout() 이 실제 높이를 재서 다시 넣는다 —
+   툴바가 접혔다 펴지는 모바일 브라우저에서 집게가 더미에 파묻히지 않게. */
 .cabinet {
-  margin: 0 16px; border-radius: var(--r-2xl); overflow: hidden; position: relative; flex: 1; min-height: 260px;
-  /* Vertical metrics are recomputed from the measured height by Play.layout()
-     so the claw never lands inside the bed on short viewports (Safari's
-     collapsing toolbars change this mid-session). These are the roomy
-     defaults used before the first measurement. */
-  --rail-top: 46px;
-  --bed-h: 118px;
-  --foot-h: 118px;
+  margin: 0 12px; border-radius: 22px; position: relative; flex: 1; min-height: 250px;
+  --rail-top: 40px;
+  --bed-h: 210px;
+  --foot-h: 26px;
   --claw-scale: 1;
-  background: linear-gradient(180deg, #1F1F1F, #0D0D0D);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .1);
+  padding: 10px;
+  background: linear-gradient(180deg, var(--candy-body-lit), var(--candy-body));
+  box-shadow: inset 0 0 0 3px var(--candy-body-deep), 0 6px 0 var(--candy-body-deep);
+  overflow: hidden;
+}
+/* 유리 — 몸통 안쪽에 파란 상자 하나. */
+.cabinet .glass {
+  position: absolute; inset: 10px; border-radius: 14px;
+  background: linear-gradient(180deg, var(--candy-glass-lit), var(--candy-glass));
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .7);
 }
 .cabinet .state {
-  position: absolute; top: 12px; left: 12px; display: flex; align-items: center; gap: 6px;
-  background: rgba(255, 255, 255, .12); border-radius: var(--r-chip); padding: 5px 10px; z-index: 3;
+  position: absolute; top: 20px; left: 22px; display: flex; align-items: center; gap: 5px;
+  background: rgba(255, 255, 255, .82); border-radius: var(--r-chip); padding: 4px 9px; z-index: 3;
 }
-.cabinet .state i { width: 6px; height: 6px; border-radius: 50%; background: var(--green-signal); }
-.cabinet .state span { font-size: 10px; font-weight: 700; color: #fff; letter-spacing: .06em; }
-.cabinet .views { position: absolute; top: 12px; right: 12px; display: flex; gap: 6px; z-index: 3; }
-.cabinet .views button { padding: 5px 10px; border-radius: var(--r-chip); background: rgba(255, 255, 255, .14); color: #fff; font-size: 10px; font-weight: 700; }
-.cabinet .views button[aria-pressed="true"] { background: var(--yellow); color: var(--ink); }
-
-/* Soft glow down the back wall so the cabinet reads as a lit box. */
-.cabinet .backwall {
-  position: absolute; top: 0; left: 0; right: 0; height: 62%;
-  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, .07), transparent 70%);
-  pointer-events: none;
+.cabinet .state i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.cabinet .state span { font-size: 9px; font-weight: 700; color: var(--candy-ink); letter-spacing: .06em; }
+/* 유리 안쪽 벽에 붙은 안내판 — 텍스트라 이미지가 필요 없다. */
+.cabinet .signs { position: absolute; inset: 10px; z-index: 1; pointer-events: none; }
+.cabinet .sign {
+  position: absolute; padding: 6px 8px; border-radius: 8px;
+  font-size: 9px; font-weight: 700; line-height: 1.35; letter-spacing: .04em;
+  background: rgba(255, 255, 255, .72); color: var(--candy-ink-soft);
+  box-shadow: 0 2px 0 rgba(255, 255, 255, .5);
+  transform: rotate(-3deg);
 }
+.cabinet .sign.s1 { top: 40px; left: 10px; }
+.cabinet .sign.s2 { top: 46px; right: 10px; transform: rotate(3deg); text-align: right; }
 
+/* 집게가 매달린 레일 */
 .rail {
-  position: absolute; top: var(--rail-top); left: 16px; right: 16px; height: 10px; border-radius: 5px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, .22), rgba(255, 255, 255, .1));
+  position: absolute; top: var(--rail-top); left: 24px; right: 24px; height: 9px; border-radius: 5px;
+  background: linear-gradient(180deg, #fff, #D8C7CF); z-index: 2;
 }
-/* The trolley that rides the rail, directly above the claw. */
 .rail .rail-mount {
-  position: absolute; top: -3px; width: 26px; height: 16px; margin-left: -13px;
-  border-radius: 5px; background: rgba(255, 255, 255, .38);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, .45);
+  position: absolute; top: -4px; width: 26px; height: 17px; margin-left: -13px;
+  border-radius: 6px; background: var(--candy-edge);
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .12);
   transition: left .16s ease-out;
 }
 .claw-rig {
-  position: absolute; top: calc(var(--rail-top) + 10px); z-index: 4;
+  position: absolute; top: calc(var(--rail-top) + 9px); z-index: 4;
   width: calc(104px * var(--claw-scale, 1));
   margin-left: calc(-52px * var(--claw-scale, 1));
   transition: left .16s ease-out;
 }
-.claw-rig .cord { width: 3px; height: 76px; background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.38)); margin: 0 auto; }
+.claw-rig .cord { width: 5px; height: 76px; background: linear-gradient(180deg, #C9B4BE, #9C8791); border-radius: 3px; margin: 0 auto; }
 .claw-rig .claw {
   position: relative;
   animation: clawSwing 2.6s ease-in-out infinite;
   transform-origin: 50% -70px;
 }
 .claw-rig[data-busy] .claw { animation: none; }
-.claw-svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 3px 5px rgba(0, 0, 0, .45)); }
+.claw-svg { display: block; width: 100%; height: auto; overflow: visible; filter: drop-shadow(0 3px 4px rgba(122, 60, 87, .3)); }
 
-/* Talons pivot at the housing rim. Open by default, swinging shut on grip. */
+/* 집게발은 몸통 테두리에서 돌아간다. 평소엔 벌어져 있다가 잡을 때 닫힌다. */
 .claw-svg .talon {
   transform-box: view-box; transform-origin: 0 0;
   transition: transform .26s cubic-bezier(.3, .9, .4, 1);
@@ -640,92 +676,83 @@ a:hover { color: var(--green-deep); }
 [data-grip] .claw-svg .t-right { transform: translate(80px, 38px) rotate(-4deg); }
 [data-grip] .claw-svg .t-back  { transform: translate(60px, 33px) rotate(-2deg); }
 
-/* A carried doll hangs from the talon tips and rides with the claw.
-   `top` puts the doll's crown just above the tips so the talons bite into it. */
+/* 잡힌 인형은 집게발 끝에 매달려 함께 움직인다. */
 .claw-rig .held {
-  /* Follows the claw's scale so the talons keep biting the same part of the
-     doll no matter how small the cabinet forced the claw to be. */
   position: absolute; top: calc(62px * var(--claw-scale, 1)); left: 50%;
   transform: translateX(-50%);
   z-index: 0; pointer-events: none;
   line-height: 0;
 }
-/* The claw box is narrower than the doll, so the global max-width would
-   squash it — the talons are meant to overlap the doll, not contain it. */
+/* 집게 상자가 인형보다 좁아 전역 max-width 가 인형을 찌그러뜨린다. */
 .claw-rig .held img { max-width: none; animation: pop .28s ease-out both; }
 
-/* The bed is the visual backdrop. Dolls live in `.pit`, which spans the full
-   cabinet width so doll x and claw x share one coordinate space. */
+/* 인형통 바닥. 인형은 .pit 에 있고, .pit 은 캐비닛 전체 너비를 써서
+   인형 x 와 집게 x 가 같은 좌표계를 쓴다. */
 .bed {
-  position: absolute; bottom: var(--foot-h); left: 20px; right: 20px; height: var(--bed-h);
-  border-radius: var(--r-lg) var(--r-lg) 0 0;
-  background: rgba(255, 255, 255, .05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+  position: absolute; bottom: var(--foot-h); left: 14px; right: 14px; height: var(--bed-h);
+  border-radius: 10px 10px 0 0;
+  background: linear-gradient(180deg, transparent, rgba(255, 255, 255, .38));
   overflow: hidden;
 }
-/* The chute mouth — a hole in the bed floor, directly above the PRIZE OUT
-   tray. Nothing is ever placed on it, so the drop target is unambiguous. */
+/* 배출구 — 바닥에 뚫린 구멍. 이 위엔 아무 인형도 놓지 않는다. */
 .bed .hole {
-  position: absolute; left: 0; bottom: 0; width: 66px; height: 100%;
-  border-radius: var(--r-lg) 0 0 0;
-  background: linear-gradient(180deg, rgba(0, 0, 0, .45), rgba(0, 0, 0, .88));
-  box-shadow: inset -2px 0 0 rgba(255, 212, 0, .3), inset 0 8px 18px rgba(0, 0, 0, .85);
+  position: absolute; left: 0; bottom: 0; width: 74px; height: 52px;
+  border-radius: 0 10px 0 0;
+  background: linear-gradient(180deg, rgba(122, 60, 87, .18), rgba(122, 60, 87, .42));
+  box-shadow: inset -2px 0 0 rgba(255, 255, 255, .6);
 }
 .bed .hole .lip {
-  position: absolute; top: 0; left: 0; right: 0; height: 5px;
-  background: linear-gradient(90deg, rgba(255, 212, 0, .5), rgba(255, 212, 0, .18));
+  position: absolute; top: 0; left: 0; right: 0; height: 4px;
+  background: rgba(255, 255, 255, .75);
 }
 .bed .hole .arrow {
-  position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-  color: rgba(255, 212, 0, .5); display: flex;
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  color: rgba(255, 255, 255, .85); display: flex;
   animation: bob 2s ease-in-out infinite;
 }
 
 .pit { position: absolute; bottom: var(--foot-h); left: 0; right: 0; height: var(--bed-h); pointer-events: none; }
 
-/* Aim guide: a beam down the claw's column plus a spotlight under the doll it
-   would close on. Alignment stays readable whatever the device height. */
+/* 조준 안내: 집게가 선 자리에 내려오는 빔과, 집게가 물 인형 아래 스포트라이트. */
 .aim {
   position: absolute; bottom: var(--foot-h); height: var(--bed-h);
-  width: 2px; margin-left: -1px; z-index: 1; pointer-events: none;
-  background: linear-gradient(180deg, rgba(255, 212, 0, 0), rgba(255, 212, 0, .38));
+  width: 3px; margin-left: -1.5px; z-index: 1; pointer-events: none;
+  background: linear-gradient(180deg, rgba(226, 115, 158, 0), rgba(226, 115, 158, .5));
   transition: left .16s ease-out, opacity .2s ease;
 }
 .aim[data-off] { opacity: 0; }
 .pit .doll.targeted::before {
-  content: ''; position: absolute; left: 50%; bottom: -7px;
-  transform: translateX(-50%);
-  width: 84%; height: 14px; border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 212, 0, .55), transparent);
+  content: ''; position: absolute; inset: -8px -6px -4px;
+  border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 255, 255, .85), transparent);
+  z-index: -1;
 }
 .pit .doll { position: absolute; transition: opacity .2s ease, transform .3s ease, bottom .3s ease, left .3s ease; }
 .pit .doll.taken { opacity: 0; transform: scale(.4) !important; }
 .pit .doll.dropping { animation: dropIn .34s cubic-bezier(.4, 1.5, .6, 1) both; }
-
 @keyframes dropIn {
-  0%   { transform: translateY(-70px) scale(1.04); }
-  70%  { transform: translateY(4px) scale(.98); }
-  100% { transform: translateY(0) scale(1); }
+  0%   { transform: translateY(-46px) rotate(-12deg); opacity: 0; }
+  60%  { opacity: 1; }
+  100% { transform: translateY(0) rotate(0); opacity: 1; }
 }
 
-/* The chute and odds panel fill the foot rather than being a fixed 96px, so a
-   short cabinet cannot push them up into the bed. */
-.play-foot {
-  position: absolute; bottom: 0; left: 0; right: 0; height: var(--foot-h);
-  display: flex; align-items: stretch; gap: 10px; padding: 6px 20px 12px;
-}
+/* 상품 수거함 — 유리 안 왼쪽에 세워 둔 투명 상자. 배출구 바로 아래다. */
 .chute {
-  width: 112px; border-radius: 14px; background: #0A0A0A; position: relative;
-  box-shadow: inset 0 0 0 2px rgba(255, 212, 0, .55), inset 0 14px 26px rgba(0, 0, 0, .9);
-  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 10px;
+  position: absolute; left: 14px; bottom: 10px; width: 74px; z-index: 7;
+  height: calc(var(--foot-h) + 44px);
+  border-radius: 0 0 8px 8px;
+  background: rgba(255, 255, 255, .34);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8);
+  display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px;
 }
-.chute .glow { position: absolute; top: 0; left: 0; right: 0; height: 26px; background: linear-gradient(180deg, rgba(255, 212, 0, .22), transparent); }
-.chute .sign { position: absolute; top: 8px; left: 0; right: 0; text-align: center; font-size: 9px; font-weight: 700; letter-spacing: .14em; color: rgba(255, 212, 0, .85); }
-.chute .slot { width: 80px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .14); }
+.chute .glow { position: absolute; top: 0; left: 0; right: 0; height: 18px; background: linear-gradient(180deg, rgba(255, 255, 255, .6), transparent); }
+.chute .sign {
+  font-size: 9px; font-weight: 700; line-height: 1.3; text-align: center;
+  color: var(--candy-ink-soft);
+}
 .chute img {
-  position: absolute; bottom: 14px; width: 56px; height: 56px;
+  position: absolute; bottom: 10px; width: 48px; height: 48px;
   animation: fallIn .55s cubic-bezier(.45, 0, .7, 1) both;
 }
-/* The prize drops through the hole and settles in the tray. */
 @keyframes fallIn {
   0%   { opacity: 0; transform: translateY(-104px) rotate(-10deg); }
   22%  { opacity: 1; }
@@ -734,55 +761,121 @@ a:hover { color: var(--green-deep); }
   100% { transform: translateY(0) rotate(0); }
 }
 
-.odds {
-  flex: 1; border-radius: 14px; background: rgba(255, 255, 255, .04);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
-  padding: 10px 14px;
-  display: flex; flex-direction: column; justify-content: center;
-}
-.odds .l { font-size: 10px; font-weight: 700; letter-spacing: .1em; color: rgba(255, 255, 255, .4); }
-.odds .v { margin-top: 6px; display: flex; align-items: baseline; gap: 6px; }
-.odds .v b { font-size: clamp(19px, 5.4vw, 24px); font-weight: 700; color: #fff; }
-.odds .v span { font-size: 11px; font-weight: 600; color: var(--on-dark-45); }
-.odds .meter { margin-top: 8px; height: 5px; flex-shrink: 0; }
-.odds .meter > i { background: var(--green-signal); }
-
+/* ── 조작대 ─────────────────────────────────────────────────────────── */
 .controls {
-  flex-shrink: 0; padding: 16px 20px calc(26px + var(--safe-b));
-  display: flex; flex-direction: column; gap: 12px;
+  flex-shrink: 0; margin: 10px 12px calc(10px + var(--safe-b));
+  padding: 10px; border-radius: 20px;
+  background: linear-gradient(180deg, var(--candy-body-lit), var(--candy-body));
+  box-shadow: inset 0 0 0 3px var(--candy-body-deep), 0 5px 0 var(--candy-body-deep);
+  display: flex; flex-direction: column; gap: 8px;
 }
-/* Single-axis lever: the claw only travels left and right. */
-.stick {
-  width: 100%; height: 66px; border-radius: 33px; position: relative; flex-shrink: 0;
-  background: rgba(255, 255, 255, .07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12);
+.console { display: flex; align-items: stretch; gap: 8px; }
+
+.pad {
+  flex: 0 0 96px; border-radius: 15px; padding: 7px 6px 5px;
+  background: var(--candy-panel);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+/* 단일 축 레버: 집게는 좌우로만 움직인다. */
+.pad .stick {
+  width: 82px; height: 52px; border-radius: 26px; position: relative; flex-shrink: 0;
+  background: var(--candy-blue);
+  box-shadow: inset 0 2px 4px rgba(122, 60, 87, .2);
   display: flex; align-items: center; justify-content: center;
   touch-action: none;
 }
-.stick .track {
-  position: absolute; left: 44px; right: 44px; height: 6px; border-radius: 3px;
-  background: rgba(255, 255, 255, .1);
+.pad .stick .track {
+  position: absolute; left: 12px; right: 12px; height: 5px; border-radius: 3px;
+  background: rgba(255, 255, 255, .6);
 }
-.stick .dpad {
-  position: absolute; top: 50%; margin-top: -22px;
-  width: 44px; height: 44px; border-radius: 50%;
-  color: rgba(255, 255, 255, .45);
-  display: flex; align-items: center; justify-content: center;
-}
-.stick .dpad.left { left: 4px; } .stick .dpad.right { right: 4px; }
-.stick .dpad:active, .stick .dpad[data-active] { color: #fff; background: rgba(255, 255, 255, .1); }
-.stick .knob {
+.pad .stick .knob {
   position: relative; z-index: 1;
-  width: 52px; height: 52px; border-radius: 50%;
-  background: linear-gradient(180deg, var(--green-lit), #00863F);
-  box-shadow: 0 6px 16px rgba(0, 166, 80, .45), inset 0 2px 0 rgba(255, 255, 255, .25);
+  width: 40px; height: 40px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #FF8FB4, var(--candy-edge));
+  box-shadow: 0 4px 0 #B85078;
   transition: transform .1s ease;
 }
-.timerrow { display: flex; align-items: center; justify-content: space-between; padding: 0 4px; }
-.timerrow .l { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, .5); }
-.timerrow .t { font-size: 20px; font-weight: 700; color: var(--yellow); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
-.timerrow .t.warn { color: var(--danger-bright); }
-.drop-btn { animation: bob 2.4s ease-in-out infinite; }
-.drop-btn:disabled { animation: none; }
+.pad .stick .knob > i {
+  position: absolute; top: 9px; left: 10px; width: 11px; height: 8px;
+  border-radius: 50%; background: rgba(255, 255, 255, .6);
+}
+.padrow { display: flex; align-items: center; gap: 1px; }
+.padrow span { font-size: 10px; font-weight: 700; color: var(--candy-ink-soft); white-space: nowrap; }
+.padrow .dpad {
+  width: 22px; height: 22px; border-radius: 50%;
+  color: var(--candy-edge);
+  display: flex; align-items: center; justify-content: center;
+}
+.padrow .dpad:active, .padrow .dpad[data-active] { background: var(--candy-body-lit); }
+
+.gauge {
+  flex: 1; min-width: 0; border-radius: 15px; padding: 8px 11px 9px;
+  background: var(--candy-panel);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8);
+  display: flex; flex-direction: column; justify-content: center; gap: 6px;
+}
+.timerrow { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.timerrow .l { font-size: 11px; font-weight: 700; color: var(--candy-ink-soft); }
+.timerrow .t { font-size: 19px; font-weight: 700; color: var(--candy-edge); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+.timerrow .t.warn { color: var(--danger); }
+.gauge .bar { height: 8px; border-radius: 4px; background: rgba(226, 115, 158, .18); overflow: hidden; }
+.gauge .bar > i {
+  display: block; height: 100%; border-radius: 4px;
+  background: linear-gradient(90deg, #FF9CC0, var(--candy-edge));
+  transition: width .1s linear;
+}
+
+/* 드롭 — 레버와 떨어뜨려 놓은 큰 원형 버튼 */
+.dropwrap { flex: 0 0 86px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
+.drop-btn {
+  width: 86px; height: 86px; border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, #FF8FB4, var(--candy-edge));
+  box-shadow: 0 6px 0 #B85078, 0 10px 16px rgba(226, 115, 158, .35);
+  color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
+  animation: bob 2.4s ease-in-out infinite;
+}
+.drop-btn .ic { display: flex; }
+.drop-btn .tx { font-size: 17px; font-weight: 700; letter-spacing: .04em; }
+.drop-btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #B85078; }
+.dropwrap .cap { font-size: 10px; font-weight: 700; color: var(--candy-ink); }
+.drop-btn:disabled, .drop-btn.btn--disabled {
+  animation: none; background: #E3D2D9; color: rgba(122, 60, 87, .4);
+  box-shadow: 0 4px 0 #C9B4BE; transform: none;
+}
+
+/* 조준한 인형 · 이번 판 확률 — 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. */
+.tipbar {
+  border-radius: 12px; padding: 7px 11px; min-height: 42px;
+  background: var(--candy-panel);
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8);
+  display: flex; align-items: center; gap: 7px;
+}
+.tipbar .th {
+  width: 30px; height: 30px; border-radius: 9px; flex-shrink: 0;
+  background: var(--candy-body-lit);
+  display: none; align-items: center; justify-content: center;
+}
+.tipbar.on .th { display: flex; }
+.tipbar.on .tip { display: none; }
+.tipbar .n {
+  flex: 1; min-width: 0; font-size: 11px; font-weight: 600; line-height: 1.4;
+  color: var(--candy-ink-soft);
+}
+.tipbar.on .n {
+  font-size: 14px; font-weight: 700; color: var(--candy-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.tipbar .pc {
+  flex-shrink: 0; font-size: 18px; font-weight: 700; color: var(--green);
+  font-variant-numeric: tabular-nums; display: none;
+}
+.tipbar.on .pc { display: block; }
+.tipbar .tip {
+  flex-shrink: 0; margin-right: 5px; padding: 1px 7px; border-radius: 7px;
+  background: var(--candy-edge); color: #fff; font-size: 10px; font-weight: 700;
+}
 
 /* Result: success (04) / fail (22) */
 /* Result screens have to survive a 520px-tall browser window as well as a
@@ -1112,10 +1205,8 @@ a:hover { color: var(--green-deep); }
 .coach { position: absolute; inset: 0; }
 .coach .hole { position: absolute; border-radius: 50%; box-shadow: 0 0 0 4px var(--yellow), 0 0 0 9999px rgba(0, 0, 0, .72); }
 /* Cut-out shaped to the single-axis lever. */
-.coach .hole.coach-lever {
-  left: 20px; right: 20px; height: 66px; border-radius: 33px;
-  bottom: calc(96px + var(--safe-b));
-}
+/* 조작대 자리는 Play.coach() 가 실측해서 인라인으로 넣는다. */
+.coach .hole.coach-lever { border-radius: 24px; }
 .coach .bubble { position: absolute; width: 250px; background: #fff; border-radius: var(--r-xl); padding: 16px 18px; }
 .coach .bubble .step { font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: .06em; }
 .coach .bubble .t { margin-top: 7px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }

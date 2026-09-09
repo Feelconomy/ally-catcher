@@ -21,34 +21,64 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
    phone browser with visible toolbars gives the cabinet far less height than
    a desktop window, and fixed pixels put the claw inside the bed. */
 const CAB = {
-  railTop:  { min: 14, max: 46, share: 0.11 },
-  bedH:     { min: 72, max: 118, share: 0.27 },
-  footH:    { min: 84, max: 118, share: 0.31 },
-  cordMax: 76,
+  railTop:  { min: 12, max: 40, share: 0.10 },
+  bedH:     { min: 108, max: 246, share: 0.46 },
+  footH:    { min: 16, max: 26, share: 0.05 },
+  cordMax: 150,   // 통이 커지면 집게가 그만큼 낮게 매달려 빈 공간이 줄어든다
   cordMin: 16,
-  clearance: 12,             // gap kept between the claw tips and the bed top
+  clearance: 22,             // gap kept between the claw tips and the bed top
   clawMin: 30,               // the claw never shrinks below this, in px of height
 };
 
-/* The heap. Two overlapping rows — a back row and a front row nestled into its
-   gaps — so the bed reads as a pile of plush rather than a tidy line. Every
-   slot clears the chute mouth on the left, so nothing ever sits on the hole it
-   is supposed to fall through. */
+/* 더미. 배경 그림을 깔지 않고 실제 인형으로 통을 채운다 — 네 줄이 서로
+   겹치게 쌓이고, 뒤로 갈수록 작고 높이 앉아 유리 안이 꽉 차 보인다.
+   모든 자리는 왼쪽 배출구를 피해 두어, 떨어질 구멍 위에는 아무것도 없다. */
 const BED = [
-  // back row: smaller, higher up, partly hidden by the front row
-  { x: 0.345, layer: 0, size: 54, bottom: 32 },
-  { x: 0.465, layer: 0, size: 56, bottom: 29 },
-  { x: 0.585, layer: 0, size: 54, bottom: 33 },
-  { x: 0.705, layer: 0, size: 57, bottom: 29 },
-  { x: 0.825, layer: 0, size: 54, bottom: 32 },
-  // front row: larger, sitting lower and overlapping the back row
-  { x: 0.405, layer: 1, size: 63, bottom: 7 },
-  { x: 0.525, layer: 1, size: 61, bottom: 10 },
-  { x: 0.645, layer: 1, size: 64, bottom: 6 },
-  { x: 0.765, layer: 1, size: 61, bottom: 9 },
+  // 앞줄 — 가장 크고 가장 낮게
+  { x: 0.300, layer: 5, size: 60, bottom: 2 },
+  { x: 0.404, layer: 5, size: 61, bottom: 6 },
+  { x: 0.528, layer: 5, size: 60, bottom: 2 },
+  { x: 0.652, layer: 5, size: 61, bottom: 6 },
+  { x: 0.776, layer: 5, size: 60, bottom: 2 },
+  { x: 0.900, layer: 5, size: 61, bottom: 6 },
+  // 둘째 줄
+  { x: 0.342, layer: 4, size: 55, bottom: 40 },
+  { x: 0.466, layer: 4, size: 56, bottom: 44 },
+  { x: 0.590, layer: 4, size: 55, bottom: 40 },
+  { x: 0.714, layer: 4, size: 56, bottom: 44 },
+  { x: 0.838, layer: 4, size: 55, bottom: 40 },
+  // 셋째 줄
+  { x: 0.300, layer: 3, size: 50, bottom: 78 },
+  { x: 0.404, layer: 3, size: 51, bottom: 82 },
+  { x: 0.528, layer: 3, size: 50, bottom: 78 },
+  { x: 0.652, layer: 3, size: 51, bottom: 82 },
+  { x: 0.776, layer: 3, size: 50, bottom: 78 },
+  { x: 0.900, layer: 3, size: 51, bottom: 82 },
+  // 넷째 줄
+  { x: 0.342, layer: 2, size: 46, bottom: 116 },
+  { x: 0.466, layer: 2, size: 47, bottom: 120 },
+  { x: 0.590, layer: 2, size: 46, bottom: 116 },
+  { x: 0.714, layer: 2, size: 47, bottom: 120 },
+  { x: 0.838, layer: 2, size: 46, bottom: 116 },
+  // 다섯째 줄
+  { x: 0.300, layer: 1, size: 42, bottom: 154 },
+  { x: 0.404, layer: 1, size: 43, bottom: 158 },
+  { x: 0.528, layer: 1, size: 42, bottom: 154 },
+  { x: 0.652, layer: 1, size: 43, bottom: 158 },
+  { x: 0.776, layer: 1, size: 42, bottom: 154 },
+  { x: 0.900, layer: 1, size: 43, bottom: 158 },
+  // 맨 뒷줄 — 가장 작고 가장 높이
+  { x: 0.342, layer: 0, size: 39, bottom: 192 },
+  { x: 0.466, layer: 0, size: 40, bottom: 196 },
+  { x: 0.590, layer: 0, size: 39, bottom: 192 },
+  { x: 0.714, layer: 0, size: 40, bottom: 196 },
+  { x: 0.838, layer: 0, size: 39, bottom: 192 },
 ];
 
-const BED_MIN_X = 0.345;     // leftmost slot — a slipped doll never lands left of this
+/** 더미가 자연 크기로 차지하는 높이 — 통이 이보다 낮으면 그 비율로 줄인다. */
+const PILE_H = Math.max(...BED.map(b => b.bottom + b.size));
+
+const BED_MIN_X = 0.300;     // leftmost slot — a slipped doll never lands left of this
 const CHUTE_X = 0.155;       // claw position over the chute mouth
 const START_X = 0.60;        // claw starts over the middle of the pile
 
@@ -83,6 +113,7 @@ const Play = {
     this.left = PLAY_SECONDS;
     this.coaching = false;
     this.stickActive = false;
+    this.targetI = -2;          // -1(없음)과도 달라야 첫 그리기가 돈다
 
     /* The bed carries over between visits: dolls already won are missing, and
        the machine restocks only once it has been emptied. Which slot each doll
@@ -99,7 +130,8 @@ const Play = {
       const slot = BED[slotIdx];
       return {
         dollId: order[k],
-        x: slot.x,
+        // 자리마다 좌우로 조금씩 흔들어 격자가 아니라 더미로 보이게
+        x: Math.max(BED_MIN_X, slot.x + (Math.random() - 0.5) * 0.03),
         layer: slot.layer,
         size: slot.size,
         bottom: slot.bottom,
@@ -121,22 +153,27 @@ const Play = {
   },
 
   render() {
-    setTheme('dark');
+    setTheme('candy');
     const m = this.machine;
-    screenEl().innerHTML = `<div class="screen">
+    screenEl().innerHTML = `<div class="screen candy">
       ${statusbar()}
       <div class="play-head">
-        <button class="iconbtn ghost" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
-        <div>
-          <div class="nm">${esc(m.name)}</div>
-          <div class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</div>
+        <button class="iconbtn candy-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
+        <div class="marquee">
+          <span class="bulbs"></span>
+          <span class="nm">${esc(m.short || m.name)}</span>
+          <span class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</span>
         </div>
-        ${walletChip(true)}
+        ${walletChip()}
       </div>
 
       <div class="cabinet" id="cabinet">
+        <div class="glass"></div>
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
-        <div class="backwall"></div>
+        <div class="signs">
+          <span class="sign s1">CATCH<br>YOUR<br>HAPPINESS</span>
+          <span class="sign s2">오늘도<br>귀여운 하루</span>
+        </div>
         <div class="rail"><i class="rail-mount" id="railMount"></i></div>
         <div class="claw-rig" id="rig">
           <div class="cord" id="cord"></div>
@@ -153,33 +190,51 @@ const Play = {
         </div>
         <div class="aim" id="aim"></div>
         <div class="pit" id="pit"></div>
-        <div class="play-foot">
-          <div class="chute" id="chute">
-            <div class="glow"></div>
-            <div class="sign">PRIZE OUT</div>
-            <div class="slot"></div>
-          </div>
-          <div class="odds">
-            <div class="l">이번 판 확률</div>
-            <div class="v"><b id="oddsNum">0%</b><span>집게 힘 ${esc(m.grip)}</span></div>
-            ${meter(0, 'onDark')}
-          </div>
+        <div class="chute" id="chute">
+          <div class="glow"></div>
+          <div class="sign">여기로<br>쏙!</div>
         </div>
       </div>
 
+      <!-- 조작대: 왼쪽 조이스틱 · 가운데 계기판 · 오른쪽 드롭 버튼.
+           레버와 드롭을 갈라 놓아 실제 기계처럼 두 손으로 쓰게 한다. -->
       <div class="controls">
-        <div class="timerrow">
-          <span class="l">남은 시간</span>
-          <span class="t" id="clock">${mmss(this.left)}</span>
+        <div class="console">
+          <div class="pad">
+            <div class="stick" id="stick">
+              <div class="track"></div>
+              <div class="knob" id="knob"><i></i></div>
+            </div>
+            <div class="padrow">
+              <button class="dpad left" data-dir="left" aria-label="왼쪽">${icon('chevronLeft3', 14)}</button>
+              <span>이동하기</span>
+              <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 14)}</button>
+            </div>
+          </div>
+
+          <div class="gauge">
+            <div class="timerrow">
+              <span class="l">남은 시간</span>
+              <span class="t" id="clock">${mmss(this.left)}</span>
+            </div>
+            <div class="bar"><i id="timeBar" style="width:100%"></i></div>
+          </div>
+
+          <div class="dropwrap">
+            <button class="drop-btn" id="dropBtn" data-act="drop" aria-label="집게 내리기">
+              <span class="ic">${icon('caretDown', 24)}</span>
+              <span class="tx">드롭</span>
+            </button>
+            <span class="cap">뽑기 시작!</span>
+          </div>
         </div>
-        ${meter(100, 'onDark')}
-        <div class="stick" id="stick">
-          <button class="dpad left"  data-dir="left"  aria-label="왼쪽">${icon('chevronLeft3', 20)}</button>
-          <div class="track"></div>
-          <div class="knob" id="knob"></div>
-          <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 20)}</button>
+        <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. -->
+        <div class="tipbar odds" id="target">
+          <span class="th"></span>
+          <b class="tip">TIP</b>
+          <span class="n" id="targetName">원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!</span>
+          <b class="pc" id="oddsNum">0%</b>
         </div>
-        <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
       </div>
     </div>`;
 
@@ -224,10 +279,11 @@ const Play = {
     const clawH = Math.min(CLAW_H, Math.max(CAB.clawMin, Math.round(available * 0.72)));
     this.clawScale = clawH / CLAW_H;
     this.restCord = Math.max(CAB.cordMin, Math.min(CAB.cordMax, available - clawH));
-    /* Dolls shrink with the bed, but never so much bigger than the claw that
-       a carried doll stops looking gripped. */
-    this.dollScale = Math.max(0.6, Math.min(
-      1, bedH / CAB.bedH.max, this.clawScale * 1.15));
+    /* 인형은 통 높이에 맞춰 줄인다. 기준은 통의 최대치가 아니라 더미가 실제로
+       쓰는 높이(PILE_H) — 그래야 어느 기기에서도 뒷줄이 통 밖으로 안 나간다.
+       집게보다 지나치게 크면 잡힌 모양이 어색해지므로 그것도 상한으로 둔다. */
+    this.dollScale = Math.max(0.42, Math.min(
+      1, (bedH - 6) / PILE_H, this.clawScale * 1.15));
 
     cab.style.setProperty('--rail-top', railTop + 'px');
     cab.style.setProperty('--bed-h', bedH + 'px');
@@ -361,6 +417,19 @@ const Play = {
     $$('.pit .doll', screenEl()).forEach(el => {
       el.classList.toggle('targeted', Number(el.dataset.i) === hit && !this.busy && !this.dropped);
     });
+    if (hit !== this.targetI) { this.targetI = hit; this.paintTarget(hit); }
+  },
+
+  /** 계기판의 '조준한 인형' 칸. 바뀔 때만 다시 그린다 — 레버를 밀고 있는
+      동안 paintAim 이 초당 수십 번 불리기 때문이다. */
+  paintTarget(i) {
+    const box = document.getElementById('target');
+    if (!box) return;
+    const d = i >= 0 && this.dolls[i] ? DOLLS[this.dolls[i].dollId] : null;
+    box.classList.toggle('on', !!d);
+    $('.th', box).innerHTML = d ? dollImg(d.id, 30) : '';
+    $('#targetName', box).textContent = d ? d.name
+      : '원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!';
   },
 
   paintKnob() {
@@ -442,8 +511,6 @@ const Play = {
     const n = this.liveOdds();
     const num = document.getElementById('oddsNum');
     if (num) num.textContent = n + '%';
-    const bar = $('.odds .meter > i', screenEl());
-    if (bar) bar.style.width = n + '%';
   },
 
   setState(text) {
@@ -461,7 +528,7 @@ const Play = {
         clock.textContent = mmss(this.left);
         clock.classList.toggle('warn', this.left <= 5);
       }
-      const bar = $('.controls .meter > i', screenEl());
+      const bar = document.getElementById('timeBar');
       if (bar) bar.style.width = (this.left / PLAY_SECONDS * 100) + '%';
       if (this.left <= 0) {
         clearInterval(this.timer);
@@ -607,13 +674,16 @@ const Play = {
     const talon = $('.claw-svg .t-right', claw);
     const tipsNow = (talon || claw).getBoundingClientRect().bottom;
 
+    // 인형통 바닥을 기준으로 잡는다 — 통 높이가 기기마다 달라서 캐비닛
+    // 아래에서 몇 px 같은 고정값을 쓰면 헛집게가 허공에서 멈춘다.
+    const bedRect = $('.bed', cabinet).getBoundingClientRect();
     let targetY;
     if (inRange && near) {
       const el = $(`.doll[data-i="${near.i}"]`, cabinet);
       // Sink the tips a little into the doll so the grip looks committed.
-      targetY = el ? el.getBoundingClientRect().top + 18 : cabRect.bottom - 190;
+      targetY = el ? el.getBoundingClientRect().top + 16 : bedRect.bottom - 56;
     } else {
-      targetY = cabRect.bottom - 152;          // clean miss: reach the bed floor
+      targetY = bedRect.bottom - 26;           // clean miss: reach the bed floor
     }
 
     const current = parseFloat(cord.style.height) || this.restCord;
@@ -684,9 +754,9 @@ const Play = {
   /** First-run coach mark over the lever (screen 25). */
   coach() {
     const steps = [
-      { t: '레버로 집게를 움직여요', d: '좌우로 밀거나 화살표를 눌러 집게를 인형 위에 맞추세요.' },
+      { t: '레버로 집게를 움직여요', d: '왼쪽 레버를 좌우로 밀거나 화살표를 눌러 집게를 인형 위에 맞추세요.' },
       { t: '확률을 보고 타이밍을 잡아요', d: '집게가 인형에 정확히 겹칠수록 이번 판 확률이 올라가요.' },
-      { t: '집게는 한 번만 내려가요', d: `${PLAY_SECONDS}초 안에 위치를 잡고 내리세요. 잡아도 올리다가 놓칠 수 있어요.` },
+      { t: '집게는 한 번만 내려가요', d: `${PLAY_SECONDS}초 안에 위치를 잡고 오른쪽 드롭 버튼을 누르세요. 잡아도 올리다가 놓칠 수 있어요.` },
     ];
     let i = 0;
     this.coaching = true;   // 튜토리얼이 뜬 동안 타이머 정지
@@ -703,6 +773,21 @@ const Play = {
     </div>`, null, { persistent: true });
 
     $('.scrim', node).style.background = 'transparent';
+
+    // 강조할 자리는 조작대의 실제 위치에서 잰다 — CSS 상수로 박아 두면
+    // 조작대 높이가 바뀔 때마다 구멍이 어긋난다.
+    const box = $('.controls', screenEl());
+    if (box) {
+      const r = box.getBoundingClientRect();
+      const shell = shellEl().getBoundingClientRect();
+      Object.assign($('.coach-lever', node).style, {
+        left: (r.left - shell.left - 4) + 'px',
+        top: (r.top - shell.top - 4) + 'px',
+        width: (r.width + 8) + 'px',
+        height: (r.height + 8) + 'px',
+        bottom: 'auto', right: 'auto',
+      });
+    }
 
     const paint = () => {
       $('.step', node).textContent = `STEP ${i + 1} / ${steps.length}`;

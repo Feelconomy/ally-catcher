@@ -40,7 +40,7 @@ function dollImg(id, size, extra, state) {
 function setTheme(name) {
   shellEl().dataset.theme = name || '';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = { dark: '#141414', green: '#00A650', yellow: '#FFD400' }[name] || '#FFFBEF';
+  if (meta) meta.content = { dark: '#141414', green: '#00A650', yellow: '#FFD400', candy: '#FDE7F0' }[name] || '#FFFBEF';
 }
 
 // 상단 여백 스페이서 (노치/안전영역 확보용). 가짜 시간·통신 표시는 제거함.

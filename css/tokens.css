@@ -18,6 +18,21 @@
   --nh-gold: #FFC20E;
   --nh-gold-ink: #7A5A00;
 
+  /* 캔디 캐비닛 — 플레이 화면 전용 파스텔 팔레트.
+     레퍼런스 아트의 분홍 기계를 코드로 옮기려고 따로 둔 값들이다. */
+  --candy-bg: #FDE7F0;
+  --candy-body: #FFC2D8;
+  --candy-body-lit: #FFD9E7;
+  --candy-body-deep: #F5A0C0;
+  --candy-edge: #E2739E;
+  --candy-glass: #CFE8FB;
+  --candy-glass-lit: #E7F4FE;
+  --candy-ink: #7A3C57;
+  --candy-ink-soft: rgba(122, 60, 87, .58);
+  --candy-panel: #FFF6E8;
+  --candy-mint: #BFE8DA;
+  --candy-blue: #B9DCF7;
+
   /* Surfaces */
   --canvas: #F3F1EA;
   --canvas-alt: #EFEDE6;
