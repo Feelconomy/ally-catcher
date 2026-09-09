@@ -21,9 +21,9 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
    phone browser with visible toolbars gives the cabinet far less height than
    a desktop window, and fixed pixels put the claw inside the bed. */
 const CAB = {
-  railTop:  { min: 12, max: 40, share: 0.10 },
-  bedH:     { min: 108, max: 246, share: 0.46 },
-  footH:    { min: 16, max: 26, share: 0.05 },
+  railTop:  { min: 10, max: 40, share: 0.10 },
+  bedH:     { min: 78, max: 246, share: 0.46 },
+  footH:    { min: 12, max: 26, share: 0.05 },
   cordMax: 150,   // 통이 커지면 집게가 그만큼 낮게 매달려 빈 공간이 줄어든다
   cordMin: 16,
   clearance: 22,             // gap kept between the claw tips and the bed top
@@ -298,6 +298,9 @@ const Play = {
       this.onResize = () => {
         if (App.route !== 'play') return;
         this.layout();
+        // 인형 크기는 통 높이에서 나오므로 통이 바뀌면 더미도 다시 그린다.
+        // 집게가 내려가는 중엔 건드리지 않는다 — 애니메이션이 끊긴다.
+        if (!this.busy) this.paintPit();
         this.paintClaw();
       };
       window.addEventListener('resize', this.onResize);

@@ -604,7 +604,7 @@ a:hover { color: var(--green-deep); }
 /* 기계 몸통. 세로 수치는 Play.layout() 이 실제 높이를 재서 다시 넣는다 —
    툴바가 접혔다 펴지는 모바일 브라우저에서 집게가 더미에 파묻히지 않게. */
 .cabinet {
-  margin: 0 12px; border-radius: 22px; position: relative; flex: 1; min-height: 250px;
+  margin: 0 12px; border-radius: 22px; position: relative; flex: 1; min-height: 180px;
   --rail-top: 40px;
   --bed-h: 210px;
   --foot-h: 26px;
@@ -763,7 +763,7 @@ a:hover { color: var(--green-deep); }
 
 /* ── 조작대 ─────────────────────────────────────────────────────────── */
 .controls {
-  flex-shrink: 0; margin: 10px 12px calc(10px + var(--safe-b));
+  flex-shrink: 0; margin: 10px 12px calc(14px + var(--safe-b));
   padding: 10px; border-radius: 20px;
   background: linear-gradient(180deg, var(--candy-body-lit), var(--candy-body));
   box-shadow: inset 0 0 0 3px var(--candy-body-deep), 0 5px 0 var(--candy-body-deep);
@@ -872,6 +872,20 @@ a:hover { color: var(--green-deep); }
   font-variant-numeric: tabular-nums; display: none;
 }
 .tipbar.on .pc { display: block; }
+/* 주소창이 떠서 세로가 짧아진 폰 — 조작대를 한 뼘 줄여 잘리지 않게 한다. */
+@media (max-height: 640px) {
+  .controls { margin-top: 8px; padding: 8px; gap: 6px; }
+  .drop-btn { width: 72px; height: 72px; }
+  .dropwrap { flex: 0 0 72px; }
+  .drop-btn .tx { font-size: 15px; }
+  .pad { flex: 0 0 88px; }
+  .pad .stick { width: 74px; height: 46px; }
+  .pad .stick .knob { width: 36px; height: 36px; }
+  .timerrow .t { font-size: 17px; }
+  .tipbar { min-height: 36px; padding: 6px 10px; }
+  .play-head { padding-bottom: 8px; }
+}
+
 .tipbar .tip {
   flex-shrink: 0; margin-right: 5px; padding: 1px 7px; border-radius: 7px;
   background: var(--candy-edge); color: #fff; font-size: 10px; font-weight: 700;
