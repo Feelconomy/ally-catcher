@@ -200,7 +200,7 @@ const Play = {
            레버와 드롭을 갈라 놓아 실제 기계처럼 두 손으로 쓰게 한다. -->
       <div class="controls">
         <div class="console">
-          <div class="pad">
+          <div class="lever">
             <div class="stick" id="stick">
               <div class="track"></div>
               <div class="knob" id="knob"><i></i></div>
