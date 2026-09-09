@@ -436,8 +436,13 @@ const Screens = {
         toast(on ? '북마크에 담았어요' : '북마크를 해제했어요', { mini: true });
       },
       share: () => {
-        Store.bumpMission('share');
-        toast('기계 링크를 복사했어요', { tone: 'ok', action: '미션 보기', onAction: () => go('mission') });
+        shareLink({ text: `올리캐쳐 '${m.name}'에서 인형 뽑자! 🎯` }).then(res => {
+          if (res === 'cancel') return;
+          if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
+          Store.bumpMission('share');
+          toast(res === 'copied' ? '기계 링크를 복사했어요' : '공유했어요',
+            { tone: 'ok', action: '미션 보기', onAction: () => go('mission') });
+        });
       },
       notify: () => toast('열리면 알려드릴게요', { tone: 'ok' }),
       play: () => {
@@ -764,9 +769,13 @@ const Screens = {
           return;
         }
         if (m.kind === 'share') {
-          Store.bumpMission('share');
-          toast('공유 링크를 복사했어요', { tone: 'ok' });
-          Screens.mission();
+          shareLink({ text: '올리캐쳐에서 같이 인형 뽑자! 🧸' }).then(res => {
+            if (res === 'cancel') return;                      // 취소 → 미션 미완료
+            if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
+            Store.bumpMission('share');                        // 실제 공유/복사 성공 시에만
+            toast(res === 'copied' ? '공유 링크를 복사했어요' : '공유했어요', { tone: 'ok' });
+            Screens.mission();
+          });
           return;
         }
         if (m.kind === 'play') { go('home'); return; }
@@ -967,7 +976,14 @@ const Screens = {
         const item = MY_MENU.find(x => x.id === el.dataset.id);
         if (!item) return;
         if (item.route) { go(item.route); return; }
-        if (item.action === 'invite') { toast('초대 링크를 복사했어요', { tone: 'ok' }); return; }
+        if (item.action === 'invite') {
+          shareLink({ text: '올리캐쳐에서 같이 인형 뽑자! 🧸 무료로 시작해요 👇' }).then(res => {
+            if (res === 'cancel') return;
+            if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
+            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구에게 초대를 보냈어요', { tone: 'ok' });
+          });
+          return;
+        }
         toast('고객센터는 준비 중이에요', { mini: true });
       },
     });

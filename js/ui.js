@@ -49,6 +49,43 @@ function statusbar(offline) {
   return `<div class="statusbar"></div>`;
 }
 
+// 공통 링크 공유: 모바일 네이티브 공유 시트 → 클립보드 복사 폴백.
+// 반환: 'shared'(공유 시트로 완료) | 'copied'(클립보드 복사) | 'cancel'(사용자 취소) | 'fail'
+async function shareLink(opts) {
+  const o = opts || {};
+  const url = o.url || (location.origin + location.pathname);
+  const text = o.text || '올리캐쳐 · AI 인형뽑기';
+  const title = o.title || '올리캐쳐';
+  const payload = `${text}\n${url}`;
+
+  // 1) 네이티브 공유 시트 (url 포함 → 카톡에선 OG 썸네일 카드로 노출)
+  if (navigator.share) {
+    try {
+      await navigator.share({ title, text, url });
+      return 'shared';
+    } catch (e) {
+      if (e && e.name === 'AbortError') return 'cancel';
+      /* 그 외 실패 → 복사 폴백 */
+    }
+  }
+  // 2) 클립보드 복사 (데스크톱 등)
+  try {
+    await navigator.clipboard.writeText(payload);
+    return 'copied';
+  } catch (_) {}
+  // 3) 구형/비보안 컨텍스트 폴백
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = payload;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.focus(); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    if (ok) return 'copied';
+  } catch (_) {}
+  return 'fail';
+}
+
 function appbar(title, opts) {
   const o = opts || {};
   return `<div class="appbar">
