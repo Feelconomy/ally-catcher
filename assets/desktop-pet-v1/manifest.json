@@ -1,0 +1,259 @@
+{
+  "format": "RGBA PNG",
+  "pixel_rendering": "nearest-neighbor",
+  "poses": {
+    "idle": {
+      "file": "poses/idle.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "blink": {
+      "file": "poses/blink.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "breathe": {
+      "file": "poses/breathe.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "walk_left_1": {
+      "file": "poses/walk_left_1.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "walk_left_2": {
+      "file": "poses/walk_left_2.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "wave": {
+      "file": "poses/wave.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "jump": {
+      "file": "poses/jump.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "sit": {
+      "file": "poses/sit.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "sleep": {
+      "file": "poses/sleep.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "surprised": {
+      "file": "poses/surprised.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "sad": {
+      "file": "poses/sad.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "angry": {
+      "file": "poses/angry.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "eat": {
+      "file": "poses/eat.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "heart": {
+      "file": "poses/heart.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "announce": {
+      "file": "poses/announce.png",
+      "size": [
+        128,
+        128
+      ]
+    },
+    "baseball": {
+      "file": "poses/baseball.png",
+      "size": [
+        128,
+        128
+      ]
+    }
+  },
+  "props": {
+    "heart": {
+      "file": "props/heart.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "sparkles": {
+      "file": "props/sparkles.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "sleep_z": {
+      "file": "props/sleep_z.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "speech_bubble": {
+      "file": "props/speech_bubble.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "megaphone": {
+      "file": "props/megaphone.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "cookie": {
+      "file": "props/cookie.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "carrot": {
+      "file": "props/carrot.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "bat_ball": {
+      "file": "props/bat_ball.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "medal": {
+      "file": "props/medal.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "baseball_cap": {
+      "file": "props/baseball_cap.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "straw_hat": {
+      "file": "props/straw_hat.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "sign": {
+      "file": "props/sign.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "cloud": {
+      "file": "props/cloud.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "anger": {
+      "file": "props/anger.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "blush": {
+      "file": "props/blush.png",
+      "size": [
+        96,
+        96
+      ]
+    },
+    "shadow": {
+      "file": "props/shadow.png",
+      "size": [
+        96,
+        96
+      ]
+    }
+  },
+  "atlases": {
+    "poses": "poses_atlas.png",
+    "props": "props_atlas.png"
+  },
+  "suggested_animations": {
+    "idle": [
+      "idle",
+      "breathe",
+      "idle",
+      "blink"
+    ],
+    "walk_left": [
+      "walk_left_1",
+      "walk_left_2"
+    ],
+    "walk_right": [
+      "walk_left_1",
+      "walk_left_2"
+    ],
+    "happy": [
+      "wave",
+      "jump"
+    ],
+    "sleep": [
+      "sleep"
+    ]
+  }
+}

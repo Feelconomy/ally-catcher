@@ -17,23 +17,18 @@ const AIM_FALLOFF = 0.10;    // distance over which the displayed odds decay
 const CLAW_W = 104;          // rendered claw width, px
 const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
 
-/* Roomy defaults. Play.layout() shrinks these to fit short viewports — a
-   phone browser with visible toolbars gives the cabinet far less height than
-   a desktop window, and fixed pixels put the claw inside the bed. */
-const CAB = {
-  railTop:  { min: 10, max: 40, share: 0.10 },
-  bedH:     { min: 78, max: 246, share: 0.46 },
-  footH:    { min: 12, max: 26, share: 0.05 },
-  cordMax: 150,   // 통이 커지면 집게가 그만큼 낮게 매달려 빈 공간이 줄어든다
-  cordMin: 16,
-  clearance: 22,             // gap kept between the claw tips and the bed top
-  clawMin: 30,               // the claw never shrinks below this, in px of height
-};
+/* 플레이 화면 스킨은 둘이다.
 
-/* 더미. 배경 그림을 깔지 않고 실제 인형으로 통을 채운다 — 네 줄이 서로
-   겹치게 쌓이고, 뒤로 갈수록 작고 높이 앉아 유리 안이 꽉 차 보인다.
-   모든 자리는 왼쪽 배출구를 피해 두어, 떨어질 구멍 위에는 아무것도 없다. */
-const BED = [
+     classic — 원래의 어두운 캐비닛. 확률 패널이 유리 안을 차지해 인형통이 얕고
+               인형이 9마리다. 가로 레버 + 전체폭 버튼.
+     arcade  — 밝은 캐비닛. 확률 패널을 유리 밖으로 빼서 그 자리를 전부 통에
+               내주고 인형 33마리를 쌓는다. 아케이드 스틱 + 별도 드롭 버튼.
+
+   어느 쪽을 쓸지는 관리자 페이지에서 고르고, 값은 서버 카탈로그에 실린다.
+   아래 수치는 첫 측정 전의 기본값 — Play.layout() 이 실제 높이를 재서
+   이 안에서 다시 계산한다. */
+
+const BED_ARCADE = [
   // 앞줄 — 가장 크고 가장 낮게
   { x: 0.300, layer: 5, size: 60, bottom: 2 },
   { x: 0.404, layer: 5, size: 61, bottom: 6 },
@@ -75,10 +70,58 @@ const BED = [
   { x: 0.838, layer: 0, size: 39, bottom: 192 },
 ];
 
-/** 더미가 자연 크기로 차지하는 높이 — 통이 이보다 낮으면 그 비율로 줄인다. */
-const PILE_H = Math.max(...BED.map(b => b.bottom + b.size));
+const BED_CLASSIC = [
+  // 뒷줄 — 작고 높이 올라앉아 앞줄에 반쯤 가린다
+  { x: 0.345, layer: 0, size: 54, bottom: 32 },
+  { x: 0.465, layer: 0, size: 56, bottom: 29 },
+  { x: 0.585, layer: 0, size: 54, bottom: 33 },
+  { x: 0.705, layer: 0, size: 57, bottom: 29 },
+  { x: 0.825, layer: 0, size: 54, bottom: 32 },
+  // 앞줄 — 크고 낮게, 뒷줄에 겹쳐 앉는다
+  { x: 0.405, layer: 1, size: 63, bottom: 7 },
+  { x: 0.525, layer: 1, size: 61, bottom: 10 },
+  { x: 0.645, layer: 1, size: 64, bottom: 6 },
+  { x: 0.765, layer: 1, size: 61, bottom: 9 },
+];
 
-const BED_MIN_X = 0.300;     // leftmost slot — a slipped doll never lands left of this
+const SKINS = {
+  classic: {
+    label: '기본', theme: 'dark', bed: BED_CLASSIC, bedMinX: 0.345,
+    cab: {
+      railTop:  { min: 14, max: 46, share: 0.11 },
+      bedH:     { min: 72, max: 118, share: 0.27 },
+      footH:    { min: 84, max: 118, share: 0.31 },
+      cordMax: 76, cordMin: 16, clearance: 12, clawMin: 30,
+    },
+  },
+  arcade: {
+    label: '아케이드', theme: 'arcade', bed: BED_ARCADE, bedMinX: 0.300,
+    cab: {
+      railTop:  { min: 10, max: 40, share: 0.10 },
+      bedH:     { min: 78, max: 246, share: 0.46 },
+      footH:    { min: 12, max: 26, share: 0.05 },
+      // 통이 커지면 집게가 그만큼 낮게 매달려 빈 공간이 줄어든다
+      cordMax: 150, cordMin: 16, clearance: 22, clawMin: 30,
+    },
+  },
+};
+
+const DEFAULT_SKIN = 'arcade';
+
+/* 고른 스킨의 값으로 start() 에서 갈아끼운다. PILE_H 는 더미가 자연 크기로
+   차지하는 높이 — 통이 이보다 낮으면 그 비율로 인형을 줄인다. */
+let CAB, BED, BED_MIN_X, PILE_H;
+
+function useSkin(id) {
+  const skin = SKINS[id] || SKINS[DEFAULT_SKIN];
+  CAB = skin.cab;
+  BED = skin.bed;
+  BED_MIN_X = skin.bedMinX;
+  PILE_H = Math.max(...BED.map(s => s.bottom + s.size));
+  return skin;
+}
+useSkin(DEFAULT_SKIN);
+
 const CHUTE_X = 0.155;       // claw position over the chute mouth
 const START_X = 0.60;        // claw starts over the middle of the pile
 const STICK_TILT = 24;       // 레버가 끝까지 기울었을 때의 각도(도)
@@ -108,6 +151,9 @@ const Play = {
     // Any drop still animating from a previous play belongs to an older
     // session and must stop touching the screen once this one begins.
     this.session += 1;
+    // 스킨마다 통 크기와 자리 수가 달라, 인형을 놓기 전에 먼저 정한다.
+    this.skinId = SKINS[Store.state.admin.skin] ? Store.state.admin.skin : DEFAULT_SKIN;
+    this.skin = useSkin(this.skinId);
     this.machine = machine;
     this.x = START_X;
     this.busy = false; this.over = false; this.dropped = false;
@@ -155,27 +201,18 @@ const Play = {
   },
 
   render() {
-    setTheme('candy');
+    setTheme(this.skin.theme);
     const m = this.machine;
-    screenEl().innerHTML = `<div class="screen candy">
-      ${statusbar()}
-      <div class="play-head">
-        <button class="iconbtn candy-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
-        <div class="marquee">
-          <span class="bulbs"></span>
-          <span class="nm">${esc(m.short || m.name)}</span>
-          <span class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</span>
-        </div>
-        ${walletChip()}
-      </div>
+    const arcade = this.skinId === 'arcade';
 
-      <div class="cabinet" id="cabinet">
-        <div class="glass"></div>
+    // 유리 안(레일·집게·통·조준빔·인형)은 두 스킨이 똑같고, 바깥 껍데기만 다르다.
+    const inner = `
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
+        ${arcade ? `<div class="glass"></div>
         <div class="signs">
           <span class="sign s1">CATCH<br>YOUR<br>HAPPINESS</span>
           <span class="sign s2">오늘도<br>귀여운 하루</span>
-        </div>
+        </div>` : '<div class="backwall"></div>'}
         <div class="rail"><i class="rail-mount" id="railMount"></i></div>
         <div class="claw-rig" id="rig">
           <div class="cord" id="cord"></div>
@@ -191,53 +228,30 @@ const Play = {
           </div>
         </div>
         <div class="aim" id="aim"></div>
-        <div class="pit" id="pit"></div>
-        <div class="chute" id="chute">
+        <div class="pit" id="pit"></div>`;
+
+    screenEl().innerHTML = `<div class="screen ${arcade ? 'arcade' : 'classic'}">
+      ${statusbar()}
+      ${arcade ? this.headArcade(m) : this.headClassic(m)}
+      <div class="cabinet" id="cabinet">
+        ${inner}
+        ${arcade ? `<div class="chute" id="chute">
           <div class="glow"></div>
           <div class="sign">여기로<br>쏙!</div>
-        </div>
+        </div>` : `<div class="play-foot">
+          <div class="chute" id="chute">
+            <div class="glow"></div>
+            <div class="sign">PRIZE OUT</div>
+            <div class="slot"></div>
+          </div>
+          <div class="odds">
+            <div class="l">이번 판 확률</div>
+            <div class="v"><b id="oddsNum">0%</b><span>집게 힘 ${esc(m.grip)}</span></div>
+            <div class="meter onDark"><i id="oddsBar" style="width:0"></i></div>
+          </div>
+        </div>`}
       </div>
-
-      <!-- 조작대: 왼쪽 조이스틱 · 가운데 계기판 · 오른쪽 드롭 버튼.
-           레버와 드롭을 갈라 놓아 실제 기계처럼 두 손으로 쓰게 한다. -->
-      <div class="controls">
-        <div class="console">
-          <div class="lever">
-            <div class="stick" id="stick">
-              <span class="base"></span>
-              <span class="shaft" id="knob"><span class="ball"></span></span>
-            </div>
-            <div class="padrow">
-              <button class="dpad left" data-dir="left" aria-label="왼쪽">${icon('chevronLeft3', 14)}</button>
-              <span>이동하기</span>
-              <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 14)}</button>
-            </div>
-          </div>
-
-          <div class="gauge">
-            <div class="timerrow">
-              <span class="l">남은 시간</span>
-              <span class="t" id="clock">${mmss(this.left)}</span>
-            </div>
-            <div class="bar"><i id="timeBar" style="width:100%"></i></div>
-          </div>
-
-          <div class="dropwrap">
-            <button class="drop-btn" id="dropBtn" data-act="drop" aria-label="집게 내리기">
-              <span class="ic">${icon('caretDown', 24)}</span>
-              <span class="tx">드롭</span>
-            </button>
-            <span class="cap">뽑기 시작!</span>
-          </div>
-        </div>
-        <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. -->
-        <div class="tipbar odds" id="target">
-          <span class="th"></span>
-          <b class="tip">TIP</b>
-          <span class="n" id="targetName">원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!</span>
-          <b class="pc" id="oddsNum">0%</b>
-        </div>
-      </div>
+      ${arcade ? this.controlsArcade() : this.controlsClassic()}
     </div>`;
 
     this.layout();
@@ -250,6 +264,89 @@ const Play = {
 
     if (!Store.state.coachDone) this.coach();
     else if (this.refilled) toast('인형을 새로 채운 기계예요', { tone: 'ok', duration: 2200 });
+  },
+
+  headClassic(m) {
+    return `<div class="play-head">
+      <button class="iconbtn ghost" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
+      <div>
+        <div class="nm">${esc(m.name)}</div>
+        <div class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</div>
+      </div>
+      ${walletChip(true)}
+    </div>`;
+  },
+
+  headArcade(m) {
+    return `<div class="play-head">
+      <button class="iconbtn arc-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
+      <div class="marquee">
+        <span class="bulbs"></span>
+        <span class="nm">${esc(m.short || m.name)}</span>
+        <span class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</span>
+      </div>
+      ${walletChip()}
+    </div>`;
+  },
+
+  controlsClassic() {
+    return `<div class="controls">
+      <div class="timerrow">
+        <span class="l">남은 시간</span>
+        <span class="t" id="clock">${mmss(this.left)}</span>
+      </div>
+      <div class="meter onDark"><i id="timeBar" style="width:100%"></i></div>
+      <div class="stick" id="stick">
+        <button class="dpad left"  data-dir="left"  aria-label="왼쪽">${icon('chevronLeft3', 20)}</button>
+        <div class="track"></div>
+        <div class="knob" id="knob"></div>
+        <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 20)}</button>
+      </div>
+      <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
+    </div>`;
+  },
+
+  /* 조작대: 왼쪽 스틱 · 가운데 계기판 · 오른쪽 드롭 버튼.
+     레버와 드롭을 갈라 놓아 실제 기계처럼 두 손으로 쓰게 한다. */
+  controlsArcade() {
+    return `<div class="controls">
+      <div class="console">
+        <div class="lever">
+          <div class="stick" id="stick">
+            <span class="base"></span>
+            <span class="shaft" id="knob"><span class="ball"></span></span>
+          </div>
+          <div class="padrow">
+            <button class="dpad left" data-dir="left" aria-label="왼쪽">${icon('chevronLeft3', 14)}</button>
+            <span>이동하기</span>
+            <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 14)}</button>
+          </div>
+        </div>
+
+        <div class="gauge">
+          <div class="timerrow">
+            <span class="l">남은 시간</span>
+            <span class="t" id="clock">${mmss(this.left)}</span>
+          </div>
+          <div class="bar"><i id="timeBar" style="width:100%"></i></div>
+        </div>
+
+        <div class="dropwrap">
+          <button class="drop-btn" id="dropBtn" data-act="drop" aria-label="집게 내리기">
+            <span class="ic">${icon('caretDown', 24)}</span>
+            <span class="tx">드롭</span>
+          </button>
+          <span class="cap">뽑기 시작!</span>
+        </div>
+      </div>
+      <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. -->
+      <div class="tipbar odds" id="target">
+        <span class="th"></span>
+        <b class="tip">TIP</b>
+        <span class="n" id="targetName">원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!</span>
+        <b class="pc" id="oddsNum">0%</b>
+      </div>
+    </div>`;
   },
 
   /** Fits the cabinet's vertical parts to the height actually available.
@@ -366,7 +463,7 @@ const Play = {
       if (!dragging) return;
       const r = stick.getBoundingClientRect();
       const cx = r.left + r.width / 2;
-      const max = r.width / 2 - 10;
+      const max = r.width / 2 - (this.skinId === 'arcade' ? 10 : 26);
       const dx = Math.max(-max, Math.min(max, ev.clientX - cx));
       vx = dx / max;
       this.tilt(vx);
@@ -445,16 +542,25 @@ const Play = {
       : '원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!';
   },
 
-  /** 레버가 기우는 각도 — 실제 아케이드 스틱처럼 밑동이 축이다. */
+  /** 레버를 -1..1 만큼 민 모습으로 그린다.
+      arcade 는 밑동을 축으로 기울고, classic 은 손잡이가 가로로 미끄러진다. */
   tilt(v) {
     const knob = document.getElementById('knob');
-    if (knob) knob.style.transform = `rotate(${(v * STICK_TILT).toFixed(1)}deg)`;
+    if (!knob) return;
+    if (this.skinId === 'arcade') {
+      knob.style.transform = `rotate(${(v * STICK_TILT).toFixed(1)}deg)`;
+      return;
+    }
+    const stick = document.getElementById('stick');
+    const max = stick ? stick.getBoundingClientRect().width / 2 - 26 : 0;
+    knob.style.transform = `translateX(${(v * max).toFixed(1)}px)`;
   },
 
-  /** 실제 스틱처럼, 미는 동안만 기울고 손을 떼면 가운데로 돌아온다. */
+  /** 손을 뗐을 때의 모습. arcade 스틱은 실제 기계처럼 중립으로 돌아오고,
+      classic 손잡이는 집게가 선 자리를 그대로 가리킨다. */
   paintKnob() {
     if (this.stickActive) return;   // 미는 중엔 손가락이 각도를 쥐고 있다
-    this.tilt(0);
+    this.tilt(this.skinId === 'arcade' ? 0 : (this.x - 0.5) * 2);
   },
 
   /** 화살표 버튼·키보드로 움직일 때도 그쪽으로 잠깐 기울여 준다. */

@@ -30,7 +30,8 @@ const DEFAULT_STATE = {
   day: null,
   // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
   // custom 은 관리자가 직접 추가한 인형(포즈 이미지는 data URL).
-  admin: { dolls: {}, machines: {}, custom: {} },
+  // skin 은 플레이 화면 스킨 ('classic' | 'arcade')
+  admin: { dolls: {}, machines: {}, custom: {}, skin: 'arcade' },
 };
 
 const Store = {
@@ -47,7 +48,7 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
-    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {} }, (saved && saved.admin) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, skin: 'arcade' }, (saved && saved.admin) || {});
     this.applyAdmin();
     this.rollDay();
     return this.state;
