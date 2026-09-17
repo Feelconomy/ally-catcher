@@ -44,8 +44,10 @@ const Sync = (function () {
     if (opts && opts.keepalive) init.keepalive = true;
     return fetch(URL + '/rest/v1/' + path, init).then((r) => {
       if (!r.ok) return r.text().then((t) => { throw new Error('DB ' + r.status + ': ' + t); });
-      if (r.status === 204) return null;
-      return r.json();
+      // 성공이어도 본문이 빌 수 있다 — 204뿐 아니라 upsert/삽입이 return=minimal 로
+      // 201·200 을 빈 본문과 함께 준다. 그때 r.json() 은 'Unexpected end of JSON input'
+      // 으로 던져 저장 성공을 실패로 오인하게 만든다. 텍스트로 받아 비면 null.
+      return r.text().then((t) => (t ? JSON.parse(t) : null));
     });
   }
 
