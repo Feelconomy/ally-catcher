@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><i></i></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=80" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
         ${dollImg('olly', 150, '', 'win')}
@@ -228,7 +228,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><i></i></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo.png?v=80" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
