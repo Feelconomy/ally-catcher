@@ -61,7 +61,7 @@ const Screens = {
         <div class="brandmark l"><i></i></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
-        ${dollImg('rabbit', 150, '')}
+        ${dollImg('olly', 150, '', 'win')}
         <div class="actions">
           <button class="btn btn--kakao" data-act="sso" data-p="카카오">${icon('logoKakao', 20)}카카오로 시작하기</button>
           <button class="btn btn--naver" data-act="sso" data-p="네이버">네이버로 시작하기</button>
@@ -1275,9 +1275,10 @@ const Screens = {
       <div class="chiprow">
         <button class="chip" aria-pressed="${tab === 'dolls'}" data-act="tab" data-t="dolls">인형 ${DOLL_IDS.length}</button>
         <button class="chip" aria-pressed="${tab === 'machines'}" data-act="tab" data-t="machines">기계 ${MACHINES.length}</button>
+        <button class="chip" aria-pressed="${tab === 'screen'}" data-act="tab" data-t="screen">화면</button>
       </div>
       <div class="scroll pad">
-        ${tab === 'dolls' ? adminDollGrid() : adminMachineList()}
+        ${tab === 'machines' ? adminMachineList() : tab === 'screen' ? adminSkinPicker() : adminDollGrid()}
         <button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>
         <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
           ${window.Sync && Sync.enabled
@@ -1293,14 +1294,46 @@ const Screens = {
       doll: el => Sheets.adminDoll(el.dataset.id),
       newDoll: () => Sheets.adminDoll(null),
       machine: el => Sheets.adminMachine(el.dataset.id),
+      skin: el => {
+        Store.state.admin.skin = el.dataset.s;
+        Store.pushAdmin();
+        Screens.admin();
+        toast(`${el.dataset.s === 'arcade' ? '아케이드' : '기본'} 화면으로 바꿨어요`, { tone: 'ok' });
+      },
       reset: () => {
-        Store.state.admin = { dolls: {}, machines: {}, custom: {} };
+        Store.state.admin = { dolls: {}, machines: {}, custom: {}, skin: 'arcade' };
         // 서버까지 비운 다음에 새로고침해야 되돌린 게 다시 딸려오지 않는다.
         Store.pushAdmin().then(() => location.reload());
       },
     });
   },
 };
+
+/* 플레이 화면 스킨 고르기. 미리보기는 실제 화면의 조각을 축소해 만든 것이라
+   이미지 파일이 없고, 스킨을 손보면 미리보기도 같이 바뀐다. */
+function adminSkinPicker() {
+  const cur = Store.state.admin.skin === 'classic' ? 'classic' : 'arcade';
+  const opts = [
+    { id: 'arcade',  name: '아케이드', desc: '밝은 캐비닛 · 인형 33마리 · 스틱과 드롭 버튼 분리' },
+    { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
+  ];
+  return `<div class="skin-pick">
+    ${opts.map(o => `<button class="skin-card ${o.id}" data-act="skin" data-s="${o.id}"
+        aria-pressed="${cur === o.id}">
+      <span class="sk-shot">
+        <span class="sk-cab"><span class="sk-claw"></span><span class="sk-pile"></span></span>
+        <span class="sk-ctl">${o.id === 'arcade'
+          ? '<span class="sk-lv"></span><span class="sk-gg"></span><span class="sk-dp"></span>'
+          : '<span class="sk-a"></span><span class="sk-b"></span>'}</span>
+      </span>
+      <span class="sk-meta">
+        <span class="sk-nm">${o.name}${cur === o.id ? ' <b class="sk-on">사용 중</b>' : ''}</span>
+        <span class="sk-ds">${o.desc}</span>
+      </span>
+    </button>`).join('')}
+    <div class="adm-note">플레이 화면에만 적용돼요. 다른 화면은 그대로입니다.</div>
+  </div>`;
+}
 
 /* 도감처럼 늘어놓은 인형 카드. 카드 안에 네 표정을 그대로 보여준다. */
 function adminDollGrid() {

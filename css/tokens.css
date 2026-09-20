@@ -18,6 +18,21 @@
   --nh-gold: #FFC20E;
   --nh-gold-ink: #7A5A00;
 
+  /* 아케이드 캐비닛 — 플레이 화면(신규 스킨) 전용 팔레트.
+     레퍼런스 아트의 기계를 이미지 없이 코드로 옮기려고 따로 둔 값들이고,
+     색은 브랜드 초록 계열로 맞췄다. */
+  --arc-bg: #EDF7F0;
+  --arc-body: #BCE5CB;
+  --arc-body-lit: #DAF2E2;
+  --arc-body-deep: #8FD3AB;
+  --arc-edge: #00A650;
+  --arc-glass: #DCF1E6;
+  --arc-glass-lit: #F2FBF5;
+  --arc-ink: #0E4F2C;
+  --arc-ink-soft: rgba(14, 79, 44, .58);
+  --arc-panel: #FFFBEF;
+  --arc-accent: #CBEBD8;
+
   /* Surfaces */
   --canvas: #F3F1EA;
   --canvas-alt: #EFEDE6;
