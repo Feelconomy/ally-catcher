@@ -821,7 +821,7 @@ const Dialogs = {
         ${meter(0, 'onDark')}
         <span class="cd" id="cd">${AD_SECONDS}초 후 닫기</span>
       </div>
-      <div class="frame">광고 영역</div>
+      <div class="frame"><iframe id="adVideo" src="https://www.youtube.com/embed/sJSwiW9UKgE?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="광고 영상" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="eager"></iframe></div>
       <div class="t">끝까지 보면 티켓 ${AD_TICKETS}장을 받아요</div>
       <div class="r">${icon('ticketFill', 18)}<span>보상 대기중</span></div>
       <div class="skip" id="skip">건너뛰기 (${AD_SECONDS})</div>
