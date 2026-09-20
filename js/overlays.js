@@ -816,17 +816,40 @@ const Dialogs = {
     shellEl().style.background = 'var(--dark-ad)';
     let left = AD_SECONDS;
 
+    // 두 광고 영상을 번갈아 재생
+    const vid = AD_VIDEOS[Store.state.adVideoIdx % AD_VIDEOS.length];
+    Store.state.adVideoIdx = (Store.state.adVideoIdx + 1) % AD_VIDEOS.length;
+    Store.save();
+
     screenEl().innerHTML = `<div class="screen ad">
       <div class="top" style="top:54px">
         ${meter(0, 'onDark')}
         <span class="cd" id="cd">${AD_SECONDS}초 후 닫기</span>
       </div>
-      <div class="frame"><iframe id="adVideo" src="https://www.youtube.com/embed/sJSwiW9UKgE?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="광고 영상" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="eager"></iframe></div>
+      <div class="frame"><iframe id="adVideo" src="https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="광고 영상" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="eager"></iframe></div>
       <div class="t">끝까지 보면 티켓 ${AD_TICKETS}장을 받아요</div>
       <div class="r">${icon('ticketFill', 18)}<span>보상 대기중</span></div>
-      <div class="skip" id="skip">건너뛰기 (${AD_SECONDS})</div>
+      <div class="skip" id="skip">건너뛰기 (${AD_SKIP_AFTER})</div>
     </div>`;
 
+    // 5초 후 건너뛰기 = 보상 없이 나가기. 30초 완주 = 티켓 지급.
+    const exitAd = () => {
+      clearInterval(timer);
+      shellEl().style.background = '';
+      setTheme('');
+      go('mission');
+    };
+    const claim = () => {
+      clearInterval(timer);
+      shellEl().style.background = '';
+      Store.state.adsWatchedToday += 1;
+      Store.bumpMission('ad');
+      Store.addTickets(AD_TICKETS);
+      Store.save();
+      Dialogs.reward(AD_TICKETS, '광고 시청 미션을 완료했어요', machine);
+    };
+
+    let skippable = false;
     const timer = setInterval(() => {
       left -= 1;
       const bar = $('.ad .meter > i', screenEl());
@@ -834,22 +857,24 @@ const Dialogs = {
       const cd = document.getElementById('cd');
       const skip = document.getElementById('skip');
       if (!cd || !skip) { clearInterval(timer); return; }
+      const watched = AD_SECONDS - left;
       if (left > 0) {
         cd.textContent = `${left}초 후 닫기`;
-        skip.textContent = `건너뛰기 (${left})`;
-      } else {
+        if (watched < AD_SKIP_AFTER) {
+          skip.textContent = `건너뛰기 (${AD_SKIP_AFTER - watched})`;
+        } else if (!skippable) {          // 5초 도달 — 건너뛰기 활성화
+          skippable = true;
+          skip.textContent = '광고 건너뛰기';
+          skip.classList.add('can-skip');
+          skip.onclick = exitAd;
+        }
+      } else {                            // 완주 — 보상 버튼으로 전환
         clearInterval(timer);
         cd.textContent = '보상 지급';
         skip.textContent = '티켓 받기';
+        skip.classList.remove('can-skip');
         skip.classList.add('ready');
-        skip.onclick = () => {
-          shellEl().style.background = '';
-          Store.state.adsWatchedToday += 1;
-          Store.bumpMission('ad');
-          Store.addTickets(AD_TICKETS);
-          Store.save();
-          Dialogs.reward(AD_TICKETS, '광고 시청 미션을 완료했어요', machine);
-        };
+        skip.onclick = claim;
       }
     }, 1000);
 

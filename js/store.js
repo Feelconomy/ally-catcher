@@ -19,6 +19,7 @@ const DEFAULT_STATE = {
   claimed: [],            // mission ids already collected
   bonusClaimed: false,
   adsWatchedToday: 0,
+  adVideoIdx: 0,          // 광고 영상 번갈아 재생용 인덱스
   attendance: 5,
   entries: [],            // raffle entries
   stock: {},              // machineId -> 남아 있는 인형 [dollId] (뽑으면 줄고, 비면 리필)

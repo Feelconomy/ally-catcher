@@ -991,7 +991,8 @@ a:hover { color: var(--green-deep); }
   background: rgba(255, 255, 255, .08); display: flex; align-items: center; justify-content: center;
   font-size: 14px; font-weight: 600; color: rgba(255, 255, 255, .35);
 }
-.ad .skip.ready { background: var(--yellow); color: var(--ink); font-weight: 700; }
+.ad .skip.can-skip { background: rgba(255, 255, 255, .18); color: #fff; cursor: pointer; }
+.ad .skip.ready { background: var(--yellow); color: var(--ink); font-weight: 700; cursor: pointer; }
 
 /* Convert done (37) */
 .convert-done { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; padding: 70px 28px 0; width: 100%; }
