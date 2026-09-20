@@ -13,6 +13,7 @@ const App = {
   pendingProvider: null,
   guest: false,
   adTimer: null,
+  adPlayer: null,
   heroTimer: null,
   splashTimers: null,
   levelUpTo: 0,
@@ -32,6 +33,7 @@ function render(route, arg) {
   // Leaving the machine tears down its timers and key handlers.
   if (App.route === 'play' && route !== 'play') Play.stop();
   if (App.adTimer) { clearInterval(App.adTimer); App.adTimer = null; }
+  if (App.adPlayer) { try { App.adPlayer.destroy(); } catch (_) {} App.adPlayer = null; }
   if (App.heroTimer) { clearInterval(App.heroTimer); App.heroTimer = null; }
   if (App.splashTimers) { App.splashTimers.forEach(clearInterval); App.splashTimers = null; }
   Overlay.closeAll();

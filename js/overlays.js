@@ -930,7 +930,7 @@ const Dialogs = {
     const before = Store.state.tickets - tickets;
     setTheme('');
     shellEl().style.background = '';
-    if (App.route === 'mission') Screens.mission(); else Screens.mission();
+    Screens.mission();   // 보상 후 미션 화면을 갱신
 
     dialog(`
       <div class="art xl" style="background:var(--yellow-soft);color:var(--yellow-pressed)">${icon('ticketFill', 46)}</div>
