@@ -6,6 +6,7 @@ const STORE_KEY = 'ppopgiwang.v1';
 
 const DEFAULT_STATE = {
   onboarded: false,
+  signupBonus: false,     // 가입 축하 티켓 지급 여부 (1회만)
   account: null,          // { provider, nickname, avatar }
   terms: { service: false, privacy: false, age: false, marketing: false },
   tickets: 0,
@@ -48,6 +49,11 @@ const Store = {
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
     this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {} }, (saved && saved.admin) || {});
+    // 마이그레이션: 이 플래그가 생기기 전에 이미 가입(onboarded)한 사용자는
+    // 보너스를 받은 것으로 간주해, 재접속 때 소급 지급/토스트가 뜨지 않게 한다.
+    if (saved && saved.onboarded && saved.signupBonus === undefined) {
+      this.state.signupBonus = true;
+    }
     this.applyAdmin();
     this.rollDay();
     return this.state;
@@ -168,6 +174,14 @@ const Store = {
   addPoints(n)  { this.state.points  = Math.max(0, this.state.points  + n); this.save(); },
 
   canAfford(cost) { return this.state.tickets >= cost; },
+
+  /** 가입 축하 티켓 — 계정/기기당 딱 1회. 지급한 장수(없으면 0)를 돌려준다. */
+  claimSignupBonus() {
+    if (this.state.signupBonus) return 0;
+    this.state.signupBonus = true;
+    this.addTickets(SIGNUP_TICKETS);   // addTickets 가 save() 까지 함
+    return SIGNUP_TICKETS;
+  },
 
   // --- prizes ------------------------------------------------------------
 

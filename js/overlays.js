@@ -795,10 +795,9 @@ const Dialogs = {
 
   /* --- 14 가입 티켓 지급 ------------------------------------------------- */
   welcome() {
-    if (!Store.state.onboarded) {
-      Store.state.onboarded = true;
-      Store.addTickets(SIGNUP_TICKETS);
-    }
+    Store.state.onboarded = true;
+    Store.claimSignupBonus();   // 중복 방지 플래그로 1회만 지급
+    Store.save();
     dialog(`
       <div class="eyebrow">WELCOME</div>
       <h3 style="margin-top:10px;font-size:23px">티켓 ${SIGNUP_TICKETS}장 도착!</h3>
