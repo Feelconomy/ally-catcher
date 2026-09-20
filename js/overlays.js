@@ -485,6 +485,26 @@ const POSE_LABELS = ['기본', '집게에 잡힘', '떨어짐', '뽑음'];
 const GRADE_POINTS = { N: 60, R: 120, SR: 400 };
 const GRADE_BG = { N: '#F0F3F6', R: '#FFF3DC', SR: '#EAF7DE' };
 
+/* YouTube IFrame Player API 를 한 번만 로드하고, 준비되면 resolve.
+   광고 진행바를 실제 영상 재생시간에 맞추기 위해 필요하다. */
+let __ytApiPromise = null;
+function ensureYTApi() {
+  if (window.YT && window.YT.Player) return Promise.resolve();
+  if (__ytApiPromise) return __ytApiPromise;
+  __ytApiPromise = new Promise((resolve, reject) => {
+    const prev = window.onYouTubeIframeAPIReady;
+    window.onYouTubeIframeAPIReady = () => {
+      if (typeof prev === 'function') { try { prev(); } catch (_) {} }
+      resolve();
+    };
+    const s = document.createElement('script');
+    s.src = 'https://www.youtube.com/iframe_api';
+    s.onerror = () => reject(new Error('YT API 로드 실패'));
+    document.head.appendChild(s);
+  });
+  return __ytApiPromise;
+}
+
 /* 2×2 포즈 시트를 브라우저에서 잘라 네 장의 data URL로. 격자선은 알파 채널의
    가운데 1/3 구간에서 가장 넓은 빈 띠로 잡고, 각 칸은 그림 경계에 맞춰 다듬는다
    — tools/split_sheet.py 와 같은 방식이다. */
@@ -814,7 +834,6 @@ const Dialogs = {
   ad(machine) {
     setTheme('dark');
     shellEl().style.background = 'var(--dark-ad)';
-    let left = AD_SECONDS;
 
     // 두 광고 영상을 번갈아 재생
     const vid = AD_VIDEOS[Store.state.adVideoIdx % AD_VIDEOS.length];
@@ -824,61 +843,86 @@ const Dialogs = {
     screenEl().innerHTML = `<div class="screen ad">
       <div class="top" style="top:54px">
         ${meter(0, 'onDark')}
-        <span class="cd" id="cd">${AD_SECONDS}초 후 닫기</span>
+        <span class="cd" id="cd">광고 준비 중…</span>
       </div>
-      <div class="frame"><iframe id="adVideo" src="https://www.youtube.com/embed/${vid}?autoplay=1&mute=1&playsinline=1&rel=0&modestbranding=1" title="광고 영상" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen loading="eager"></iframe></div>
+      <div class="frame"><div id="adVideo"></div></div>
       <div class="t">끝까지 보면 티켓 ${AD_TICKETS}장을 받아요</div>
       <div class="r">${icon('ticketFill', 18)}<span>보상 대기중</span></div>
       <div class="skip" id="skip">건너뛰기 (${AD_SKIP_AFTER})</div>
     </div>`;
 
-    // 5초 후 건너뛰기 = 보상 없이 나가기. 30초 완주 = 티켓 지급.
-    const exitAd = () => {
-      clearInterval(timer);
-      shellEl().style.background = '';
-      setTheme('');
-      go('mission');
+    const start = Date.now();
+    let player = null, poll = null, rewarded = false, skippable = false, ended = false;
+
+    const cleanup = () => {
+      if (poll) { clearInterval(poll); poll = null; }
+      App.adTimer = null;
+      if (player && player.destroy) { try { player.destroy(); } catch (_) {} }
+      player = null; App.adPlayer = null;
     };
+    // 5초 후 건너뛰기 = 보상 없이 나가기. 영상 끝까지 시청 = 티켓 지급.
+    const exitAd = () => { cleanup(); shellEl().style.background = ''; setTheme(''); go('mission'); };
     const claim = () => {
-      clearInterval(timer);
-      shellEl().style.background = '';
+      if (rewarded) return; rewarded = true;
+      cleanup(); shellEl().style.background = '';
       Store.state.adsWatchedToday += 1;
       Store.bumpMission('ad');
       Store.addTickets(AD_TICKETS);
       Store.save();
       Dialogs.reward(AD_TICKETS, '광고 시청 미션을 완료했어요', machine);
     };
+    const enableSkip = () => {
+      if (skippable) return; skippable = true;
+      const skip = document.getElementById('skip');
+      if (skip) { skip.textContent = '광고 건너뛰기'; skip.classList.add('can-skip'); skip.onclick = exitAd; }
+    };
+    const showClaim = () => {                   // 영상이 실제로 끝나면 '티켓 받기'
+      if (ended || rewarded) return; ended = true;
+      if (poll) { clearInterval(poll); poll = null; }
+      const cd = document.getElementById('cd'); if (cd) cd.textContent = '시청 완료';
+      const bar = $('.ad .meter > i', screenEl()); if (bar) bar.style.width = '100%';
+      const skip = document.getElementById('skip');
+      if (skip) { skip.textContent = '티켓 받기'; skip.classList.remove('can-skip'); skip.classList.add('ready'); skip.onclick = claim; }
+    };
 
-    let skippable = false;
-    const timer = setInterval(() => {
-      left -= 1;
-      const bar = $('.ad .meter > i', screenEl());
-      if (bar) bar.style.width = ((AD_SECONDS - left) / AD_SECONDS * 100) + '%';
+    // 진행바·카운트다운을 '실제 영상 재생시간'에 맞춘다.
+    const tick = () => {
       const cd = document.getElementById('cd');
       const skip = document.getElementById('skip');
-      if (!cd || !skip) { clearInterval(timer); return; }
-      const watched = AD_SECONDS - left;
-      if (left > 0) {
-        cd.textContent = `${left}초 후 닫기`;
-        if (watched < AD_SKIP_AFTER) {
-          skip.textContent = `건너뛰기 (${AD_SKIP_AFTER - watched})`;
-        } else if (!skippable) {          // 5초 도달 — 건너뛰기 활성화
-          skippable = true;
-          skip.textContent = '광고 건너뛰기';
-          skip.classList.add('can-skip');
-          skip.onclick = exitAd;
-        }
-      } else {                            // 완주 — 보상 버튼으로 전환
-        clearInterval(timer);
-        cd.textContent = '보상 지급';
-        skip.textContent = '티켓 받기';
-        skip.classList.remove('can-skip');
-        skip.classList.add('ready');
-        skip.onclick = claim;
+      if (!cd || !skip) { cleanup(); return; }         // 화면을 벗어남
+      let cur = 0, dur = 0;
+      if (player && player.getDuration) {
+        try { dur = player.getDuration() || 0; cur = player.getCurrentTime() || 0; } catch (_) {}
       }
-    }, 1000);
+      if (dur > 0) {
+        const bar = $('.ad .meter > i', screenEl());
+        if (bar) bar.style.width = Math.min(100, cur / dur * 100) + '%';
+        if (!ended) cd.textContent = `${Math.max(0, Math.ceil(dur - cur))}초 후 닫기`;
+        if (cur >= dur - 0.4) { showClaim(); return; }
+      }
+      // 건너뛰기 게이트 — 진입 후 벽시계 기준(영상이 안 떠도 항상 건너뛰기 보장)
+      if (!skippable) {
+        const elapsed = (Date.now() - start) / 1000;
+        if (elapsed < AD_SKIP_AFTER) skip.textContent = `건너뛰기 (${Math.max(1, Math.ceil(AD_SKIP_AFTER - elapsed))})`;
+        else enableSkip();
+      }
+    };
 
-    App.adTimer = timer;
+    ensureYTApi().then(() => {
+      if (!document.getElementById('adVideo')) return;   // 이미 나갔으면 중단
+      player = new YT.Player('adVideo', {
+        width: '100%', height: '100%', videoId: vid,
+        playerVars: { autoplay: 1, mute: 1, playsinline: 1, rel: 0, modestbranding: 1, controls: 1 },
+        events: {
+          onReady: (e) => { try { e.target.playVideo(); } catch (_) {} },
+          onStateChange: (e) => { if (e.data === YT.PlayerState.ENDED) showClaim(); },
+        },
+      });
+      App.adPlayer = player;
+    }).catch(() => { /* API 로드 실패 시: 벽시계로 건너뛰기만 동작 */ });
+
+    poll = setInterval(tick, 250);
+    App.adTimer = poll;
   },
 
   /* --- 32 보상 획득 ------------------------------------------------------ */
