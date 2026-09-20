@@ -84,9 +84,12 @@ const Store = {
   prune() {
     const known = id => !!DOLLS[id];
     this.state.prizes = this.state.prizes.filter(p => known(p.dollId));
+    // 인형통에서는 없어진 인형뿐 아니라 관리자가 꺼둔 인형도 뺀다 — 껐는데
+    // 다음 리필까지 계속 나오면 꺼진 것처럼 보이지 않는다.
+    const stocked = id => known(id) && !DOLLS[id].hidden;
     for (const k in this.state.stock) {
       const s = this.state.stock[k];
-      if (Array.isArray(s)) this.state.stock[k] = s.filter(known);
+      if (Array.isArray(s)) this.state.stock[k] = s.filter(stocked);
     }
   },
 
@@ -314,8 +317,9 @@ const Store = {
   refillMachine(machine, slots) {
     const n = Math.max(1, slots || 9);
     const filled = [];
-    if (!machine.pool.length) { this.state.stock[machine.id] = filled; return filled; }
-    for (let i = 0; i < n; i++) filled.push(machine.pool[i % machine.pool.length]);
+    const pool = machine.pool.filter(id => DOLLS[id] && !DOLLS[id].hidden);
+    if (!pool.length) { this.state.stock[machine.id] = filled; return filled; }
+    for (let i = 0; i < n; i++) filled.push(pool[i % pool.length]);
     shuffle(filled);
     this.state.stock[machine.id] = filled;
     this.save();

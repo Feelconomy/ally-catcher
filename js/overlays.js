@@ -364,6 +364,14 @@ const Sheets = {
             aria-pressed="${(d ? d.grade : 'R') === g}">${g} · ${fmt(GRADE_POINTS[g])}P</button>`).join('')}
       </div>
 
+      ${d ? `<div class="entry-calc" style="margin-top:16px">
+        <div class="ln">
+          <span class="l">기계에 넣기</span>
+          <button class="toggle" role="switch" aria-checked="${!d.hidden}" data-act="hide" aria-label="기계에 넣기"><i></i></button>
+        </div>
+      </div>
+      <div class="adm-note">꺼두면 인형통에 더 이상 채워지지 않아요. 이미 뽑은 인형과 도감은 그대로예요.</div>` : ''}
+
       <button class="btn btn--primary" style="margin-top:18px" data-act="save">${d ? '저장' : '추가하기'}</button>
       ${d && custom ? `<button class="btn md btn--text" style="margin-top:6px;color:var(--danger)" data-act="del">이 인형 삭제</button>` : ''}`,
       (node, close) => {
@@ -386,6 +394,11 @@ const Sheets = {
 
         bind(node, {
           grade: el => { grade = el.dataset.g; paintGrade(); },
+          hide: el => {
+            Store.setAdmin('dolls', id, { hidden: !d.hidden });
+            el.setAttribute('aria-checked', String(!d.hidden));
+            toast(d.hidden ? '기계에서 뺐어요' : '기계에 다시 넣어요', { mini: true });
+          },
           del: () => {
             Store.removeCustomDoll(id);
             close(); Screens.admin(); toast('삭제했어요', { mini: true });
@@ -402,6 +415,7 @@ const Sheets = {
               const ok = Store.addCustomDoll({
                 id: newId, name, grade, points: GRADE_POINTS[grade],
                 bg: GRADE_BG[grade], rate: d ? d.rate : 2.4, art,
+                hidden: d ? !!d.hidden : false,
               });
               if (!ok) return toast('저장 공간이 부족해요. 인형을 몇 개 지워보세요', { tone: 'error' });
             }
@@ -436,7 +450,7 @@ const Sheets = {
 
       <div class="group-label" style="margin:18px 0 8px">넣을 인형 <span id="pn">${picked.size}</span>종</div>
       <div class="adm-pick" id="pick">
-        ${DOLL_IDS.map(id => `<button class="pk" data-act="pick" data-id="${id}" aria-pressed="${picked.has(id)}">
+        ${DOLL_IDS.map(id => `<button class="pk ${DOLLS[id].hidden ? 'off' : ''}" data-act="pick" data-id="${id}" aria-pressed="${picked.has(id)}">
           <span class="th" style="background:${DOLLS[id].bg}">${dollImg(id, 38)}</span>
           <span class="nm">${esc(DOLLS[id].name)}</span>
         </button>`).join('')}

@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=80" alt="" width="72" height="72"></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=81" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
         ${dollImg('olly', 150, '', 'win')}
@@ -228,7 +228,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo.png?v=80" alt="" width="30" height="30"></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=81" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
@@ -1340,9 +1340,9 @@ function adminDollGrid() {
   return `<div class="adm-grid">
     ${DOLL_IDS.map(id => {
       const d = DOLLS[id];
-      return `<button class="adm-card" data-act="doll" data-id="${id}">
+      return `<button class="adm-card ${d.hidden ? 'off' : ''}" data-act="doll" data-id="${id}">
         <span class="hero" style="background:${d.bg}">${dollImg(id, 62)}</span>
-        <span class="nm">${esc(d.name)}${Store.state.admin.custom[id] ? ' <b class="tag">추가</b>' : ''}</span>
+        <span class="nm">${esc(d.name)}${Store.state.admin.custom[id] ? ' <b class="tag">추가</b>' : ''}${d.hidden ? ' <b class="tag off">꺼짐</b>' : ''}</span>
         <span class="mt">${d.grade} · ${fmt(d.points)}P</span>
         ${d.art ? `<span class="poses">${DOLL_STATES.map(s => dollImg(id, 26, '', s)).join('')}</span>`
                 : '<span class="poses one">표정 한 종류</span>'}
@@ -1373,7 +1373,7 @@ function adminMachineList() {
           <span class="chev">${icon('chevronRight3', 18)}</span>
         </span>
         <span class="pool">
-          ${ids.slice(0, 8).map(id => `<span class="p" style="background:${DOLLS[id].bg}">${dollImg(id, 26)}</span>`).join('')}
+          ${ids.slice(0, 8).map(id => `<span class="p ${DOLLS[id].hidden ? 'off' : ''}" style="background:${DOLLS[id].bg}">${dollImg(id, 26)}</span>`).join('')}
           ${ids.length > 8 ? `<span class="more">+${ids.length - 8}</span>` : ''}
           ${ids.length ? '' : '<span class="more">비어 있음</span>'}
         </span>
