@@ -615,7 +615,7 @@ const Screens = {
       ${statusbar()}
       <div class="storage-head">
         <h2 class="h2">보관함</h2>
-        <p>${total ? `인형 ${total}마리 · 도감 완성도 ${Store.codexPercent()}%` : '아직 모은 인형이 없어요'}</p>
+        <p>${total ? `인형 ${total}마리 · 도감 수집률 ${Store.codexPercent()}%` : '아직 모은 인형이 없어요'}</p>
       </div>
 
       ${total ? `
@@ -676,7 +676,7 @@ const Screens = {
       ${appbar('인형 도감')}
       <div style="margin:0 20px 16px" class="card pad">
         <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:13px;font-weight:700">완성도</span>
+          <span style="font-size:13px;font-weight:700">수집률</span>
           <span style="font-size:16px;font-weight:700;color:var(--green)">${owned} / ${CODEX_TOTAL}</span>
         </div>
         <div style="margin-top:11px">${meter((owned / CODEX_TOTAL) * 100, 'tall')}</div>
@@ -799,7 +799,7 @@ const Screens = {
           <div class="l">보유 포인트</div>
           <div class="v">${fmt(Store.state.points)}<span>P</span></div>
         </div>
-        ${dollImg('duck', 62)}
+        ${dollImg('olly', 62)}
       </div>
 
       <div class="scroll">
