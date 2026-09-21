@@ -1449,7 +1449,7 @@ a:hover { color: var(--green-deep); }
 .toast .ic.err { color: #FF6B6B; }
 .toast .tx { flex: 1; font-size: 13px; font-weight: 600; color: #fff; padding: 12px 0; }
 .toast .act { font-size: 13px; font-weight: 700; color: var(--yellow); flex-shrink: 0; }
-.toast.mini { align-self: center; min-height: 0; padding: 12px 20px; border-radius: 14px; background: rgba(23, 23, 23, .88); }
+.toast.mini { align-self: center; min-height: 0; padding: 12px 20px; border-radius: 14px; background: rgba(23, 23, 23, .88); color: #fff; font-size: 13px; font-weight: 600; }
 
 /* Brag card preview */
 .brag-frame {
