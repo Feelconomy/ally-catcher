@@ -60,16 +60,13 @@ function applySession(session) {
     avatar: (prev && prev.avatar) || 'cat',
   };
   Store.state.onboarded = true;
-  // 카카오 가입도 축하 티켓 1회. (반환 0이면 이미 받은 사용자 → 조용히 넘어감)
-  const bonus = Store.claimSignupBonus ? Store.claimSignupBonus() : 0;
+  // 가입 축하 티켓은 여기서 주지 않는다 — 서버에 계정 행이 없을 때(진짜 신규)만
+  // sync.js 의 createRow 에서 1회 지급한다. 로컬 플래그로 주면 저장소가 지워진
+  // 기존 회원이 재지급받는 버그가 생긴다.
   Store.save();
   const curRoute = (typeof App !== 'undefined') ? App.route : null;
   if (typeof go === 'function' && ['login', 'splash', null, undefined].includes(curRoute)) {
     go('home');
-  }
-  // 신규 가입이면 홈 진입 후 토스트로 알림 (렌더 뒤에 띄우려 약간 지연)
-  if (bonus && typeof toast === 'function') {
-    setTimeout(() => toast(`가입 축하! 티켓 ${bonus}장을 받았어요 🎉`, { tone: 'ok' }), 400);
   }
 }
 

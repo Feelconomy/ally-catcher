@@ -124,6 +124,14 @@ const Sync = (function () {
   // 현재 로컬 상태로 새 행 생성 (extra로 auth_user_id 등 추가)
   function createRow(extra) {
     const acc = Store.state.account;
+    // 진짜 신규 로그인 계정(서버에 행이 없어 여기까지 옴)에만 가입 축하 티켓 1회.
+    // 기존 회원은 applyRow 경로로 빠지므로 절대 재지급되지 않는다.
+    if (extra && extra.auth_user_id && Store.claimSignupBonus) {
+      const n = Store.claimSignupBonus();
+      if (n && typeof toast === 'function') {
+        setTimeout(() => toast(`가입 축하! 티켓 ${n}장을 받았어요 🎉`, { tone: 'ok' }), 400);
+      }
+    }
     const body = Object.assign({
       device_id: getDeviceId(),
       nickname: acc ? acc.nickname : null,
