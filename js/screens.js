@@ -491,7 +491,7 @@ const Screens = {
       <div class="result">
         <div class="blob a"></div><div class="blob b"></div>
         <div class="kicker">GOT IT!</div>
-        <h2>배출구에 떨어졌어요</h2>
+        <h2>인형을 뽑았어요</h2>
         <div class="prize">${dollImg(d.id, 172, '', 'win')}</div>
         <div class="nm">${esc(d.name)}</div>
         <div class="tags">
