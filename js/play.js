@@ -282,7 +282,7 @@ const Play = {
       <button class="iconbtn arc-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
       <div class="marquee">
         <span class="bulbs"></span>
-        <span class="nm">${esc(m.short || m.name)}</span>
+        <span class="nm">${esc(m.name)}</span>
         <span class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</span>
       </div>
       ${walletChip()}
