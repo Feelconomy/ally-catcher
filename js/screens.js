@@ -1057,42 +1057,23 @@ const Screens = {
   /* --- 40 알림 설정 ------------------------------------------------------ */
   notif() {
     setTheme('');
-    const n = Store.state.notifications;
-
+    // 준비 중인(가짜) 화면 — 고정 상태로 보여주고 전체 비활성(조작 불가).
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('알림 설정')}
-      ${n.osGranted ? '' : `
-        <div style="margin:0 20px 16px" class="banner">
-          <span class="ic">${icon('bell', 20)}</span>
-          <div class="tx">
-            <div style="font-size:13px;font-weight:700">기기 알림이 꺼져 있어요</div>
-            <div style="margin-top:4px;font-size:11px;font-weight:600;color:rgba(138,106,0,.85)">허용하면 아래 알림을 받을 수 있어요</div>
-          </div>
-          <button class="pillbtn btn--dark" data-act="grant">설정 열기</button>
-        </div>`}
       <div class="scroll pad">
-        <div class="card list" style="${n.osGranted ? '' : 'opacity:.55'}">
-          ${notifRow('missions', '데일리 미션 초기화', '매일 오전 6시', n.missions, n.osGranted)}
-          ${notifRow('raffle', '추첨 결과', '응모한 이벤트 발표 시', n.raffle, n.osGranted)}
-          ${notifRow('newMachine', '신규 기계 오픈', '', n.newMachine, n.osGranted)}
-          ${notifRow('marketing', '마케팅 정보', '선택 · 동의일 2026.08.01', n.marketing, n.osGranted)}
+        <div class="card list" style="pointer-events:none">
+          ${notifRow('missions', '데일리 미션 초기화', '매일 오전 6시', true, true)}
+          ${notifRow('raffle', '추첨 결과', '응모한 이벤트 발표 시', true, true)}
+          ${notifRow('newMachine', '신규 기계 오픈', '', true, true)}
+          ${notifRow('marketing', '마케팅 정보', '선택 · 동의일 2026.08.01', false, true)}
         </div>
+        <div style="margin-top:14px;text-align:center;font-size:12px;font-weight:600;color:var(--ink-45)">알림 기능은 준비 중이에요</div>
         <div style="height:24px"></div>
       </div>
     </div>`;
 
-    bind(screenEl(), {
-      back: () => go('my'),
-      grant: () => { Store.state.notifications.osGranted = true; Store.save(); Screens.notif(); toast('기기 알림을 켰어요', { tone: 'ok' }); },
-      toggleN: el => {
-        if (!Store.state.notifications.osGranted) { toast('먼저 기기 알림을 켜주세요', { tone: 'error' }); return; }
-        const k = el.dataset.k;
-        Store.state.notifications[k] = !Store.state.notifications[k];
-        Store.save();
-        el.setAttribute('aria-checked', String(Store.state.notifications[k]));
-      },
-    });
+    bind(screenEl(), { back: () => go('my') });
   },
 
   /* --- 35 NH멤버스 연동 -------------------------------------------------- */
