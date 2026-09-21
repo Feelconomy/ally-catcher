@@ -93,7 +93,7 @@ const Screens = {
       <div class="scroll" style="padding:14px 24px 0">
         <div style="display:flex;flex-direction:column;align-items:center">
           <div style="position:relative;width:104px;height:104px;border-radius:34px;background:var(--yellow);display:flex;align-items:center;justify-content:center">
-            <img id="avatar" src="dolls/cat.svg" alt="" width="78" height="78" style="width:78px;height:78px">
+            <img id="avatar" src="${dollArt(DEFAULT_AVATAR)}" alt="" width="78" height="78" style="width:78px;height:78px;object-fit:contain">
             <button data-act="shuffle" aria-label="아바타 바꾸기"
               style="position:absolute;right:-4px;bottom:-4px;width:34px;height:34px;border-radius:50%;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 3px var(--cream)">
               ${icon('camera', 16)}
@@ -121,7 +121,7 @@ const Screens = {
     </div>`;
 
     const input = $('#nick'), field = $('#nickField'), next = $('#next');
-    let avatar = 'cat';
+    let avatar = DEFAULT_AVATAR;
 
     const validate = () => {
       const v = input.value.trim();
@@ -142,8 +142,9 @@ const Screens = {
     bind(screenEl(), {
       back: () => go('login'),
       shuffle: () => {
-        avatar = DOLL_IDS[(DOLL_IDS.indexOf(avatar) + 1) % DOLL_IDS.length];
-        $('#avatar').src = `dolls/${avatar}.svg`;
+        const ids = avatarIds();
+        avatar = ids[(ids.indexOf(avatar) + 1) % ids.length] || DEFAULT_AVATAR;
+        $('#avatar').src = dollArt(avatar);
       },
       suggest: el => { input.value = el.dataset.n; validate(); input.focus(); },
       next: () => {
@@ -922,7 +923,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <button class="profile" data-act="editName">
-        <span class="av">${dollImg(acc ? acc.avatar : 'penguin', 48)}</span>
+        <span class="av">${dollImg(safeAvatar(acc && acc.avatar), 48)}</span>
         <span style="flex:1;text-align:left">
           <span class="nm" style="display:block">${esc(acc ? acc.nickname : '게스트')}</span>
           <span class="lv">${esc(Store.levelTitle())} Lv.${Store.level()}</span>

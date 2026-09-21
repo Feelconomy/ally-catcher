@@ -61,6 +61,10 @@ function poseDolls(list) {
 
 const DOLL_IDS = Object.keys(DOLLS);
 
+// 프로필 대표 이미지로 쓸 수 없는 옛 인형들 (신규 올리 시리즈만 허용)
+const BLOCKED_AVATARS = ['bear', 'dog', 'rabbit', 'cat', 'penguin', 'duck'];
+const DEFAULT_AVATAR = 'olly';
+
 const GRADE_CLASS = { N: 'badge--n', R: 'badge--r', SR: 'badge--sr' };
 
 const MACHINES = [

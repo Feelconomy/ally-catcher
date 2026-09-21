@@ -56,6 +56,10 @@ const Store = {
     if (saved && saved.onboarded && saved.signupBonus === undefined) {
       this.state.signupBonus = true;
     }
+    // 마이그레이션: 프로필 대표가 차단된 옛 인형이면 허용 인형으로 바꾼다.
+    if (this.state.account && typeof safeAvatar === 'function') {
+      this.state.account.avatar = safeAvatar(this.state.account.avatar);
+    }
     this.applyAdmin();
     this.rollDay();
     return this.state;

@@ -126,7 +126,7 @@ const Sheets = {
       </div>
       <div class="btn-row" style="margin-top:14px">
         <button class="btn md btn--neutral" data-act="brag">자랑하기</button>
-        <button class="btn md btn--dark" data-act="rep">프로필 대표로</button>
+        ${BLOCKED_AVATARS.includes(d.id) ? '' : '<button class="btn md btn--dark" data-act="rep">프로필 대표로</button>'}
       </div>
       <button class="btn md btn--outline" style="margin-top:9px" data-act="trade" ${dupes ? '' : 'disabled'}>
         ${dupes ? `중복 ${dupes}개 포인트로 교환` : '교환할 중복이 없어요'}
@@ -134,6 +134,7 @@ const Sheets = {
       (node, close) => bind(node, {
         brag: () => { close(); Dialogs.brag(d.id); },
         rep: () => {
+          if (BLOCKED_AVATARS.includes(d.id)) return;   // 차단 인형은 프로필로 못 씀
           if (Store.state.account) { Store.state.account.avatar = d.id; Store.save(); }
           close(); toast('프로필 대표 인형을 바꿨어요', { mini: true }); go('my');
         },
@@ -323,7 +324,7 @@ const Sheets = {
           save: () => {
             const v = input.value.trim();
             if (v.length < 2) { toast('2자 이상 입력해 주세요', { tone: 'error' }); return; }
-            if (!Store.state.account) Store.state.account = { provider: '게스트', avatar: 'penguin' };
+            if (!Store.state.account) Store.state.account = { provider: '게스트', avatar: DEFAULT_AVATAR };
             Store.state.account.nickname = v; Store.save();
             close(); toast('닉네임을 변경했어요', { mini: true });
             if (App.route === 'my') Screens.my();

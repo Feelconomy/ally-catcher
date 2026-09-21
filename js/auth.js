@@ -57,7 +57,7 @@ function applySession(session) {
   Store.state.account = {
     provider: '카카오',
     nickname: Auth.nickname() || (prev && prev.nickname) || '카카오회원',
-    avatar: (prev && prev.avatar) || 'cat',
+    avatar: (typeof safeAvatar === 'function') ? safeAvatar(prev && prev.avatar) : ((prev && prev.avatar) || DEFAULT_AVATAR),
   };
   Store.state.onboarded = true;
   // 가입 축하 티켓은 여기서 주지 않는다 — 서버에 계정 행이 없을 때(진짜 신규)만

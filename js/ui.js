@@ -36,6 +36,18 @@ function dollImg(id, size, extra, state) {
     style="width:${px}px;height:${px}px;object-fit:contain${extra ? ';' + extra : ''}">`;
 }
 
+/** 프로필 대표로 쓸 수 있는 인형 id 목록 (차단 6종 제외, 실제 존재하는 것만). */
+function avatarIds() {
+  return DOLL_IDS.filter((id) => !BLOCKED_AVATARS.includes(id) && DOLLS[id]);
+}
+
+/** 주어진 avatar가 허용/존재하면 그대로, 아니면 안전한 기본 아바타로 보정. */
+function safeAvatar(id) {
+  if (id && !BLOCKED_AVATARS.includes(id) && DOLLS[id]) return id;
+  const ok = avatarIds();
+  return ok.includes(DEFAULT_AVATAR) ? DEFAULT_AVATAR : (ok[0] || DEFAULT_AVATAR);
+}
+
 /** Sets the shell background tone the screen wants (cream / dark / green / yellow). */
 function setTheme(name) {
   shellEl().dataset.theme = name || '';
