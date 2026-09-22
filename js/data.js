@@ -139,7 +139,7 @@ const HOME_FILTERS = ['전체', '인기', '한정판', '쉬움', '신규'];
 /* Missions. `kind` drives what tapping the action button does. */
 const MISSIONS = [
   { id: 'share',  title: '친구 초대하기', reward: 1, goal: 1, kind: 'share',
-    icon: 'share',      iconBg: '#E5FBEC', iconColor: '#00863F', btn: '공유', btnClass: 'btn--primary' },
+    icon: 'share',      iconBg: '#E5FBEC', iconColor: '#00863F', btn: '초대', btnClass: 'btn--primary' },
   { id: 'ad',     title: '광고 보고 티켓 받기',   reward: 1, goal: 3, kind: 'ad',
     icon: 'play',       iconBg: '#FFF4C2', iconColor: '#8A6A00', btn: '시청', btnClass: 'btn--accent' },
   { id: 'rare',   title: '레어 등급 인형 뽑기',   reward: 2, goal: 1, kind: 'play',

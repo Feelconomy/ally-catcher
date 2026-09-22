@@ -783,7 +783,7 @@ const Screens = {
             if (res === 'cancel') return;                      // 취소 → 미션 미완료
             if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
             Store.bumpMission('share');                        // 실제 공유/복사 성공 시에만
-            toast(res === 'copied' ? '공유 링크를 복사했어요' : '공유했어요', { tone: 'ok' });
+            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구에게 초대를 보냈어요', { tone: 'ok' });
             Screens.mission();
           });
           return;
