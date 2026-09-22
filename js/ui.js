@@ -49,11 +49,31 @@ function safeAvatar(id) {
 }
 
 /** Sets the shell background tone the screen wants (cream / dark / green / yellow). */
+const THEME_BG = { dark: '#141414', green: '#00A650', yellow: '#FFD400', arcade: '#EDF7F0' };
+
+/* 폰에서는 주소창이 접혔다 펴질 때 100dvh 가 실제로 보이는 높이와 어긋나, 셸이
+   화면보다 짧아지면서 아래로 앱 바깥 배경(베이지)이 비칠 때가 있다. 뒷배경까지
+   화면 색으로 칠해 두면 그 틈이 보이지 않는다. 데스크톱은 셸을 폰처럼 가운데
+   띄워 보여주는 화면이라 바깥을 칠하면 안 되므로 좁은 화면에서만 칠한다. */
+const narrow = window.matchMedia('(max-width: 479px)');
+
+function paintBackdrop(name) {
+  // body 에 칠한다. html 에 칠하면 body 가 자기 배경(--canvas)으로 그 위를 덮어
+  // 틈이 그대로 베이지로 보인다. 데스크톱에서는 인라인 값을 지워, 폰처럼 가운데
+  // 띄워 보여주는 --canvas 바탕을 되돌린다.
+  document.body.style.background = narrow.matches ? (THEME_BG[name] || '#FFFBEF') : '';
+}
+
 function setTheme(name) {
   shellEl().dataset.theme = name || '';
+  const bg = THEME_BG[name] || '#FFFBEF';
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.content = { dark: '#141414', green: '#00A650', yellow: '#FFD400', arcade: '#EDF7F0' }[name] || '#FFFBEF';
+  if (meta) meta.content = bg;
+  paintBackdrop(name);
 }
+
+// 창 크기가 데스크톱↔모바일 경계를 넘나들면 뒷배경도 따라간다
+narrow.addEventListener('change', () => paintBackdrop(shellEl().dataset.theme));
 
 // 상단 여백 스페이서 (노치/안전영역 확보용). 가짜 시간·통신 표시는 제거함.
 // offline 인자는 호출부 호환용으로 남겨둠(현재 미사용).
