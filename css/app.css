@@ -1229,28 +1229,23 @@ a:hover { color: var(--green-deep); }
 .result.fail .prize.empty-claw { color: rgba(255, 255, 255, .22); }
 .result.fail .slip-name.dim { color: var(--on-dark-45); }
 
-/* 그린 모드 실패 화면 — 어두운 바탕 대신 플레이 화면과 같은 밝은 초록 톤.
-   글자는 진초록, 카드는 크림, 강조는 브랜드 초록. */
-.result.fail.arc .kicker { color: var(--arc-ink-soft); }
-.result.fail.arc h2 { color: var(--arc-ink); }
-.result.fail.arc .prize {
-  background: var(--arc-panel);
-  box-shadow: inset 0 0 0 2px var(--arc-body), 0 4px 0 var(--arc-body-deep);
-}
-.result.fail.arc .prize.slipped { box-shadow: inset 0 0 0 2px var(--arc-edge), 0 4px 0 var(--arc-body-deep); }
-.result.fail.arc .prize.empty-claw { color: var(--arc-body-deep); }
-.result.fail.arc .slip-name { color: var(--arc-edge); }
-.result.fail.arc .slip-name.dim { color: var(--arc-ink-soft); }
+/* 그린 모드 실패 화면 — 성공 화면과 같은 브랜드 초록 바탕. 인형 카드는 성공
+   화면처럼 흰색, 글자는 흰색, 강조는 노랑. 기본(어두운) 실패 화면의 반투명
+   흰 카드는 초록 위에선 탁해 보여 조금 더 밝게 올렸다. */
+.result.fail.arc .kicker { color: rgba(255, 255, 255, .72); }
+.result.fail.arc .prize { background: #fff; box-shadow: 0 20px 40px rgba(0, 90, 44, .35); }
+.result.fail.arc .prize.slipped { box-shadow: 0 0 0 3px var(--yellow), 0 20px 40px rgba(0, 90, 44, .35); }
+.result.fail.arc .prize.empty-claw { color: var(--green); }
+.result.fail.arc .prize img { opacity: .55; }
+.result.fail.arc .prize.slipped img { opacity: 1; }
+.result.fail.arc .slip-name { color: var(--yellow); }
+.result.fail.arc .slip-name.dim { color: rgba(255, 255, 255, .72); }
 .result.fail.arc .aim-report,
-.result.fail.arc .streak { background: var(--arc-panel); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8); }
+.result.fail.arc .streak { background: rgba(255, 255, 255, .16); }
 .result.fail.arc .aim-report .top .l,
-.result.fail.arc .streak .top .l { color: var(--arc-ink-soft); }
-.result.fail.arc .aim-report .top .v { color: var(--arc-ink); }
-.result.fail.arc .streak .top .v { color: var(--arc-edge); }
+.result.fail.arc .streak .top .l { color: rgba(255, 255, 255, .82); }
 .result.fail.arc .aim-report .cap,
-.result.fail.arc .streak .cap { color: var(--arc-ink-soft); }
-.result.fail.arc .meter { background: var(--arc-accent); }
-.result.fail.arc .meter > i { background: var(--arc-edge); }
+.result.fail.arc .streak .cap { color: rgba(255, 255, 255, .72); }
 .aim-report {
   margin-top: clamp(10px, 2vh, 18px); width: 100%; padding: 14px 18px;
   border-radius: var(--r-xl); background: rgba(255, 255, 255, .06);

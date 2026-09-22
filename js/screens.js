@@ -8,7 +8,7 @@ const Screens = {
     setTheme('green');
     // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
-      <div class="mark"><img src="assets/logo.png?v=84" alt="" width="88" height="88"></div>
+      <div class="mark"><img src="assets/logo.png?v=85" alt="" width="88" height="88"></div>
       <div class="name">올리캐쳐</div>
       <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
       <div class="pitch">
@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=84" alt="" width="72" height="72"></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=85" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
         ${dollImg('olly', 150, '', 'win')}
@@ -229,7 +229,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=84" alt="" width="30" height="30"></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=85" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
@@ -536,10 +536,10 @@ const Screens = {
 
   /* --- 22 뽑기 실패 ------------------------------------------------------ */
   lose(dollId) {
-    // 그린 모드로 플레이했으면 실패 화면도 같은 밝은 초록 톤으로 맞춘다.
+    // 그린 모드로 플레이했으면 실패 화면도 성공 화면과 같은 브랜드 초록으로.
     const green = Play.skinId === 'arcade';
-    setTheme(green ? 'arcade' : 'dark');
-    const on = green ? '' : 'onDark';      // 밝은 바탕에선 흰 트랙 미터가 안 보인다
+    setTheme(green ? 'green' : 'dark');
+    const on = green ? 'onGreen' : 'onDark';
     const m = Play.machine || MACHINES[0];
     const next = Store.odds(m);
     const attempt = App.lastAttempt || {};
@@ -556,9 +556,10 @@ const Screens = {
       timeout: { k: 'TIME UP',   h: '시간이 다 됐어요' },
     }[kind];
 
-    screenEl().innerHTML = `<div class="screen" style="align-items:center;background:${green ? 'var(--arc-bg)' : 'var(--dark-soft)'}">
+    screenEl().innerHTML = `<div class="screen" style="align-items:center;background:${green ? 'var(--green)' : 'var(--dark-soft)'}">
       ${statusbar()}
       <div class="result fail ${green ? 'arc' : ''}">
+        ${green ? '<div class="blob a"></div><div class="blob b"></div>' : ''}
         <div class="kicker">${copy.k}</div>
         <h2>${copy.h}</h2>
 
@@ -592,7 +593,7 @@ const Screens = {
         </div>
         <div class="foot">
           <button class="btn btn--accent" data-act="again">티켓 ${m.cost}장으로 한 번 더</button>
-          <button class="btn md ${green ? 'btn--outline' : 'btn--translucent-dark'}" data-act="others">다른 기계 보기</button>
+          <button class="btn md ${green ? 'btn--translucent' : 'btn--translucent-dark'}" data-act="others">다른 기계 보기</button>
         </div>
       </div>
     </div>`;
@@ -952,9 +953,9 @@ const Screens = {
       </div>
 
       <div class="card statgrid" style="margin:0 20px 18px;padding:18px">
-        <div class="st"><div class="n">${Store.state.plays}</div><div class="l">총 플레이</div></div>
+        <div class="st"><div class="n">${fmt(Store.state.plays)}</div><div class="l">누적 플레이</div></div>
         <div class="div"></div>
-        <div class="st"><div class="n" style="color:var(--green)">${Store.state.wins}</div><div class="l">성공</div></div>
+        <div class="st"><div class="n" style="color:var(--green)">${fmt(Store.state.wins)}</div><div class="l">누적 성공</div></div>
         <div class="div"></div>
         <div class="st"><div class="n">${fmt(Store.state.points)}</div><div class="l">포인트</div></div>
       </div>
@@ -1319,7 +1320,7 @@ function modePicker() {
 function adminSkinPicker() {
   const cur = Store.state.admin.skin === 'classic' ? 'classic' : 'arcade';
   const opts = [
-    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 인형 33마리 · 스틱과 드롭 버튼 분리' },
+    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 인형 28마리 · 스틱과 드롭 버튼 분리' },
     { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
   ];
   return `<div class="skin-pick">
