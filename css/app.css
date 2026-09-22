@@ -520,7 +520,15 @@ a:hover { color: var(--green-deep); }
   border-radius: 12px; background: var(--surface-sunken); padding: 8px 2px;
   display: flex; flex-direction: column; align-items: center; gap: 4px;
 }
-.adm-poses .p.empty { min-height: 78px; justify-content: flex-end; }
+.adm-poses .p.empty { min-height: 78px; justify-content: center; }
+/* 직접 만든 인형은 칸마다 눌러 그림을 넣는다 */
+.adm-poses.pickable .p { cursor: pointer; box-shadow: inset 0 0 0 1.5px transparent; }
+.adm-poses.pickable .p:active { transform: scale(.96); }
+.adm-poses.pickable .p.empty { box-shadow: inset 0 0 0 1.5px var(--line-soft); background: none; border: 1.5px dashed rgba(0, 166, 80, .35); }
+.adm-poses .p .plus {
+  width: 28px; height: 28px; border-radius: 50%; background: var(--surface-sunken);
+  color: var(--green); display: flex; align-items: center; justify-content: center;
+}
 .adm-poses .p span { font-size: 10px; font-weight: 700; color: var(--ink-45); }
 .adm-note { margin-top: 12px; font-size: 12px; font-weight: 600; color: var(--ink-45); }
 
