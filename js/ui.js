@@ -70,10 +70,12 @@ async function shareLink(opts) {
   const title = o.title || '올리캐쳐';
   const payload = `${text}\n${url}`;
 
-  // 1) 네이티브 공유 시트 (url 포함 → 카톡에선 OG 썸네일 카드로 노출)
+  // 1) 네이티브 공유 시트
+  //   url을 별도 필드로 넘기면 카톡이 링크 카드를 메시지 '위'로 올려 어색해지므로,
+  //   문구+링크를 하나의 text로 합쳐 보낸다. → 메시지 먼저, 끝의 링크 아래에 OG 카드가 붙음.
   if (navigator.share) {
     try {
-      await navigator.share({ title, text, url });
+      await navigator.share({ title, text: payload });
       return 'shared';
     } catch (e) {
       if (e && e.name === 'AbortError') return 'cancel';
