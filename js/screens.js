@@ -783,7 +783,7 @@ const Screens = {
             if (res === 'cancel') return;                      // 취소 → 미션 미완료
             if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
             Store.bumpMission('share');                        // 실제 공유/복사 성공 시에만
-            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구에게 초대를 보냈어요', { tone: 'ok' });
+            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구를 초대했어요', { tone: 'ok' });
             Screens.mission();
           });
           return;
@@ -990,7 +990,7 @@ const Screens = {
           shareLink({ text: '올리캐쳐에서 같이 인형 뽑자! 🧸🦖 무료로 시작해요 👇' }).then(res => {
             if (res === 'cancel') return;
             if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
-            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구에게 초대를 보냈어요', { tone: 'ok' });
+            toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구를 초대했어요', { tone: 'ok' });
           });
           return;
         }
