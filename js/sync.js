@@ -56,14 +56,10 @@ const Sync = (function () {
   // 항상 Store의 '현재' 값을 읽어 보내므로, 밀린 호출은 최신 상태로 수렴한다.
   let writing = false;
   let dirty = false;
-  // 서버 players 행에 plays·wins 컬럼이 있는지 (supabase/stats.sql 실행 여부).
-  // 행을 받아올 때 키가 있는지로 판단한다 — 따로 확인 요청을 보낼 필요가 없다.
-  let hasStats = false;
 
   function doWrite(keepalive) {
     // 행 id로 저장 → 로그인 후 다른 기기에서도(다른 device_id) 같은 계정 행을 정확히 갱신
     const body = { tickets: Store.state.tickets | 0, points: Store.state.points | 0 };
-    if (hasStats) { body.plays = Store.state.plays | 0; body.wins = Store.state.wins | 0; }
     return req('PATCH', 'players?id=eq.' + encodeURIComponent(playerId),
       body, null, { keepalive: !!keepalive })
       .catch((e) => console.warn('플레이어 저장 실패:', e.message));
@@ -115,19 +111,12 @@ const Sync = (function () {
         suspended = true;
         Store.state.tickets = p.tickets | 0;
         Store.state.points = p.points | 0;
-        hasStats = 'plays' in p;
-        if (hasStats) {
-          Store.state.plays = Math.max(Store.state.plays | 0, p.plays | 0);
-          Store.state.wins  = Math.max(Store.state.wins  | 0, p.wins  | 0);
-        }
         Store.state.prizes = (prizes || []).map((r) => ({
           dollId: r.doll_id, at: Date.parse(r.won_at) || Date.now(),
         }));
         Store.prune();           // 서버에 없는 인형(관리자가 지운 것)이 섞여 오면 턴다
         Store.save();            // 로컬에도 반영(서버 push는 suspended로 스킵)
         suspended = false;
-        // 이 기기 기록이 서버보다 많았으면(마이그레이션 직후) 바로 올려 둔다.
-        if (hasStats && (Store.state.plays !== (p.plays | 0) || Store.state.wins !== (p.wins | 0))) savePlayer();
         return 'existing';
       });
   }
@@ -152,8 +141,6 @@ const Sync = (function () {
     return req('POST', 'players', body, { Prefer: 'return=representation' })
       .then((created) => {
         playerId = created[0].id;
-        hasStats = 'plays' in created[0];
-        if (hasStats) savePlayer();   // 이 기기에서 이미 한 플레이 수를 새 행에 올린다
         return (Store.state.prizes.length ? reconcilePrizes() : Promise.resolve()).then(() => 'created');
       });
   }
