@@ -320,7 +320,7 @@ a:hover { color: var(--green-deep); }
 .splash .pitch { padding: 0 34px; text-align: center; min-height: 74px; animation: fadeIn .45s ease-out; }
 .splash .pitch.in { animation: fadeIn .45s ease-out; }
 .splash .pitch .k { font-size: 13px; font-weight: 700; color: var(--yellow); letter-spacing: .04em; }
-.splash .pitch .p { margin-top: 8px; font-size: 13px; font-weight: 600; line-height: 1.6; color: rgba(255, 255, 255, .82); }
+.splash .pitch .p { margin-top: 8px; font-size: 13px; font-weight: 600; line-height: 1.6; color: rgba(255, 255, 255, .82); white-space: pre-line; }
 .splash .bar { width: 132px; }
 .splash .ver { position: absolute; bottom: 44px; font-size: 11px; font-weight: 600; color: var(--on-dark-60); }
 
@@ -342,7 +342,7 @@ a:hover { color: var(--green-deep); }
 .onb .blob.b { bottom: 210px; left: -80px; width: 200px; height: 200px; background: rgba(0, 166, 80, .14); }
 .onb .kicker { font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: .04em; position: relative; }
 .onb h2 { margin-top: 12px; font-size: 38px; line-height: 1.22; font-weight: 700; letter-spacing: -.03em; position: relative; }
-.onb p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-60); max-width: 250px; position: relative; }
+.onb p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-60); max-width: 250px; position: relative; white-space: pre-line; }
 .onb .tray {
   margin: 30px auto 0; width: 240px; height: 236px; border-radius: 26px; position: relative;
   background: rgba(255, 255, 255, .62); box-shadow: inset 0 0 0 1px rgba(23, 23, 23, .08);
