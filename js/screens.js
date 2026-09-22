@@ -173,7 +173,7 @@ const Screens = {
       }
       if (s.art[0] === 'exchange') {
         return `<div class="onb-art swap">
-          <span class="from">${dollImg('cat', 72)}</span>
+          <span class="from">${dollImg('olly', 72)}</span>
           <span class="arw">${icon('arrowRight', 22)}</span>
           <span class="to"><b>400</b><i>POINT</i></span>
         </div>`;

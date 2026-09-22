@@ -342,16 +342,16 @@ a:hover { color: var(--green-deep); }
 .onb .blob.b { bottom: 210px; left: -80px; width: 200px; height: 200px; background: rgba(0, 166, 80, .14); }
 .onb .kicker { font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: .04em; position: relative; }
 .onb h2 { margin-top: 12px; font-size: 38px; line-height: 1.22; font-weight: 700; letter-spacing: -.03em; position: relative; }
-.onb p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-60); max-width: 250px; position: relative; white-space: pre-line; }
+.onb p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-60); max-width: 300px; position: relative; white-space: pre-line; }
 .onb .tray {
-  margin: 30px auto 0; width: 240px; height: 236px; border-radius: 26px; position: relative;
+  margin: 30px auto 0; width: 276px; height: 264px; border-radius: 30px; position: relative;
   background: rgba(255, 255, 255, .62); box-shadow: inset 0 0 0 1px rgba(23, 23, 23, .08);
   display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 10px;
 }
 .onb .tray img { width: 96px; height: 96px; }
 .onb .tray.single { display: flex; align-items: center; justify-content: center; }
 /* The 올리 illustration carries its own framing, so drop the tray plate. */
-.onb .tray.bare { background: none; box-shadow: none; padding: 0; height: auto; width: 100%; margin-top: 10px; }
+.onb .tray.bare { background: none; box-shadow: none; padding: 0; height: auto; width: 100%; margin-top: 28px; }
 .onb .tray.bare img {
   width: auto; height: 300px; margin: 0 auto;
   /* The source art is cropped flat at the bottom of the pile — fade the cut
@@ -378,7 +378,10 @@ a:hover { color: var(--green-deep); }
 .onb-art.swap .to b { font-size: 21px; font-weight: 700; color: var(--yellow-ink); }
 .onb-art.swap .to i { font-size: 10px; font-weight: 700; font-style: normal; color: var(--yellow-ink); }
 .onb-art.swap .arw { color: var(--ink-30); display: flex; }
-.onb .foot { margin-top: auto; padding-bottom: 34px; display: flex; flex-direction: column; gap: 14px; position: relative; }
+/* 슬라이드마다 위 콘텐츠 높이가 달라도 하단 표시가 흔들리지 않도록 고정 위치로 둔다. */
+.onb .foot { position: absolute; left: 28px; right: 28px; bottom: calc(44px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+/* 건너뛰기 버튼은 탭 영역(46px)이 커서 위 간격이 커 보인다 — dots↔버튼 간격과 맞도록 살짝 당김. */
+.onb .foot [data-act="skip"] { margin-top: -8px; }
 .dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
 .dots > i { width: 6px; height: 6px; border-radius: 3px; background: rgba(23, 23, 23, .24); transition: width .2s ease; }
 .dots > i.on { width: 22px; background: var(--ink); }
