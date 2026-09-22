@@ -855,10 +855,13 @@ const Dialogs = {
         if (!cardReady) return;   // 카드 생성 중엔 무시
         const url = location.origin + location.pathname;
         const text = `올리캐쳐에서 '${d.name}'를 뽑았어요! 🎉`;
+        // 메시지 → 빈 줄 → 링크 순서. url을 별도 필드로 넘기면 카톡이 링크 카드를
+        // 위로 올리므로, 항상 text에 합쳐 보낸다.
+        const payload = `${text}\n\n${url}`;
         // 1) 이미지까지 공유 가능하면 카드 이미지 + 문구 + 링크
         if (canShareImage()) {
           try {
-            await navigator.share({ files: [shareFile], title: '올리캐쳐', text: `${text}\n${url}` });
+            await navigator.share({ files: [shareFile], title: '올리캐쳐', text: payload });
             Store.bumpMission('share');
             close();
             return;
@@ -870,7 +873,7 @@ const Dialogs = {
         // 2) 텍스트/링크 공유 (이미지 공유 미지원 기기)
         if (navigator.share) {
           try {
-            await navigator.share({ title: '올리캐쳐', text, url });
+            await navigator.share({ title: '올리캐쳐', text: payload });
             Store.bumpMission('share');
             close();
             return;
@@ -880,7 +883,7 @@ const Dialogs = {
         }
         // 3) 데스크톱 등: 클립보드에 문구+링크 복사
         try {
-          await navigator.clipboard.writeText(`${text}\n${url}`);
+          await navigator.clipboard.writeText(payload);
           Store.bumpMission('share');
           close();
           toast('공유 문구를 복사했어요', { tone: 'ok' });
