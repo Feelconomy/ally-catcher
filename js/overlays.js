@@ -339,18 +339,27 @@ const Sheets = {
   adminDoll(id) {
     const d = id ? DOLLS[id] : null;
     const custom = id ? !!Store.state.admin.custom[id] : true;
+    const builtin = !!d && !custom;
     let art = d ? DOLL_STATES.reduce((o, s) => (o[s] = dollArt(id, s), o), {}) : null;
+    // 기본 인형에서 원래 그림과 달라진 칸이 있는지 (그림 원래대로 버튼용)
+    const touched = () => builtin && DOLL_STATES.some(st => art[st] !== baseArt(id)[st]);
 
     sheet(`
       <h3>${d ? '인형 정보' : '인형 추가'}</h3>
 
-      <div class="adm-poses ${custom ? 'pickable' : ''}" id="poses">${poseTiles(art, custom)}</div>
+      <div class="adm-poses pickable" id="poses">${poseTiles(art, true)}</div>
 
-      ${custom ? `<div class="adm-note">칸을 눌러 파일을 고르거나, 이미지를 복사해 붙여넣으세요(⌘V · Ctrl+V) — 빈 칸부터 차례로 채워져요. 2×2 시트 한 장으로 한 번에 넣을 수도 있어요.</div>
-      <label class="btn md btn--outline" style="margin-top:10px;cursor:pointer">
-        2×2 시트로 한 번에 넣기
-        <input type="file" accept="image/*" id="sheetFile" hidden>
-      </label>` : `<div class="adm-note">기본 인형의 그림은 파일로 들어 있어 바꿀 수 없어요.</div>`}
+      <div class="adm-note">${d
+        ? '칸을 눌러 파일을 고르거나, 칸 위에 마우스를 올리고 이미지를 붙여넣으면(⌘V · Ctrl+V) 그 포즈만 바뀌어요.'
+        : '칸을 눌러 파일을 고르거나, 이미지를 복사해 붙여넣으세요(⌘V · Ctrl+V) — 빈 칸부터 차례로 채워져요.'}
+        2×2 시트 한 장으로 네 칸을 한 번에 바꿀 수도 있어요.</div>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <label class="btn md btn--outline" style="flex:1;cursor:pointer">
+          2×2 시트로 한 번에
+          <input type="file" accept="image/*" id="sheetFile" hidden>
+        </label>
+        ${builtin ? `<button class="btn md btn--outline" style="flex:1" data-act="revertArt" id="revertArt" ${touched() ? '' : 'hidden'}>그림 원래대로</button>` : ''}
+      </div>
 
       <label class="field" style="margin-top:16px">
         <span class="lbl">이름</span>
@@ -371,13 +380,17 @@ const Sheets = {
       <div class="adm-note">꺼두면 인형통에 더 이상 채워지지 않아요. 이미 뽑은 인형과 도감은 그대로예요.</div>` : ''}
 
       <button class="btn btn--primary" style="margin-top:18px" data-act="save">${d ? '저장' : '추가하기'}</button>
-      ${d && custom ? `<button class="btn md btn--text" style="margin-top:6px;color:var(--danger)" data-act="del">이 인형 삭제</button>` : ''}`,
+      ${d ? `<button class="btn md btn--text" style="margin-top:6px;color:var(--danger)" data-act="del">이 인형 삭제</button>` : ''}`,
       (node, close) => {
         let grade = d ? d.grade : 'R';
         const paintGrade = () => $$('[data-act="grade"]', node)
           .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === grade)));
 
-        const paintPoses = () => { $('#poses', node).innerHTML = poseTiles(art, custom); };
+        const paintPoses = () => {
+          $('#poses', node).innerHTML = poseTiles(art, true);
+          const rv = $('#revertArt', node);
+          if (rv) rv.hidden = !touched();
+        };
 
         const file = $('#sheetFile', node);
         if (file) file.addEventListener('change', () => {
@@ -406,7 +419,7 @@ const Sheets = {
 
         /* 클립보드 붙여넣기 — 빈 칸부터 차례로 채운다. PC 에서 칸 위에 마우스를
            올려 두면 그 칸을 바꾼다. 글자 붙여넣기(이름 칸)는 건드리지 않는다. */
-        if (custom) {
+        {
           let hoverPose = null;
           $('#poses', node).addEventListener('mouseover', ev => {
             const t = ev.target.closest('[data-st]');
@@ -431,14 +444,18 @@ const Sheets = {
         bind(node, {
           grade: el => { grade = el.dataset.g; paintGrade(); },
           hide: el => {
-            Store.setAdmin('dolls', id, { hidden: !d.hidden });
-            el.setAttribute('aria-checked', String(!d.hidden));
-            toast(d.hidden ? '기계에서 뺐어요' : '기계에 다시 넣어요', { mini: true });
+            // applyAdmin 이 인형 객체를 새로 세우므로 d 는 옛 값이다 — 매번 다시 찾는다
+            const off = !DOLLS[id].hidden;
+            Store.setAdmin('dolls', id, { hidden: off });
+            el.setAttribute('aria-checked', String(!off));
+            toast(off ? '기계에서 뺐어요' : '기계에 다시 넣어요', { mini: true });
           },
-          del: () => {
-            Store.removeCustomDoll(id);
-            close(); Screens.admin(); toast('삭제했어요', { mini: true });
-          },
+          revertArt: () => { art = baseArt(id); paintPoses(); },
+          del: () => confirmDelete(d, () => {
+            Store.removeDoll(id);
+            close(); Screens.admin();
+            toast(builtin ? '삭제했어요. 인형 탭 아래에서 되살릴 수 있어요' : '삭제했어요', { mini: true });
+          }),
           save: () => {
             const name = $('#dn', node).value.trim();
             if (name.length < 1) return toast('이름을 입력해 주세요', { tone: 'error' });
@@ -448,8 +465,11 @@ const Sheets = {
               return toast(`${names} 그림을 넣어 주세요`, { tone: 'error' });
             }
 
-            if (d && !custom) {                      // 기본 인형은 필드만 덮어쓰기
-              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade] });
+            if (builtin) {
+              // 원래 그림과 다른 칸만 남긴다 — 서버·저장소에 원본을 다시 싣지 않도록
+              const base = baseArt(id), changed = {};
+              DOLL_STATES.forEach(st => { if (art[st] !== base[st]) changed[st] = art[st]; });
+              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade], art: changed });
             } else {
               const newId = id || 'c' + Date.now().toString(36);
               const ok = Store.addCustomDoll({
@@ -534,6 +554,23 @@ const Sheets = {
       });
   },
 };
+
+/* 인형 삭제 확인. 되돌리기 어려운 부분(이미 뽑은 사람의 보관함)을 먼저 말하고,
+   잠깐 빼두기만 할 거면 '기계에 넣기'를 끄라고 안내한다. */
+function confirmDelete(d, onYes) {
+  dialog(`
+    <div class="art" style="background:var(--danger-bg, #FFF0F0);color:var(--danger)">${icon('triangleExclamation', 28)}</div>
+    <h3 style="margin-top:14px">'${esc(d.name)}'을(를) 삭제할까요?</h3>
+    <p style="margin-top:8px;font-size:13px;font-weight:600;line-height:1.6;color:var(--ink-50)">
+      모든 기계에서 빠지고, 이미 뽑은 사람의 보관함에서도 사라져요.
+      잠깐 빼두기만 하려면 '기계에 넣기'를 끄세요.
+    </p>
+    <div class="btn-row" style="margin-top:18px">
+      <button class="btn md btn--neutral" data-close>취소</button>
+      <button class="btn md btn--primary" style="background:var(--danger)" data-act="yes">삭제</button>
+    </div>`,
+    (node, close) => bind(node, { yes: () => { close(); onYes(); } }));
+}
 
 const POSE_LABELS = ['기본', '집게에 잡힘', '떨어짐', '뽑음'];
 

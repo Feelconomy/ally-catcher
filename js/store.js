@@ -70,8 +70,22 @@ const Store = {
      바뀐 필드뿐이라, 되돌리기는 저장분을 비우고 새로고침하면 끝. */
   applyAdmin() {
     const a = this.state.admin;
+    // 기본 인형은 매번 원본에서 다시 세운다 — 그래야 삭제·그림 교체를 되돌렸을 때
+    // 새로고침 없이 원래대로 돌아온다. 화면은 DOLLS[id] 를 그때그때 찾아 쓰므로
+    // 객체를 새로 만들어도 괜찮다.
+    for (const id in DOLL_BASE) {
+      DOLLS[id] = Object.assign({}, DOLL_BASE[id]);
+      if (DOLL_BASE[id].art) DOLLS[id].art = baseArt(id);
+    }
     for (const id in a.custom) DOLLS[id] = Object.assign({ id }, a.custom[id]);
-    for (const id in a.dolls) if (DOLLS[id]) Object.assign(DOLLS[id], a.dolls[id]);
+    for (const id in a.dolls) {
+      if (!DOLLS[id]) continue;
+      const { art, deleted, ...rest } = a.dolls[id];
+      if (deleted) { delete DOLLS[id]; continue; }
+      Object.assign(DOLLS[id], rest);
+      // 바꾼 포즈만 저장돼 있어서 나머지는 원래 그림으로 채운다
+      if (art && Object.keys(art).length) DOLLS[id].art = Object.assign(baseArt(id), art);
+    }
     for (const id in a.machines) {
       const m = MACHINES.find(x => x.id === id);
       if (m) Object.assign(m, a.machines[id]);
@@ -128,23 +142,37 @@ const Store = {
     return false;
   },
 
-  /** 추가한 인형 삭제 — 기계 구성과 이미 뽑은 목록에서도 빼준다. */
-  removeCustomDoll(id) {
-    delete this.state.admin.custom[id];
-    delete this.state.admin.dolls[id];
-    delete DOLLS[id];
+  /** 인형 삭제 — 기계 구성에서 빼고, 보관함·인형통에서도 정리된다(prune).
+      관리자가 추가한 인형은 통째로 지우고, 기본 인형은 '삭제됨'만 표시한다 —
+      원본이 data.js 에 있어서 restoreDoll() 로 되살릴 수 있다. */
+  removeDoll(id) {
+    const a = this.state.admin;
+    if (a.custom[id]) { delete a.custom[id]; delete a.dolls[id]; }
+    else a.dolls[id] = { deleted: true };
     // 덮어쓰기 묶음을 직접 손봐서 서버에는 한 번만 올린다.
     for (const m of MACHINES) {
+      if (!m.pool.includes(id) && !m.contents.includes(id) && m.hero !== id) continue;
       const keep = x => x !== id;
       const pool = m.pool.filter(keep);
-      const bag = this.state.admin.machines;
-      bag[m.id] = Object.assign(bag[m.id] || {}, {
+      a.machines[m.id] = Object.assign(a.machines[m.id] || {}, {
         pool, contents: m.contents.filter(keep),
-        hero: m.hero === id ? (pool[0] || Object.keys(DOLLS)[0]) : m.hero,
+        hero: m.hero === id ? (pool[0] || Object.keys(DOLLS).find(keep)) : m.hero,
       });
     }
     this.applyAdmin();          // 여기서 보관함·인형통의 남은 id 도 정리된다
     this.pushAdmin();
+  },
+
+  /** 지운 기본 인형 되살리기. 기계 구성은 돌아오지 않는다 — 기계 탭에서 다시 넣는다. */
+  restoreDoll(id) {
+    delete this.state.admin.dolls[id];
+    this.applyAdmin();
+    this.pushAdmin();
+  },
+
+  /** 지운 기본 인형 목록 */
+  deletedDolls() {
+    return Object.keys(DOLL_BASE).filter(id => (this.state.admin.dolls[id] || {}).deleted);
   },
 
   /** 저장 성공 여부를 돌려준다 — 시크릿 모드나 용량 초과면 false. */

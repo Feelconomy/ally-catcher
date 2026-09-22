@@ -8,7 +8,7 @@ const Screens = {
     setTheme('green');
     // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
-      <div class="mark"><img src="assets/logo.png?v=90" alt="" width="88" height="88"></div>
+      <div class="mark"><img src="assets/logo.png?v=91" alt="" width="88" height="88"></div>
       <div class="name">올리캐쳐</div>
       <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
       <div class="pitch">
@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=90" alt="" width="72" height="72"></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=91" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
         ${dollImg('olly', 150, '', 'win')}
@@ -229,7 +229,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=90" alt="" width="30" height="30"></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=91" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
@@ -1286,6 +1286,11 @@ const Screens = {
       tab: el => { App.adminTab = el.dataset.t; Screens.admin(); },
       doll: el => Sheets.adminDoll(el.dataset.id),
       newDoll: () => Sheets.adminDoll(null),
+      restoreDoll: el => {
+        Store.restoreDoll(el.dataset.id);
+        Screens.admin();
+        toast('되살렸어요. 기계 탭에서 다시 넣어 주세요', { tone: 'ok' });
+      },
       machine: el => Sheets.adminMachine(el.dataset.id),
       skin: el => {
         Store.state.admin.skin = el.dataset.s;
@@ -1343,12 +1348,16 @@ function adminSkinPicker() {
 
 /* 도감처럼 늘어놓은 인형 카드. 카드 안에 네 표정을 그대로 보여준다. */
 function adminDollGrid() {
+  const a = Store.state.admin;
+  // 기본 인형인데 포즈 그림을 바꾼 것
+  const repainted = id => !a.custom[id] && a.dolls[id] && a.dolls[id].art && Object.keys(a.dolls[id].art).length;
+  const gone = Store.deletedDolls();
   return `<div class="adm-grid">
     ${DOLL_IDS.map(id => {
       const d = DOLLS[id];
       return `<button class="adm-card ${d.hidden ? 'off' : ''}" data-act="doll" data-id="${id}">
         <span class="hero" style="background:${d.bg}">${dollImg(id, 62)}</span>
-        <span class="nm">${esc(d.name)}${Store.state.admin.custom[id] ? ' <b class="tag">추가</b>' : ''}${d.hidden ? ' <b class="tag off">꺼짐</b>' : ''}</span>
+        <span class="nm">${esc(d.name)}${a.custom[id] ? ' <b class="tag">추가</b>' : ''}${repainted(id) ? ' <b class="tag">그림 바꿈</b>' : ''}${d.hidden ? ' <b class="tag off">꺼짐</b>' : ''}</span>
         <span class="mt">${d.grade} · ${fmt(d.points)}P</span>
         ${d.art ? `<span class="poses">${DOLL_STATES.map(s => dollImg(id, 26, '', s)).join('')}</span>`
                 : '<span class="poses one">표정 한 종류</span>'}
@@ -1357,9 +1366,19 @@ function adminDollGrid() {
     <button class="adm-card add" data-act="newDoll">
       <span class="plus">${icon('plusThick', 22)}</span>
       <span class="nm">인형 추가</span>
-      <span class="mt">2×2 포즈 시트에서</span>
+      <span class="mt">포즈 네 장 · 2×2 시트 · 붙여넣기</span>
     </button>
-  </div>`;
+  </div>
+  ${gone.length ? `<div class="adm-gone">
+    <div class="group-label" style="margin-top:18px">삭제한 기본 인형 · ${gone.length}</div>
+    <div class="adm-gone-list">
+      ${gone.map(id => `<button class="adm-gone-item" data-act="restoreDoll" data-id="${id}">
+        <span class="th" style="background:${DOLL_BASE[id].bg}"><img src="${esc(baseArt(id).idle)}" alt="" width="30" height="30"></span>
+        <span class="nm">${esc(DOLL_BASE[id].name)}</span>
+        <span class="go">되살리기</span>
+      </button>`).join('')}
+    </div>
+  </div>` : ''}`;
 }
 
 /* 기계 카드 — 넣어둔 인형까지 한눈에. */

@@ -61,6 +61,17 @@ function poseDolls(list) {
 
 const DOLL_IDS = Object.keys(DOLLS);
 
+/* 원본 카탈로그 사본. 관리자가 기본 인형을 지우거나 포즈 그림을 바꿔도 되돌릴 수
+   있도록, Store.applyAdmin() 은 기본 인형을 매번 여기서 다시 세운 뒤 수정분을 얹는다. */
+const DOLL_BASE = JSON.parse(JSON.stringify(DOLLS));
+
+/** 기본 인형의 원래 포즈 네 장. SVG 인형은 한 장을 네 포즈에 같이 쓴다. */
+function baseArt(id) {
+  const b = DOLL_BASE[id];
+  if (b && b.art) return Object.assign({}, b.art);
+  return { idle: `dolls/${id}.svg`, grabbed: `dolls/${id}.svg`, drop: `dolls/${id}.svg`, win: `dolls/${id}.svg` };
+}
+
 // 프로필 대표 이미지로 쓸 수 없는 옛 인형들 (신규 올리 시리즈만 허용)
 const BLOCKED_AVATARS = ['bear', 'dog', 'rabbit', 'cat', 'penguin', 'duck'];
 const DEFAULT_AVATAR = 'olly';

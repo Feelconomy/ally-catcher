@@ -487,6 +487,18 @@ a:hover { color: var(--green-deep); }
   color: var(--green); display: flex; align-items: center; justify-content: center;
 }
 
+/* 관리자 — 삭제한 기본 인형 (되살리기) */
+.adm-gone-list { display: flex; flex-direction: column; gap: 6px; }
+.adm-gone-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left;
+  padding: 8px 12px 8px 8px; border-radius: 14px; background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-soft);
+}
+.adm-gone-item .th { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.adm-gone-item .th img { filter: grayscale(1); opacity: .5; object-fit: contain; }
+.adm-gone-item .nm { flex: 1; font-size: 13px; font-weight: 700; color: var(--ink-50); }
+.adm-gone-item .go { font-size: 12px; font-weight: 700; color: var(--green); }
+
 /* 관리자 — 기계 카드 */
 .adm-machines { display: flex; flex-direction: column; gap: 10px; }
 .adm-mcard {
