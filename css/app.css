@@ -525,6 +525,9 @@ a:hover { color: var(--green-deep); }
 .adm-poses.pickable .p { cursor: pointer; box-shadow: inset 0 0 0 1.5px transparent; }
 .adm-poses.pickable .p:active { transform: scale(.96); }
 .adm-poses.pickable .p.empty { box-shadow: inset 0 0 0 1.5px var(--line-soft); background: none; border: 1.5px dashed rgba(0, 166, 80, .35); }
+/* 붙여넣으면 채워질 칸, 그리고 마우스를 올린 칸(그 칸을 바꾼다) */
+.adm-poses.pickable .p.next { border: 1.5px solid var(--green); background: rgba(0, 166, 80, .05); }
+.adm-poses.pickable .p:hover { box-shadow: inset 0 0 0 2px var(--green); }
 .adm-poses .p .plus {
   width: 28px; height: 28px; border-radius: 50%; background: var(--surface-sunken);
   color: var(--green); display: flex; align-items: center; justify-content: center;

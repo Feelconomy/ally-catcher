@@ -346,7 +346,7 @@ const Sheets = {
 
       <div class="adm-poses ${custom ? 'pickable' : ''}" id="poses">${poseTiles(art, custom)}</div>
 
-      ${custom ? `<div class="adm-note">칸을 하나씩 눌러 포즈별로 넣거나, 2×2 시트 한 장으로 한 번에 넣어요.</div>
+      ${custom ? `<div class="adm-note">칸을 눌러 파일을 고르거나, 이미지를 복사해 붙여넣으세요(⌘V · Ctrl+V) — 빈 칸부터 차례로 채워져요. 2×2 시트 한 장으로 한 번에 넣을 수도 있어요.</div>
       <label class="btn md btn--outline" style="margin-top:10px;cursor:pointer">
         2×2 시트로 한 번에 넣기
         <input type="file" accept="image/*" id="sheetFile" hidden>
@@ -389,18 +389,44 @@ const Sheets = {
             .catch(e => toast(e.message, { tone: 'error' }));
         });
 
-        // 칸별 입력 — 칸을 다시 그리면 input 도 새로 생기므로 위임으로 받는다.
-        $('#poses', node).addEventListener('change', ev => {
-          const input = ev.target.closest('input[data-pose]');
-          const f = input && input.files && input.files[0];
-          if (!f) return;
-          const pose = input.dataset.pose;
+        const putPose = (pose, f) => {
           const label = POSE_LABELS[DOLL_STATES.indexOf(pose)];
           poseFile(f, label).then(url => {
             art = Object.assign({}, art, { [pose]: url });
             paintPoses();
           }).catch(e => toast(e.message, { tone: 'error' }));
+        };
+
+        // 칸별 입력 — 칸을 다시 그리면 input 도 새로 생기므로 위임으로 받는다.
+        $('#poses', node).addEventListener('change', ev => {
+          const input = ev.target.closest('input[data-pose]');
+          const f = input && input.files && input.files[0];
+          if (f) putPose(input.dataset.pose, f);
         });
+
+        /* 클립보드 붙여넣기 — 빈 칸부터 차례로 채운다. PC 에서 칸 위에 마우스를
+           올려 두면 그 칸을 바꾼다. 글자 붙여넣기(이름 칸)는 건드리지 않는다. */
+        if (custom) {
+          let hoverPose = null;
+          $('#poses', node).addEventListener('mouseover', ev => {
+            const t = ev.target.closest('[data-st]');
+            hoverPose = t ? t.dataset.st : null;
+          });
+          $('#poses', node).addEventListener('mouseleave', () => { hoverPose = null; });
+
+          const onPaste = ev => {
+            // 시트가 닫혔으면 스스로 떼어낸다 (overlay 에 닫힘 알림이 따로 없다)
+            if (!node.isConnected) { document.removeEventListener('paste', onPaste); return; }
+            const items = Array.from((ev.clipboardData && ev.clipboardData.items) || []);
+            const item = items.find(i => i.kind === 'file' && i.type.startsWith('image/'));
+            if (!item) return;
+            ev.preventDefault();
+            const pose = hoverPose || DOLL_STATES.find(st => !(art && art[st]));
+            if (!pose) return toast('네 칸이 다 찼어요. 바꿀 칸 위에 마우스를 올리고 붙여넣으세요', { mini: true });
+            putPose(pose, item.getAsFile());
+          };
+          document.addEventListener('paste', onPaste);
+        }
 
         bind(node, {
           grade: el => { grade = el.dataset.g; paintGrade(); },
@@ -514,12 +540,13 @@ const POSE_LABELS = ['기본', '집게에 잡힘', '떨어짐', '뽑음'];
 /* 포즈 네 칸. 그림이 있으면 보여주고, 비었으면 이름만. pickable 이면 칸마다
    파일 입력을 품어서 누르면 그 포즈만 고를 수 있다. */
 function poseTiles(art, pickable) {
+  const next = DOLL_STATES.find(st => !(art && art[st]));   // 붙여넣으면 채워질 칸
   return DOLL_STATES.map((st, i) => {
     const src = art && art[st];
     const inner = `${src ? `<img src="${src}" alt="" width="54" height="54" style="object-fit:contain">` : `<i class="plus">${icon('plusThick', 16)}</i>`}
       <span>${POSE_LABELS[i]}</span>`;
     return pickable
-      ? `<label class="p ${src ? '' : 'empty'}" aria-label="${POSE_LABELS[i]} 그림 고르기">${inner}
+      ? `<label class="p ${src ? '' : 'empty'} ${st === next ? 'next' : ''}" data-st="${st}" aria-label="${POSE_LABELS[i]} 그림 고르기">${inner}
            <input type="file" accept="image/*" data-pose="${st}" hidden></label>`
       : `<div class="p">${inner}</div>`;
   }).join('');
