@@ -1424,10 +1424,10 @@ function machineCard(m) {
 
 /** Turns a 0–100 aim score into advice the player can act on. */
 function aimHint(accuracy) {
-  if (accuracy >= 70) return '거의 다 왔어요. 아주 조금만 더 맞추면 잡혀요.';
-  if (accuracy >= 40) return '조금 빗나갔어요. 인형 한가운데에 집게를 맞춰보세요.';
-  if (accuracy > 0)   return '많이 빗나갔어요. 확률 숫자가 올라갈 때까지 레버를 움직여보세요.';
-  return '집게 아래에 인형이 없었어요. 노란 빔이 인형에 닿도록 맞춰보세요.';
+  if (accuracy >= 70) return '거의 다 왔어요! 조금만 더 맞춰보세요';
+  if (accuracy >= 40) return '살짝 빗나갔어요. 한가운데를 노려보세요';
+  if (accuracy > 0)   return '많이 빗나갔어요. 확률이 오를 때까지 움직여보세요';
+  return '집게 아래에 인형이 없었어요. 노란 빔을 맞춰보세요';
 }
 
 /** Five taps on the wordmark within three seconds opens the test panel. */

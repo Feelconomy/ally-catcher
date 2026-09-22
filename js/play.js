@@ -324,7 +324,7 @@ const Play = {
       <div class="tipbar odds" id="target">
         <span class="th"></span>
         <b class="tip">TIP</b>
-        <span class="n" id="targetName">원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!</span>
+        <span class="n" id="targetName">레버로 위치를 맞추고 드롭 버튼을 눌러보세요!</span>
         <b class="pc" id="oddsNum">0%</b>
       </div>
     </div>`;
@@ -520,7 +520,7 @@ const Play = {
     box.classList.toggle('on', !!d);
     $('.th', box).innerHTML = d ? dollImg(d.id, 30) : '';
     $('#targetName', box).textContent = d ? d.name
-      : '원하는 위치로 레버를 움직이고, 드롭 버튼을 눌러 인형을 뽑아보세요!';
+      : '레버로 위치를 맞추고 드롭 버튼을 눌러보세요!';
   },
 
   /** 레버를 -1..1 만큼 민 모습으로 그린다.
