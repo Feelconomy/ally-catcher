@@ -1453,7 +1453,14 @@ a:hover { color: var(--green-deep); }
   position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
   width: 302px; max-width: calc(100% - 40px);
   background: #fff; border-radius: 24px; padding: 28px 24px 22px; text-align: center;
-  animation: riseIn .22s cubic-bezier(.2, .8, .3, 1);
+  animation: dialogIn .22s cubic-bezier(.2, .8, .3, 1);
+}
+/* 팝업은 transform 으로 가운데를 잡는다. 공용 riseIn 은 transform 을 통째로
+   바꿔서, 도는 동안 가운데 맞춤이 풀려 팝업이 오른쪽 아래에서 튀어나온 뒤
+   가운데로 순간이동했다. 가운데 맞춤을 키프레임 안에도 넣어 둔다. */
+@keyframes dialogIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
 }
 .dialog.wide { width: 306px; border-radius: var(--r-3xl); padding: 30px 24px 24px; }
 .dialog .art { width: 58px; height: 58px; margin: 0 auto; border-radius: 20px; display: flex; align-items: center; justify-content: center; }
