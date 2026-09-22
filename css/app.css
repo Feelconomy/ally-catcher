@@ -350,14 +350,12 @@ a:hover { color: var(--green-deep); }
 }
 .onb .tray img { width: 96px; height: 96px; }
 .onb .tray.single { display: flex; align-items: center; justify-content: center; }
-/* The 올리 illustration carries its own framing, so drop the tray plate. */
+/* 인형뽑기 기계 그림은 자체 틀이 있어 받침판을 뺀다. 예전 올리 그림은 아래가
+   잘려 있어 흐리게 지웠지만, 기계 그림은 다리까지 온전해서 그대로 보여준다. */
 .onb .tray.bare { background: none; box-shadow: none; padding: 0; height: auto; width: 100%; margin-top: 28px; }
 .onb .tray.bare img {
   width: auto; height: 300px; margin: 0 auto;
-  /* The source art is cropped flat at the bottom of the pile — fade the cut
-     so it dissolves into the slide instead of showing a hard edge. */
-  -webkit-mask-image: linear-gradient(180deg, #000 74%, transparent 97%);
-  mask-image: linear-gradient(180deg, #000 74%, transparent 97%);
+  filter: drop-shadow(0 10px 18px rgba(138, 106, 0, .22));
 }
 
 .onb-art { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; }

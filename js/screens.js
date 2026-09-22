@@ -8,7 +8,7 @@ const Screens = {
     setTheme('green');
     // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
-      <div class="mark"><img src="assets/logo.png?v=92" alt="" width="88" height="88"></div>
+      <div class="mark"><img src="assets/logo.png?v=94" alt="" width="88" height="88"></div>
       <div class="name">올리캐쳐</div>
       <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
       <div class="pitch">
@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=92" alt="" width="72" height="72"></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=94" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>카카오 계정으로 간편하게 로그인하고<br>올리캐쳐에 티켓과 인형을 저~장해보세요!</p>
         <div class="login-hero">${dollImg('olly', 150, '', 'win')}</div>
@@ -162,8 +162,8 @@ const Screens = {
 
     /** Each slide illustrates its own promise rather than repeating the tray. */
     const artFor = s => {
-      if (s.art[0] === 'ollie') {
-        return '<img class="onb-art-hero" src="assets/ollie.png" alt="집게에 매달린 올리" width="480" height="720">';
+      if (s.art[0] === 'machine') {
+        return '<img class="onb-art-hero" src="assets/onboarding-machine.webp" alt="인형이 가득 찬 분홍 인형뽑기 기계" width="1024" height="1536">';
       }
       if (s.art[0] === 'ticket') {
         return `<div class="onb-art tickets">
@@ -191,7 +191,7 @@ const Screens = {
           <div class="kicker">${s.k}</div>
           <h2>${s.h}</h2>
           <p>${esc(s.p)}</p>
-          <div class="tray ${s.art.length === 1 ? 'single' : ''} ${s.art[0] === 'ollie' ? 'bare' : ''}">${artFor(s)}</div>
+          <div class="tray ${s.art.length === 1 ? 'single' : ''} ${s.art[0] === 'machine' ? 'bare' : ''}">${artFor(s)}</div>
           <div class="foot">
             <div class="dots">${slides.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
             <button class="btn btn--primary" data-act="next">
@@ -227,7 +227,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=92" alt="" width="30" height="30"></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=94" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
