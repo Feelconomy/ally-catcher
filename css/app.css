@@ -404,6 +404,15 @@ a:hover { color: var(--green-deep); }
 .adm-in:focus { box-shadow: inset 0 0 0 1.5px var(--green); }
 .adm-in.num { flex: 0 0 56px; text-align: center; }
 
+/* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
+.md-mode {
+  margin-top: 14px; padding: 12px 14px; border-radius: var(--r-xl); background: var(--surface);
+  box-shadow: var(--shadow-card);
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.md-mode .md-l { font-size: 13px; font-weight: 700; }
+.md-mode .md-seg { display: flex; gap: 6px; }
+
 /* 관리자 — 플레이 화면 스킨 고르기. 미리보기는 색칠한 사각형 몇 개라
    그림 파일이 없다. */
 .skin-pick { display: flex; flex-direction: column; gap: 10px; }
@@ -1218,6 +1227,30 @@ a:hover { color: var(--green-deep); }
    what you were going for. */
 .result.fail .prize.aimed { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .12); }
 .result.fail .prize.empty-claw { color: rgba(255, 255, 255, .22); }
+.result.fail .slip-name.dim { color: var(--on-dark-45); }
+
+/* 그린 모드 실패 화면 — 어두운 바탕 대신 플레이 화면과 같은 밝은 초록 톤.
+   글자는 진초록, 카드는 크림, 강조는 브랜드 초록. */
+.result.fail.arc .kicker { color: var(--arc-ink-soft); }
+.result.fail.arc h2 { color: var(--arc-ink); }
+.result.fail.arc .prize {
+  background: var(--arc-panel);
+  box-shadow: inset 0 0 0 2px var(--arc-body), 0 4px 0 var(--arc-body-deep);
+}
+.result.fail.arc .prize.slipped { box-shadow: inset 0 0 0 2px var(--arc-edge), 0 4px 0 var(--arc-body-deep); }
+.result.fail.arc .prize.empty-claw { color: var(--arc-body-deep); }
+.result.fail.arc .slip-name { color: var(--arc-edge); }
+.result.fail.arc .slip-name.dim { color: var(--arc-ink-soft); }
+.result.fail.arc .aim-report,
+.result.fail.arc .streak { background: var(--arc-panel); box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .8); }
+.result.fail.arc .aim-report .top .l,
+.result.fail.arc .streak .top .l { color: var(--arc-ink-soft); }
+.result.fail.arc .aim-report .top .v { color: var(--arc-ink); }
+.result.fail.arc .streak .top .v { color: var(--arc-edge); }
+.result.fail.arc .aim-report .cap,
+.result.fail.arc .streak .cap { color: var(--arc-ink-soft); }
+.result.fail.arc .meter { background: var(--arc-accent); }
+.result.fail.arc .meter > i { background: var(--arc-edge); }
 .aim-report {
   margin-top: clamp(10px, 2vh, 18px); width: 100%; padding: 14px 18px;
   border-radius: var(--r-xl); background: rgba(255, 255, 255, .06);

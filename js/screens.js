@@ -8,7 +8,7 @@ const Screens = {
     setTheme('green');
     // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
-      <div class="mark"><img src="assets/logo.png?v=83" alt="" width="88" height="88"></div>
+      <div class="mark"><img src="assets/logo.png?v=84" alt="" width="88" height="88"></div>
       <div class="name">올리캐쳐</div>
       <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
       <div class="pitch">
@@ -58,7 +58,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=83" alt="" width="72" height="72"></div>
+        <div class="brandmark l"><img src="assets/logo.png?v=84" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
         ${dollImg('olly', 150, '', 'win')}
@@ -229,7 +229,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="home-head">
-        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=83" alt="" width="30" height="30"></button>
+        <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=84" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
         <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
         ${walletChip()}
@@ -386,6 +386,7 @@ const Screens = {
             <div class="div"></div>
             <div class="st"><div class="n" style="font-size:17px;color:var(--green)">+${m.reward}P</div><div class="l">성공 시 적립</div></div>
           </div>
+          ${modePicker()}
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
           <div class="doll-strip">
             ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
@@ -446,6 +447,12 @@ const Screens = {
         });
       },
       notify: () => toast('열리면 알려드릴게요', { tone: 'ok' }),
+      mode: el => {
+        Store.state.settings.skin = el.dataset.s;
+        Store.save();
+        $$('.md-mode [data-act="mode"]').forEach(b => b.setAttribute('aria-pressed', String(b === el)));
+        toast(`${el.dataset.s === 'arcade' ? '그린' : '기본'} 화면으로 플레이해요`, { mini: true });
+      },
       play: () => {
         if (!Store.canAfford(m.cost)) { Sheets.ticketShort(m); return; }
         go('loading', m.id);
@@ -529,7 +536,10 @@ const Screens = {
 
   /* --- 22 뽑기 실패 ------------------------------------------------------ */
   lose(dollId) {
-    setTheme('dark');
+    // 그린 모드로 플레이했으면 실패 화면도 같은 밝은 초록 톤으로 맞춘다.
+    const green = Play.skinId === 'arcade';
+    setTheme(green ? 'arcade' : 'dark');
+    const on = green ? '' : 'onDark';      // 밝은 바탕에선 흰 트랙 미터가 안 보인다
     const m = Play.machine || MACHINES[0];
     const next = Store.odds(m);
     const attempt = App.lastAttempt || {};
@@ -546,9 +556,9 @@ const Screens = {
       timeout: { k: 'TIME UP',   h: '시간이 다 됐어요' },
     }[kind];
 
-    screenEl().innerHTML = `<div class="screen" style="align-items:center;background:var(--dark-soft)">
+    screenEl().innerHTML = `<div class="screen" style="align-items:center;background:${green ? 'var(--arc-bg)' : 'var(--dark-soft)'}">
       ${statusbar()}
-      <div class="result fail">
+      <div class="result fail ${green ? 'arc' : ''}">
         <div class="kicker">${copy.k}</div>
         <h2>${copy.h}</h2>
 
@@ -556,7 +566,7 @@ const Screens = {
           <div class="prize empty-claw">
             ${icon('circleExclamation', 64)}
           </div>
-          <div class="slip-name" style="color:var(--on-dark-45)">집게를 내리지 못했어요</div>`
+          <div class="slip-name dim">집게를 내리지 못했어요</div>`
         : `
           <div class="prize ${kind === 'slip' ? 'slipped' : 'aimed'}">
             ${dollImg(doll.id, 150, '', kind === 'slip' ? 'drop' : 'idle')}
@@ -568,7 +578,7 @@ const Screens = {
                 <span class="l">조준 정확도</span>
                 <span class="v">${attempt.accuracy || 0}%</span>
               </div>
-              ${meter(attempt.accuracy || 0, 'onDark')}
+              ${meter(attempt.accuracy || 0, on)}
               <div class="cap">${aimHint(attempt.accuracy || 0)}</div>
             </div>` : ''}`}
 
@@ -577,12 +587,12 @@ const Screens = {
             <span class="l">연속 실패 보너스</span>
             <span class="v">+${Math.min(Store.state.failStreak * FAIL_BONUS, MAX_RATE - m.baseRate)}% 확률</span>
           </div>
-          ${meter((next / MAX_RATE) * 100, 'onDark')}
+          ${meter((next / MAX_RATE) * 100, on)}
           <div class="cap">다음 판 성공률 ${next}%로 올라갔어요</div>
         </div>
         <div class="foot">
           <button class="btn btn--accent" data-act="again">티켓 ${m.cost}장으로 한 번 더</button>
-          <button class="btn md btn--translucent-dark" data-act="others">다른 기계 보기</button>
+          <button class="btn md ${green ? 'btn--outline' : 'btn--translucent-dark'}" data-act="others">다른 기계 보기</button>
         </div>
       </div>
     </div>`;
@@ -1280,7 +1290,7 @@ const Screens = {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
         Screens.admin();
-        toast(`${el.dataset.s === 'arcade' ? '아케이드' : '기본'} 화면으로 바꿨어요`, { tone: 'ok' });
+        toast(`${el.dataset.s === 'arcade' ? '그린' : '기본'} 화면으로 바꿨어요`, { tone: 'ok' });
       },
       reset: () => {
         Store.state.admin = { dolls: {}, machines: {}, custom: {}, skin: 'arcade' };
@@ -1291,12 +1301,25 @@ const Screens = {
   },
 };
 
+/* 기계 상세의 '플레이 화면' 고르기. 사용자가 고른 값은 이 기기에 남고,
+   고른 적이 없으면 관리자 기본값을 따른다. */
+function modePicker() {
+  const cur = Store.state.settings.skin || Store.state.admin.skin || 'arcade';
+  return `<div class="md-mode">
+    <span class="md-l">플레이 화면</span>
+    <span class="md-seg">
+      <button class="chip sm" data-act="mode" data-s="arcade" aria-pressed="${cur !== 'classic'}">그린</button>
+      <button class="chip sm" data-act="mode" data-s="classic" aria-pressed="${cur === 'classic'}">기본</button>
+    </span>
+  </div>`;
+}
+
 /* 플레이 화면 스킨 고르기. 미리보기는 실제 화면의 조각을 축소해 만든 것이라
    이미지 파일이 없고, 스킨을 손보면 미리보기도 같이 바뀐다. */
 function adminSkinPicker() {
   const cur = Store.state.admin.skin === 'classic' ? 'classic' : 'arcade';
   const opts = [
-    { id: 'arcade',  name: '아케이드', desc: '밝은 캐비닛 · 인형 33마리 · 스틱과 드롭 버튼 분리' },
+    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 인형 33마리 · 스틱과 드롭 버튼 분리' },
     { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
   ];
   return `<div class="skin-pick">
@@ -1313,7 +1336,7 @@ function adminSkinPicker() {
         <span class="sk-ds">${o.desc}</span>
       </span>
     </button>`).join('')}
-    <div class="adm-note">플레이 화면에만 적용돼요. 다른 화면은 그대로입니다.</div>
+    <div class="adm-note">모든 사용자의 기본값이에요. 사용자가 기계 화면에서 직접 고르면 그쪽이 우선합니다.</div>
   </div>`;
 }
 

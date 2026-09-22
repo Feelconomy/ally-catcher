@@ -28,47 +28,25 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
    아래 수치는 첫 측정 전의 기본값 — Play.layout() 이 실제 높이를 재서
    이 안에서 다시 계산한다. */
 
-const BED_ARCADE = [
-  // 앞줄 — 가장 크고 가장 낮게
-  { x: 0.300, layer: 5, size: 60, bottom: 2 },
-  { x: 0.404, layer: 5, size: 61, bottom: 6 },
-  { x: 0.528, layer: 5, size: 60, bottom: 2 },
-  { x: 0.652, layer: 5, size: 61, bottom: 6 },
-  { x: 0.776, layer: 5, size: 60, bottom: 2 },
-  { x: 0.900, layer: 5, size: 61, bottom: 6 },
-  // 둘째 줄
-  { x: 0.342, layer: 4, size: 55, bottom: 40 },
-  { x: 0.466, layer: 4, size: 56, bottom: 44 },
-  { x: 0.590, layer: 4, size: 55, bottom: 40 },
-  { x: 0.714, layer: 4, size: 56, bottom: 44 },
-  { x: 0.838, layer: 4, size: 55, bottom: 40 },
-  // 셋째 줄
-  { x: 0.300, layer: 3, size: 50, bottom: 78 },
-  { x: 0.404, layer: 3, size: 51, bottom: 82 },
-  { x: 0.528, layer: 3, size: 50, bottom: 78 },
-  { x: 0.652, layer: 3, size: 51, bottom: 82 },
-  { x: 0.776, layer: 3, size: 50, bottom: 78 },
-  { x: 0.900, layer: 3, size: 51, bottom: 82 },
-  // 넷째 줄
-  { x: 0.342, layer: 2, size: 46, bottom: 116 },
-  { x: 0.466, layer: 2, size: 47, bottom: 120 },
-  { x: 0.590, layer: 2, size: 46, bottom: 116 },
-  { x: 0.714, layer: 2, size: 47, bottom: 120 },
-  { x: 0.838, layer: 2, size: 46, bottom: 116 },
-  // 다섯째 줄
-  { x: 0.300, layer: 1, size: 42, bottom: 154 },
-  { x: 0.404, layer: 1, size: 43, bottom: 158 },
-  { x: 0.528, layer: 1, size: 42, bottom: 154 },
-  { x: 0.652, layer: 1, size: 43, bottom: 158 },
-  { x: 0.776, layer: 1, size: 42, bottom: 154 },
-  { x: 0.900, layer: 1, size: 43, bottom: 158 },
-  // 맨 뒷줄 — 가장 작고 가장 높이
-  { x: 0.342, layer: 0, size: 39, bottom: 192 },
-  { x: 0.466, layer: 0, size: 40, bottom: 196 },
-  { x: 0.590, layer: 0, size: 39, bottom: 192 },
-  { x: 0.714, layer: 0, size: 40, bottom: 196 },
-  { x: 0.838, layer: 0, size: 39, bottom: 192 },
-];
+/* 그린 모드 더미. 모든 인형이 같은 크기로 여섯 줄 쌓인다 — 뒤로 갈수록
+   작게 그리던 원근을 빼고, 정면에서 본 인형 더미로 둔다.
+
+   layer 는 바닥에서부터 센 줄 번호다 (0 = 맨 아래, 5 = 맨 위). z-index 와
+   nearest() 가 둘 다 '높은 layer 우선'이라, 위에 얹힌 인형이 아래 인형을
+   덮어 그려지고 집게도 더미 꼭대기에 있는 인형부터 문다. */
+const ARCADE_DOLL = 52;       // 그린 모드 인형 한 마리 크기(px, 배율 1 기준)
+const ARCADE_ROW = 38;        // 줄 사이 높이 — 인형보다 작아 윗줄이 아랫줄에 얹힌다
+const BED_ARCADE = [];
+for (let row = 0; row < 6; row++) {
+  // 짝수 줄 6자리, 홀수 줄은 그 사이사이에 5자리 — 벽돌처럼 엇갈려 쌓인다
+  const xs = row % 2 === 0
+    ? [0.300, 0.424, 0.548, 0.672, 0.796, 0.900]
+    : [0.362, 0.486, 0.610, 0.734, 0.858];
+  xs.forEach((x, i) => BED_ARCADE.push({
+    x, layer: row, size: ARCADE_DOLL,
+    bottom: 2 + row * ARCADE_ROW + (i % 2) * 4,   // 줄 안에서도 살짝 들쭉날쭉
+  }));
+}
 
 const BED_CLASSIC = [
   // 뒷줄 — 작고 높이 올라앉아 앞줄에 반쯤 가린다
@@ -95,7 +73,7 @@ const SKINS = {
     },
   },
   arcade: {
-    label: '아케이드', theme: 'arcade', bed: BED_ARCADE, bedMinX: 0.300,
+    label: '그린', theme: 'arcade', bed: BED_ARCADE, bedMinX: 0.300,
     cab: {
       railTop:  { min: 10, max: 40, share: 0.10 },
       bedH:     { min: 78, max: 246, share: 0.46 },
@@ -152,7 +130,9 @@ const Play = {
     // session and must stop touching the screen once this one begins.
     this.session += 1;
     // 스킨마다 통 크기와 자리 수가 달라, 인형을 놓기 전에 먼저 정한다.
-    this.skinId = SKINS[Store.state.admin.skin] ? Store.state.admin.skin : DEFAULT_SKIN;
+    // 플레이어가 기계 화면에서 고른 모드가 먼저, 없으면 관리자가 정한 기본값.
+    const want = Store.state.settings.skin || Store.state.admin.skin;
+    this.skinId = SKINS[want] ? want : DEFAULT_SKIN;
     this.skin = useSkin(this.skinId);
     this.machine = machine;
     this.x = START_X;
@@ -210,7 +190,7 @@ const Play = {
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
         ${arcade ? `<div class="glass"></div>
         <div class="signs">
-          <span class="sign s1">CATCH<br>YOUR<br>HAPPINESS</span>
+          <span class="sign s1">내 마음속에<br>저장 ~</span>
           <span class="sign s2">오늘도<br>귀여운 하루</span>
         </div>` : '<div class="backwall"></div>'}
         <div class="rail"><i class="rail-mount" id="railMount"></i></div>
