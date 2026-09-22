@@ -60,17 +60,15 @@ const Screens = {
       <div class="login">
         <div class="brandmark l"><img src="assets/logo.png?v=92" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
-        <p>간편 로그인으로 티켓과 인형을<br>기기 사이에서 안전하게 보관해요</p>
-        ${dollImg('olly', 150, '', 'win')}
+        <p>카카오 계정으로 간편하게 로그인하고<br>올리캐쳐에 티켓과 인형을 저~장해보세요!</p>
+        <div class="login-hero">${dollImg('olly', 150, '', 'win')}</div>
         <div class="actions">
           <button class="btn btn--kakao" data-act="sso" data-p="카카오">${icon('logoKakao', 20)}카카오로 시작하기</button>
-          <button class="btn btn--naver" data-act="sso" data-p="네이버">네이버로 시작하기</button>
-          <button class="btn btn--apple" data-act="sso" data-p="Apple">${icon('logoApple', 18)}Apple로 계속하기</button>
           <button class="btn sm btn--text" style="text-decoration:underline" data-act="peek">둘러보기</button>
         </div>
       </div>
     </div>`;
-    $('.login img').classList.add('mascot');
+    $('.login-hero img').classList.add('mascot');   // 문구와 버튼 사이 hero 영역의 올리 이미지에
 
     bind(screenEl(), {
       sso: el => {

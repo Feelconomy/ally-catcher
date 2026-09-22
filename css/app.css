@@ -328,8 +328,9 @@ a:hover { color: var(--green-deep); }
 .login { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 60px 28px calc(34px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; }
 .login h2 { margin-top: 22px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .login p { margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--ink-50); text-align: center; line-height: 1.6; }
-.login .mascot { width: 150px; height: 150px; margin-top: 34px; animation: bob 3.4s ease-in-out infinite; }
-.login .actions { margin-top: auto; width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 24px; }
+.login-hero { flex: 1; min-height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.login .mascot { width: 150px; height: 150px; animation: bob 3.4s ease-in-out infinite; }
+.login .actions { width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 24px; }
 .btn--kakao { background: #FEE500; color: var(--ink); height: 54px; font-size: 15px; border-radius: var(--r-lg); box-shadow: none; }
 .btn--naver { background: #03C75A; color: #fff; height: 54px; font-size: 15px; border-radius: var(--r-lg); box-shadow: none; }
 .btn--apple { background: var(--ink); color: #fff; height: 54px; font-size: 15px; border-radius: var(--r-lg); }
