@@ -22,32 +22,28 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
      classic — 원래의 어두운 캐비닛. 확률 패널이 유리 안을 차지해 인형통이 얕고
                인형이 9마리다. 가로 레버 + 전체폭 버튼.
      arcade  — 밝은 캐비닛. 확률 패널을 유리 밖으로 빼서 그 자리를 전부 통에
-               내주고 인형 28마리를 쌓는다. 아케이드 스틱 + 별도 드롭 버튼.
+               내주고 큰 인형 16마리를 무더기로 쌓는다. 아케이드 스틱 + 별도 드롭 버튼.
 
    어느 쪽을 쓸지는 관리자 페이지에서 고르고, 값은 서버 카탈로그에 실린다.
    아래 수치는 첫 측정 전의 기본값 — Play.layout() 이 실제 높이를 재서
    이 안에서 다시 계산한다. */
 
-/* 그린 모드 더미. 모든 인형이 같은 크기로 다섯 줄 쌓인다 — 뒤로 갈수록
-   작게 그리던 원근을 빼고, 정면에서 본 인형 더미로 둔다.
+/* 그린 모드 더미 — 정면에서 본 인형 무더기. 큰 인형이 네 줄로 쌓이고 앞줄이 뒷줄을
+   가려서, 뒷줄은 앞 인형 머리 너머로 얼굴만 빼꼼 보인다. 위로 갈수록 좁아져 가운데가
+   볼록하다.
 
-   layer 는 바닥에서부터 센 줄 번호다 (0 = 맨 아래, 4 = 맨 위). z-index 와
-   nearest() 가 둘 다 '높은 layer 우선'이라, 위에 얹힌 인형이 아래 인형을
-   덮어 그려지고 집게도 더미 꼭대기에 있는 인형부터 문다. */
-const ARCADE_DOLL = 68;       // 그린 모드 인형 한 마리 크기(px, 배율 1 기준)
-const ARCADE_ROW = 40;        // 줄 사이 높이 — 인형보다 작아 윗줄이 아랫줄에 얹힌다
-const ARCADE_ROWS = 5;        // 여섯 줄이면 통 높이에 맞추느라 인형이 작아져서 다섯 줄로
-const BED_ARCADE = [];
-for (let row = 0; row < ARCADE_ROWS; row++) {
-  // 짝수 줄 6자리, 홀수 줄은 그 사이사이에 5자리 — 벽돌처럼 엇갈려 쌓인다
-  const xs = row % 2 === 0
-    ? [0.300, 0.424, 0.548, 0.672, 0.796, 0.900]
-    : [0.362, 0.486, 0.610, 0.734, 0.858];
-  xs.forEach((x, i) => BED_ARCADE.push({
-    x, layer: row, size: ARCADE_DOLL,
-    bottom: 2 + row * ARCADE_ROW + (i % 2) * 4,   // 줄 안에서도 살짝 들쭉날쭉
-  }));
-}
+   layer 가 클수록 앞(아래) 줄이다 — 기본 모드와 같은 규칙이라 z-index(2 + layer×2)
+   그대로 앞줄이 위에 그려진다. 집게는 닿는 인형 중 머리가 가장 높은 것, 즉 더미
+   꼭대기부터 문다 (SKINS.arcade.pickTop). */
+const ARCADE_DOLL = 76;       // 그린 모드 인형 한 마리 크기(px, 배율 1 기준)
+const arcadeRow = (layer, xs, base, bumps) =>
+  xs.map((x, i) => ({ x, layer, size: ARCADE_DOLL, bottom: base + bumps[i] }));
+const BED_ARCADE = [
+  ...arcadeRow(0, [0.47, 0.63, 0.79],             128, [2, 6, 0]),        // 꼭대기 — 가운데만
+  ...arcadeRow(1, [0.39, 0.55, 0.71, 0.87],        88, [0, 4, 2, 5]),     // 뒷줄
+  ...arcadeRow(2, [0.33, 0.47, 0.63, 0.79, 0.90],  44, [3, 0, 5, 1, 4]),  // 가운뎃줄
+  ...arcadeRow(3, [0.39, 0.55, 0.71, 0.87],         0, [3, 0, 4, 1]),     // 앞줄
+];
 
 const BED_CLASSIC = [
   // 뒷줄 — 작고 높이 올라앉아 앞줄에 반쯤 가린다
@@ -66,6 +62,7 @@ const BED_CLASSIC = [
 const SKINS = {
   classic: {
     label: '기본', theme: 'dark', bed: BED_CLASSIC, bedMinX: 0.345,
+    tilt: 26,
     cab: {
       railTop:  { min: 14, max: 46, share: 0.11 },
       bedH:     { min: 72, max: 118, share: 0.27 },
@@ -74,7 +71,9 @@ const SKINS = {
     },
   },
   arcade: {
-    label: '그린', theme: 'arcade', bed: BED_ARCADE, bedMinX: 0.300,
+    label: '그린', theme: 'arcade', bed: BED_ARCADE, bedMinX: 0.330,
+    pickTop: true,       // 더미 꼭대기(머리가 가장 높은 인형)부터 문다
+    tilt: 10,            // 인형을 ±5° 정도만 기울인다 — 반듯하게 앉은 무더기
     cab: {
       railTop:  { min: 10, max: 40, share: 0.10 },
       bedH:     { min: 78, max: 246, share: 0.46 },
@@ -163,7 +162,7 @@ const Play = {
         layer: slot.layer,
         size: slot.size,
         bottom: slot.bottom,
-        rot: Math.round((Math.random() - 0.5) * 26),
+        rot: Math.round((Math.random() - 0.5) * this.skin.tilt),
         taken: false,
       };
     });
@@ -605,8 +604,11 @@ const Play = {
       const reachable = dist < GRAB_RADIUS;
       const bestReachable = best.dist < GRAB_RADIUS;
       if (reachable && bestReachable) {
-        // Both grabbable — prefer the higher layer, then the closer one.
-        if (d.layer > best.d.layer || (d.layer === best.d.layer && dist < best.dist)) best = { i, d, dist };
+        // 둘 다 닿으면 — 그린 모드는 머리가 더 높은 인형(더미 꼭대기), 기본 모드는
+        // 앞줄(높은 layer)을 먼저 문다. 같으면 더 가까운 쪽.
+        const rank = x => this.skin.pickTop ? x.bottom + x.size : x.layer;
+        const r = rank(d), rb = rank(best.d);
+        if (r > rb || (r === rb && dist < best.dist)) best = { i, d, dist };
       } else if (reachable && !bestReachable) {
         best = { i, d, dist };
       } else if (!bestReachable && dist < best.dist) {

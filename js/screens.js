@@ -173,7 +173,7 @@ const Screens = {
       }
       if (s.art[0] === 'exchange') {
         return `<div class="onb-art swap">
-          <span class="from">${dollImg('olly', 72)}</span>
+          <span class="from">${dollImg('tiger', 72)}</span>
           <span class="arw">${icon('arrowRight', 22)}</span>
           <span class="to"><b>400</b><i>POINT</i></span>
         </div>`;
@@ -1323,7 +1323,7 @@ function modePicker() {
 function adminSkinPicker() {
   const cur = Store.state.admin.skin === 'classic' ? 'classic' : 'arcade';
   const opts = [
-    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 인형 28마리 · 스틱과 드롭 버튼 분리' },
+    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 큰 인형 16마리 무더기 · 스틱과 드롭 버튼 분리' },
     { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
   ];
   return `<div class="skin-pick">

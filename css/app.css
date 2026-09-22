@@ -954,8 +954,10 @@ a:hover { color: var(--green-deep); }
   box-shadow: 0 2px 0 rgba(0, 0, 0, .12);
   transition: left .16s ease-out;
 }
+/* 그린 모드는 앞줄이 뒷줄을 가리는 무더기라 인형 z-index 가 최대 8까지 올라간다.
+   집게가 그 뒤로 숨지 않게 더미보다 위에 둔다 — 꼭대기 인형의 머리를 무는 게 보이게. */
 .screen.arcade .claw-rig {
-  position: absolute; top: calc(var(--rail-top) + 9px); z-index: 4;
+  position: absolute; top: calc(var(--rail-top) + 9px); z-index: 20;
   width: calc(104px * var(--claw-scale, 1));
   margin-left: calc(-52px * var(--claw-scale, 1));
   transition: left .16s ease-out;
