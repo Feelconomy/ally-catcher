@@ -85,29 +85,33 @@ function statusbar(offline) {
 // 반환: 'shared'(공유 시트로 완료) | 'copied'(클립보드 복사) | 'cancel'(사용자 취소) | 'fail'
 async function shareLink(opts) {
   const o = opts || {};
+  const url = o.url || (location.origin + location.pathname);
   const text = o.text || '올리캐쳐 · AI 인형뽑기';
   const title = o.title || '올리캐쳐';
-  const payload = text;   // 링크는 붙이지 않고 문구만 보낸다 (카톡에 URL 카드/텍스트가 안 뜨도록)
 
   // 1) 네이티브 공유 시트
+  //   url을 '별도 필드'로 넘긴다 → 카톡은 URL을 본문 텍스트로 쓰지 않고
+  //   OG 썸네일 카드만 만든다(본문엔 문구만, 링크는 카드로). 카드가 메시지 위에
+  //   붙는 건 카톡 렌더링이라 제어 불가.
   if (navigator.share) {
     try {
-      await navigator.share({ title, text: payload });
+      await navigator.share({ title, text, url });
       return 'shared';
     } catch (e) {
       if (e && e.name === 'AbortError') return 'cancel';
       /* 그 외 실패 → 복사 폴백 */
     }
   }
-  // 2) 클립보드 복사 (데스크톱 등)
+  // 2) 클립보드 복사 (데스크톱 등) — 여기선 카드가 없으니 링크를 문구와 함께 담는다
+  const clip = `${text}\n${url}`;
   try {
-    await navigator.clipboard.writeText(payload);
+    await navigator.clipboard.writeText(clip);
     return 'copied';
   } catch (_) {}
   // 3) 구형/비보안 컨텍스트 폴백
   try {
     const ta = document.createElement('textarea');
-    ta.value = payload;
+    ta.value = clip;
     ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.focus(); ta.select();
     const ok = document.execCommand('copy');
