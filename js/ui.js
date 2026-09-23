@@ -88,14 +88,16 @@ async function shareLink(opts) {
   const url = o.url || (location.origin + location.pathname);
   const text = o.text || '올리캐쳐 · AI 인형뽑기';
   const title = o.title || '올리캐쳐';
+  const file = o.file || null;   // 자랑카드처럼 이미지까지 함께 보낼 때
 
   // 1) 네이티브 공유 시트
   //   url을 '별도 필드'로 넘긴다 → 카톡은 URL을 본문 텍스트로 쓰지 않고
   //   OG 썸네일 카드만 만든다(본문엔 문구만, 링크는 카드로). 카드가 메시지 위에
   //   붙는 건 카톡 렌더링이라 제어 불가.
   if (navigator.share) {
+    const withFile = file && navigator.canShare && navigator.canShare({ files: [file] });
     try {
-      await navigator.share({ title, text, url });
+      await navigator.share(withFile ? { files: [file], title, text, url } : { title, text, url });
       return 'shared';
     } catch (e) {
       if (e && e.name === 'AbortError') return 'cancel';
