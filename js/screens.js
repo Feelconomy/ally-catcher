@@ -987,7 +987,7 @@ const Screens = {
         if (!item) return;
         if (item.route) { go(item.route); return; }
         if (item.action === 'invite') {
-          shareLink({ text: '올리캐쳐에서 같이 인형 뽑자! 🧸🦖 무료로 시작해요 👇' }).then(res => {
+          shareLink({ text: '👆 올리캐쳐에서 같이 인형 뽑자! 🧸🦖' }).then(res => {
             if (res === 'cancel') return;
             if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
             toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구를 초대했어요', { tone: 'ok' });

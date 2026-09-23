@@ -85,14 +85,11 @@ function statusbar(offline) {
 // 반환: 'shared'(공유 시트로 완료) | 'copied'(클립보드 복사) | 'cancel'(사용자 취소) | 'fail'
 async function shareLink(opts) {
   const o = opts || {};
-  const url = o.url || (location.origin + location.pathname);
   const text = o.text || '올리캐쳐 · AI 인형뽑기';
   const title = o.title || '올리캐쳐';
-  const payload = `${text}\n${url}`;
+  const payload = text;   // 링크는 붙이지 않고 문구만 보낸다 (카톡에 URL 카드/텍스트가 안 뜨도록)
 
   // 1) 네이티브 공유 시트
-  //   url을 별도 필드로 넘기면 카톡이 링크 카드를 메시지 '위'로 올려 어색해지므로,
-  //   문구+링크를 하나의 text로 합쳐 보낸다. → 메시지 먼저, 끝의 링크 아래에 OG 카드가 붙음.
   if (navigator.share) {
     try {
       await navigator.share({ title, text: payload });
