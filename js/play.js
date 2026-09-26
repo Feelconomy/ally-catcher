@@ -126,6 +126,7 @@ const Play = {
 
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
   start(machine) {
+    this.stop();
     // Any drop still animating from a previous play belongs to an older
     // session and must stop touching the screen once this one begins.
     this.session += 1;
@@ -170,6 +171,13 @@ const Play = {
   },
 
   stop() {
+    this.session += 1;
+    this.releaseControls?.();
+    cancelAnimationFrame(this.motionFrame);
+    this.motionFrame = null;
+    if (this.keyUp) window.removeEventListener('keyup', this.keyUp);
+    if (this.releaseControls) window.removeEventListener('blur', this.releaseControls);
+    if (this.onVisibility) document.removeEventListener('visibilitychange', this.onVisibility);
     clearInterval(this.timer); this.timer = null;
     clearTimeout(this.flickTimer);
     if (this.keys) { window.removeEventListener('keydown', this.keys); this.keys = null; }
@@ -188,11 +196,7 @@ const Play = {
     // 유리 안(레일·집게·통·조준빔·인형)은 두 스킨이 똑같고, 바깥 껍데기만 다르다.
     const inner = `
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
-        ${arcade ? `<div class="glass"></div>
-        <div class="signs">
-          <span class="sign s1">내 마음속에<br>저장 ~</span>
-          <span class="sign s2">오늘도<br>귀여운 하루</span>
-        </div>` : '<div class="backwall"></div>'}
+        ${arcade ? '<div class="glass"></div>' : '<div class="backwall"></div>'}
         <div class="rail"><i class="rail-mount" id="railMount"></i></div>
         <div class="claw-rig" id="rig">
           <div class="cord" id="cord"></div>
@@ -212,7 +216,7 @@ const Play = {
 
     screenEl().innerHTML = `<div class="screen ${arcade ? 'arcade' : 'classic'}">
       ${statusbar()}
-      ${arcade ? this.headArcade(m) : this.headClassic(m)}
+      ${arcade ? this.headArcade() : this.headClassic(m)}
       <div class="cabinet" id="cabinet">
         ${inner}
         ${arcade ? `<div class="chute" id="chute">
@@ -257,15 +261,9 @@ const Play = {
     </div>`;
   },
 
-  headArcade(m) {
+  headArcade() {
     return `<div class="play-head">
       <button class="iconbtn arc-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
-      <div class="marquee">
-        <span class="bulbs"></span>
-        <span class="nm">${esc(m.name)}</span>
-        <span class="mt">난이도 ${esc(m.difficulty)} · 집게 힘 ${esc(m.grip)}</span>
-      </div>
-      ${walletChip()}
     </div>`;
   },
 
@@ -389,85 +387,89 @@ const Play = {
 
   wire() {
     const root = screenEl();
-    bind(root, {
-      exit: () => this.confirmExit(),
-      drop: () => this.drop(),
-      wallet: () => go('mission'),
-    });
-
-    // Hold-to-move on the two direction buttons.
+    bind(root, { exit: () => this.confirmExit(), drop: () => this.drop(), wallet: () => go('mission') });
+    const pressed = new Set();
+    let pointer = null;
+    this.input = 0;
+    this.velocity = 0;
+    const steer = value => {
+      this.input = this.canMove() ? value : 0;
+      this.stickActive = !!this.input;
+      this.tilt(this.input);
+    };
+    this.releaseControls = () => {
+      pointer = null;
+      pressed.clear();
+      steer(0);
+      $$('.dpad', root).forEach(btn => delete btn.dataset.active);
+    };
     $$('.dpad', root).forEach(btn => {
-      let hold = null;
-      const begin = ev => {
+      btn.addEventListener('pointerdown', ev => {
         ev.preventDefault();
-        if (!this.canMove()) return;
+        if (!this.canMove() || pointer !== null) return;
+        pointer = ev.pointerId;
+        btn.setPointerCapture(pointer);
         btn.dataset.active = '1';
-        // 누르고 있는 동안은 손가락이 각도를 쥔 것으로 친다 —
-        // 안 그러면 nudge → paintKnob 이 매번 각도를 0 으로 되돌린다.
-        this.stickActive = true;
-        this.tilt(btn.dataset.dir === 'left' ? -1 : 1);
-        this.nudge(btn.dataset.dir);
-        hold = setInterval(() => this.nudge(btn.dataset.dir), 60);
-      };
-      const end = () => {
-        clearInterval(hold); hold = null; delete btn.dataset.active;
-        this.stickActive = false;
-        this.tilt(0);
-      };
-      btn.addEventListener('pointerdown', begin);
-      ['pointerup', 'pointerleave', 'pointercancel'].forEach(e => btn.addEventListener(e, end));
+        steer(btn.dataset.dir === 'left' ? -1 : 1);
+        haptic(8);
+      });
+      ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type =>
+        btn.addEventListener(type, ev => { if (ev.pointerId === pointer) this.releaseControls(); }));
     });
-
-    this.bindStick($('#stick', root), $('#knob', root));
-
-    this.keys = ev => {
-      if (!this.canMove()) return;
-      if (ev.key === 'ArrowLeft')  { ev.preventDefault(); this.nudge('left'); this.flick('left'); }
-      if (ev.key === 'ArrowRight') { ev.preventDefault(); this.nudge('right'); this.flick('right'); }
-      if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); this.drop(); }
-    };
-    window.addEventListener('keydown', this.keys);
-  },
-
-  /** The lever slides along its track; how far you push it sets the speed. */
-  bindStick(stick, knob) {
-    let dragging = false, raf = null, vx = 0;
-
-    const apply = () => {
-      if (!dragging) { raf = null; return; }
-      if (Math.abs(vx) > 0.04) this.move(vx * 0.020);
-      raf = requestAnimationFrame(apply);
-    };
-
+    const stick = $('#stick', root);
     const track = ev => {
-      if (!dragging) return;
+      if (ev.pointerId !== pointer) return;
       const r = stick.getBoundingClientRect();
-      const cx = r.left + r.width / 2;
-      const max = r.width / 2 - (this.skinId === 'arcade' ? 10 : 26);
-      const dx = Math.max(-max, Math.min(max, ev.clientX - cx));
-      vx = dx / max;
-      this.tilt(vx);
-      if (!raf) raf = requestAnimationFrame(apply);
+      const value = Math.max(-1, Math.min(1, (ev.clientX - r.left - r.width / 2) / (r.width / 2 - 10)));
+      steer(Math.abs(value) < 0.12 ? 0 : value);
     };
-
-    const release = () => {
-      if (!dragging) return;
-      dragging = false; this.stickActive = false; vx = 0;
-      if (raf) { cancelAnimationFrame(raf); raf = null; }
-      this.paintKnob();
-    };
-
     stick.addEventListener('pointerdown', ev => {
-      if (ev.target.closest('.dpad') || !this.canMove()) return;
-      dragging = true; this.stickActive = true;
-      stick.setPointerCapture(ev.pointerId);
+      if (ev.target.closest('.dpad') || !this.canMove() || pointer !== null) return;
+      ev.preventDefault();
+      pointer = ev.pointerId;
+      stick.setPointerCapture(pointer);
       track(ev);
+      haptic(8);
     });
     stick.addEventListener('pointermove', track);
-    ['pointerup', 'pointercancel'].forEach(e => stick.addEventListener(e, release));
+    ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type =>
+      stick.addEventListener(type, ev => { if (ev.pointerId === pointer) this.releaseControls(); }));
+    this.keys = ev => {
+      if (!this.canMove() || ev.target.closest('button, input, textarea, select')) return;
+      if (['ArrowLeft', 'ArrowRight'].includes(ev.key)) {
+        ev.preventDefault();
+        pressed.add(ev.key);
+        steer(Number(pressed.has('ArrowRight')) - Number(pressed.has('ArrowLeft')));
+      } else if ((ev.key === ' ' || ev.key === 'Enter') && !ev.repeat) {
+        ev.preventDefault();
+        this.drop();
+      }
+    };
+    this.keyUp = ev => {
+      if (!pressed.has(ev.key)) return;
+      pressed.delete(ev.key);
+      steer(Number(pressed.has('ArrowRight')) - Number(pressed.has('ArrowLeft')));
+    };
+    this.onVisibility = () => { if (document.hidden) this.releaseControls(); };
+    window.addEventListener('keydown', this.keys);
+    window.addEventListener('keyup', this.keyUp);
+    window.addEventListener('blur', this.releaseControls);
+    document.addEventListener('visibilitychange', this.onVisibility);
+    let previous = performance.now();
+    const frame = now => {
+      const dt = Math.min(0.04, (now - previous) / 1000);
+      previous = now;
+      const target = this.canMove() ? this.input * 0.42 : 0;
+      this.velocity += (target - this.velocity) * (1 - Math.exp(-dt * 14));
+      if (Math.abs(this.velocity) > 0.0005) this.move(this.velocity * dt);
+      const claw = $('#claw', root);
+      if (claw && !this.busy) claw.style.setProperty('--sway', (-this.velocity * 13).toFixed(2) + 'deg');
+      this.motionFrame = requestAnimationFrame(frame);
+    };
+    this.motionFrame = requestAnimationFrame(frame);
   },
 
-  canMove() { return !this.busy && !this.over && !this.dropped; },
+  canMove() { return !this.busy && !this.over && !this.dropped && !this.coaching && this.left > 0; },
 
   nudge(dir) { this.move(dir === 'left' ? -0.038 : 0.038); },
 
@@ -476,7 +478,6 @@ const Play = {
     const next = Math.max(0.08, Math.min(0.92, this.x + delta));
     if (next === this.x) return;
     this.x = next;
-    haptic(5);
     this.paintClaw();
     this.paintOdds();
   },
@@ -488,7 +489,7 @@ const Play = {
     const mount = document.getElementById('railMount');
     if (!rig) return;
     rig.style.left = (this.x * 100) + '%';
-    if (mount) mount.style.left = (this.x * 100) + '%';
+    if (mount) mount.style.left = `calc(${this.x * 100}% + ${(this.x - 0.5) * (this.skinId === 'arcade' ? 48 : 32)}px)`;
     this.paintAim();
     this.paintKnob();
   },
@@ -518,8 +519,7 @@ const Play = {
     const d = i >= 0 && this.dolls[i] ? DOLLS[this.dolls[i].dollId] : null;
     box.classList.toggle('on', !!d);
     $('.th', box).innerHTML = d ? dollImg(d.id, 30) : '';
-    $('#targetName', box).textContent = d ? d.name
-      : '레버로 위치를 맞추고 드롭 버튼을 눌러보세요!';
+    $('#targetName', box).textContent = d ? d.name : '조준 대기';
   },
 
   /** 레버를 -1..1 만큼 민 모습으로 그린다.
@@ -655,7 +655,9 @@ const Play = {
   /* ---------------------------------------------------------------- drop */
 
   async drop() {
-    if (this.busy || this.over || this.dropped) return;
+    if (!this.canMove()) return;
+    this.releaseControls?.();
+    this.velocity = 0;
 
     const session = this.session;
     const alive = () => this.session === session;
@@ -695,9 +697,9 @@ const Play = {
 
     // Lower until the talon tips reach the doll (or the bed on a clean miss).
     const reach = this.reachFor(near, inRange);
-    cord.style.transition = 'height .55s cubic-bezier(.4,0,.6,1)';
+    cord.style.transition = 'height .8s cubic-bezier(.4,0,.6,1)';
     cord.style.height = reach + 'px';
-    await wait(600);
+    await wait(850);
     if (!alive()) return;
 
     rig.dataset.grip = '1';
@@ -720,6 +722,7 @@ const Play = {
       cord.style.transition = 'height .3s ease-out';
       cord.style.height = (reach * 0.55) + 'px';
       await wait(340);
+      if (!alive()) return;
       await this.releaseInto(carried, this.x, 'slip');
       if (!alive()) return;
       cord.style.transition = 'height .45s ease-out';
@@ -744,7 +747,7 @@ const Play = {
     rig.style.transition = 'left .75s ease-in-out';
     rig.style.left = overChute;
     const mount = document.getElementById('railMount');
-    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = overChute; }
+    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = `calc(${CHUTE_X * 100}% + ${(CHUTE_X - 0.5) * (this.skinId === 'arcade' ? 48 : 32)}px)`; }
 
     if (failMode === 'slipCarry') {
       await wait(430);                       // let go partway across
@@ -763,12 +766,22 @@ const Play = {
     await wait(800);
     if (!alive()) return;
     delete rig.dataset.grip;
+    const heldImage = document.querySelector('#held img');
+    const heldSize = heldImage.offsetWidth;
+    const heldRect = heldImage.getBoundingClientRect();
     document.getElementById('held').innerHTML = '';
     const chute = document.getElementById('chute');
-    chute.insertAdjacentHTML('beforeend', dollImg(carried.dollId, 56, '', 'drop'));
+    chute.insertAdjacentHTML('beforeend', dollImg(carried.dollId, heldSize,
+      `max-width:none;left:50%;margin-left:${-heldSize / 2}px`, 'drop'));
+    const prize = chute.lastElementChild;
+    const landing = prize.getBoundingClientRect();
+    prize.animate([
+      { transform: `translate(${heldRect.left - landing.left}px, ${heldRect.top - landing.top}px) rotate(-8deg)` },
+      { transform: 'translate(0, 0) rotate(6deg)' }
+    ], { duration: 780, easing: 'cubic-bezier(.42,0,1,1)' });
     this.setState('GOT IT');
     haptic(40);
-    await wait(620);
+    await wait(920);
     if (!alive()) return;
     this.finish(true, carried.dollId);
   },
@@ -804,6 +817,8 @@ const Play = {
 
   /** Opens the claw and drops `doll` back onto the bed at `x`. */
   async releaseInto(doll, x, reason) {
+    const session = this.session;
+    const heldRect = document.getElementById('held').getBoundingClientRect();
     const rig = document.getElementById('rig');
     delete rig.dataset.grip;
     document.getElementById('held').innerHTML = '';
@@ -817,13 +832,18 @@ const Play = {
       this.paintPit();
       const el = $(`.doll[data-i="${idx}"]`, screenEl());
       if (el) {
-        el.classList.add('dropping');
+        const landing = el.getBoundingClientRect();
+        el.animate([
+          { transform: `translate(${heldRect.left - landing.left}px, ${heldRect.top - landing.top}px) rotate(-12deg)` },
+          { transform: 'translate(0, 0) rotate(0deg)' }
+        ], { duration: 420, easing: 'cubic-bezier(.42,0,1,1)' });
         // Show the tumbling pose while it falls, then let it settle back.
         const img = $('img', el);
         const d = this.dolls[idx];
         if (img) {
           img.src = dollArt(d.dollId, 'drop');
           setTimeout(() => {
+            if (this.session !== session) return;
             const still = $(`.doll[data-i="${idx}"] img`, screenEl());
             if (still) still.src = dollArt(d.dollId, 'idle');
           }, 420);
@@ -848,6 +868,7 @@ const Play = {
   },
 
   confirmExit() {
+    this.releaseControls?.();
     if (this.over) { go('home'); return; }
     const spent = this.dropped ? '이번 판은 이미 집게를 내렸어요.' :
       `사용한 티켓 ${this.machine.cost}장은 돌려받을 수 없어요.<br>남은 시간 ${Math.ceil(this.left)}초 안에 도전해 보세요.`;

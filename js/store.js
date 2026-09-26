@@ -32,7 +32,7 @@ const DEFAULT_STATE = {
   day: null,
   // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
   // custom 은 관리자가 직접 추가한 인형(포즈 이미지는 data URL).
-  // skin 은 플레이 화면 스킨 ('classic' | 'arcade')
+  // skin: classic (basic), arcade (green 2D), green3d (green 3D).
   admin: { dolls: {}, machines: {}, custom: {}, skin: 'arcade' },
 };
 

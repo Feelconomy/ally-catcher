@@ -449,7 +449,7 @@ const Screens = {
         Store.state.settings.skin = el.dataset.s;
         Store.save();
         $$('.md-mode [data-act="mode"]').forEach(b => b.setAttribute('aria-pressed', String(b === el)));
-        toast(`${el.dataset.s === 'arcade' ? '그린' : '기본'} 화면으로 플레이해요`, { mini: true });
+        toast(`${modeName(el.dataset.s)} 화면으로 플레이해요`, { mini: true });
       },
       play: () => {
         if (!Store.canAfford(m.cost)) { Sheets.ticketShort(m); return; }
@@ -483,6 +483,9 @@ const Screens = {
   /* --- 03 플레이 --------------------------------------------------------- */
   play(id) {
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
+    const skin = Store.state.settings.skin || Store.state.admin.skin || 'arcade';
+    if (skin === 'green3d') { startGreen3D(m); return; }
+    window.Play3D?.stop();
     Play.start(m);
   },
 
@@ -1294,7 +1297,7 @@ const Screens = {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
         Screens.admin();
-        toast(`${el.dataset.s === 'arcade' ? '그린' : '기본'} 화면으로 바꿨어요`, { tone: 'ok' });
+        toast(`${modeName(el.dataset.s)} 화면으로 바꿨어요`, { tone: 'ok' });
       },
       reset: () => {
         Store.state.admin = { dolls: {}, machines: {}, custom: {}, skin: 'arcade' };
@@ -1307,13 +1310,17 @@ const Screens = {
 
 /* 기계 상세의 '플레이 화면' 고르기. 사용자가 고른 값은 이 기기에 남고,
    고른 적이 없으면 관리자 기본값을 따른다. */
+function modeName(id) {
+  return { classic: '기본', arcade: '그린', green3d: '그린 3D' }[id] || '그린';
+}
 function modePicker() {
   const cur = Store.state.settings.skin || Store.state.admin.skin || 'arcade';
   return `<div class="md-mode">
     <span class="md-l">플레이 화면</span>
     <span class="md-seg">
-      <button class="chip sm" data-act="mode" data-s="arcade" aria-pressed="${cur !== 'classic'}">그린</button>
       <button class="chip sm" data-act="mode" data-s="classic" aria-pressed="${cur === 'classic'}">기본</button>
+      <button class="chip sm" data-act="mode" data-s="arcade" aria-pressed="${cur === 'arcade'}">그린</button>
+      <button class="chip sm" data-act="mode" data-s="green3d" aria-pressed="${cur === 'green3d'}">그린 3D</button>
     </span>
   </div>`;
 }
@@ -1321,17 +1328,18 @@ function modePicker() {
 /* 플레이 화면 스킨 고르기. 미리보기는 실제 화면의 조각을 축소해 만든 것이라
    이미지 파일이 없고, 스킨을 손보면 미리보기도 같이 바뀐다. */
 function adminSkinPicker() {
-  const cur = Store.state.admin.skin === 'classic' ? 'classic' : 'arcade';
+  const cur = Store.state.admin.skin || 'arcade';
   const opts = [
-    { id: 'arcade',  name: '그린', desc: '밝은 초록 캐비닛 · 큰 인형 16마리 무더기 · 스틱과 드롭 버튼 분리' },
     { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
+    { id: 'arcade', name: '그린', desc: '민트 이미지 캐비닛 · 2D 인형뽑기' },
+    { id: 'green3d', name: '그린 3D', desc: '민트 입체 캐비닛 · 인형 12마리 · 앞뒤·좌우 조작' },
   ];
   return `<div class="skin-pick">
-    ${opts.map(o => `<button class="skin-card ${o.id}" data-act="skin" data-s="${o.id}"
+    ${opts.map(o => `<button class="skin-card ${o.id === 'classic' ? 'classic' : 'arcade'}" data-act="skin" data-s="${o.id}"
         aria-pressed="${cur === o.id}">
       <span class="sk-shot">
         <span class="sk-cab"><span class="sk-claw"></span><span class="sk-pile"></span></span>
-        <span class="sk-ctl">${o.id === 'arcade'
+        <span class="sk-ctl">${o.id !== 'classic'
           ? '<span class="sk-lv"></span><span class="sk-gg"></span><span class="sk-dp"></span>'
           : '<span class="sk-a"></span><span class="sk-b"></span>'}</span>
       </span>

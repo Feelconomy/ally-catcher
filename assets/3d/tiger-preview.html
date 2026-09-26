@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ko">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tiger Duck | Model Review</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f7f8;color:#25282b;font:14px system-ui;letter-spacing:0}header{height:64px;padding:0 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #ddd}h1{font-size:18px;margin:0}a{color:inherit}main{display:grid;grid-template-columns:1fr 1fr;height:calc(100dvh - 64px)}section{position:relative;min-width:0;min-height:0}section+section{border-left:1px solid #ddd}h2{position:absolute;top:18px;left:24px;font-size:13px;margin:0;font-weight:500;z-index:1}.reference{width:100%;height:100%;object-fit:contain;padding:60px 24px 40px}canvas{display:block;width:100%;height:100%}nav{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);display:flex;gap:2px;padding:3px;background:#fff;border:1px solid #ddd;border-radius:6px}button{border:0;background:transparent;padding:9px 15px;color:#4b5154;cursor:pointer;white-space:nowrap;border-radius:3px}button[aria-pressed=true]{background:#263a35;color:#fff}#status{position:absolute;top:50%;left:0;width:100%;text-align:center}button:focus-visible{outline:2px solid #008c65}@media(max-width:600px){header{height:54px;padding:0 16px}main{height:calc(100dvh - 54px);grid-template-columns:1fr;grid-template-rows:42% 58%}section+section{border-left:0;border-top:1px solid #ddd}.reference{padding:28px 16px 8px}h2{top:10px;left:16px}nav{bottom:10px}button{padding:7px 14px}}
+</style>
+<script type="importmap">{"imports":{"three":"../../vendor/three.module.js"}}</script>
+<header><h1>Tiger Duck · 모델 검토</h1><a href="../../#home">게임으로</a></header>
+<main>
+<section><h2>기준 이미지</h2><img class="reference" id="reference" src="tiger-reference-front.png" alt="첨부한 호랑이 오리 인형 원본"></section>
+<section id="viewport"><h2>3D 시안</h2><div id="status" role="status">모델 불러오는 중…</div><nav aria-label="시점"><button data-view="front" aria-pressed="true">정면</button><button data-view="side" aria-pressed="false">측면</button><button data-view="back" aria-pressed="false">후면</button><button data-view="angle" aria-pressed="false">사선</button></nav></section>
+</main>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from '../../vendor/GLTFLoader.js';
+import {OrbitControls} from '../../vendor/OrbitControls.js';
+const host=document.querySelector('#viewport'),status=document.querySelector('#status');
+try {
+ const renderer=new THREE.WebGLRenderer({antialias:true,preserveDrawingBuffer:true});
+ renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setClearColor(0xf6f7f8);
+ renderer.toneMapping=THREE.NeutralToneMapping;host.prepend(renderer.domElement);
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(32,1,.01,100);
+ scene.add(new THREE.HemisphereLight(0xffffff,0xc5c5b5,2));
+ for(const [x,y,z,intensity] of [[-3,4,5,2.5],[3,2,2,1],[0,4,-3,2]]){
+  const light=new THREE.DirectionalLight(0xffffff,intensity);light.position.set(x,y,z);scene.add(light);
+ }
+ const gltf=await new GLTFLoader().loadAsync('./tiger-reference.glb?v=3');
+ const model=gltf.scene.getObjectByName('TigerDuckReference');
+ if(!model)throw new Error('Model root missing');
+ scene.add(model);model.updateMatrixWorld(true);
+ const box=new THREE.Box3().setFromObject(model),size=box.getSize(new THREE.Vector3()),center=box.getCenter(new THREE.Vector3());
+ model.position.sub(center);const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=1.5;controls.maxDistance=7;
+ let view='front';
+ function position(){const distance=Math.max(size.y,size.x/camera.aspect)*2.45;camera.position.set(...(view==='side'?[distance,0,0]:view==='back'?[0,0,-distance]:view==='angle'?[distance*.55,.1,distance*.84]:[0,0,distance]));controls.target.set(0,0,0);controls.update();}
+ function resize(){renderer.setSize(host.clientWidth,host.clientHeight);camera.aspect=host.clientWidth/host.clientHeight;camera.updateProjectionMatrix();position();}
+ new ResizeObserver(resize).observe(host);resize();
+ document.querySelectorAll('[data-view]').forEach(b=>b.addEventListener('click',()=>{view=b.dataset.view;document.getElementById('reference').src=`tiger-reference-${view==='angle'?'front':view}.png`;document.querySelectorAll('[data-view]').forEach(t=>t.setAttribute('aria-pressed',String(t===b)));position();}));
+ status.remove();renderer.setAnimationLoop(()=>{controls.update();renderer.render(scene,camera);});
+ window.modelReview={renderer,model,camera,controls};
+}catch(error){status.textContent='모델을 불러오지 못했습니다. 새로고침해주세요.';console.error(error);}
+</script>
+</html>

@@ -1,0 +1,332 @@
+import * as THREE from 'three';
+import { GLTFLoader } from '../vendor/GLTFLoader.js';
+import { OrbitControls } from '../vendor/OrbitControls.js';
+import * as CANNON from '../vendor/cannon-es.js';
+
+const CHUTE = { x: -.91, z: .53 };
+const REST_Y = 2.72;
+const clamp = THREE.MathUtils.clamp;
+const ease = t => t * t * (3 - 2 * t);
+
+export const Play3D = {
+  session: 0,
+  active: false,
+  async start(machine) {
+    this.stop();
+    const session = this.session;
+    this.active = true; this.machine = machine; this.phase = 'loading';
+    this.time = PLAY_SECONDS; this.input = new THREE.Vector2(); this.velocity = new THREE.Vector2();
+    this.position = new THREE.Vector3(.25, REST_Y, 0); this.held = null; this.lastTarget = null;
+    screenEl().innerHTML = `<section class="green3d">
+      <div class="green3d-stage" id="stage3d">
+        <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><span class="green3d-status" id="status3d" role="status">준비 중</span></div>
+        <div class="green3d-views" aria-label="카메라 시점"><button data-view="front" aria-pressed="false">정면</button><button data-view="angle" aria-pressed="true">입체</button><button data-view="top" aria-pressed="false">위</button></div>
+      </div>
+      <div class="green3d-deck"><div class="green3d-console">
+        <div class="green3d-stick" id="stick3d" role="group" aria-label="집게 이동 조이스틱" tabindex="0"><span class="green3d-knob" id="knob3d"></span></div>
+        <div class="green3d-readout"><span class="green3d-label">남은 시간</span><strong class="green3d-clock" id="clock3d">00:20</strong><div class="green3d-meter"><i id="time3d" style="width:100%"></i></div></div>
+        <button class="green3d-drop" id="drop3d" disabled aria-label="집게 내리기">${icon('caretDown',24)}<span>드롭</span></button>
+      </div><div class="green3d-target"><img id="targetImg3d" alt="" hidden><span id="target3d">준비 중</span><b id="odds3d"></b></div></div>
+    </section>`;
+    this.root = document.getElementById('stage3d');
+    document.getElementById('exit3d').onclick = () => this.exit();
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.3;
+    this.root.prepend(this.renderer.domElement);
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#cce5d8');
+    this.camera = new THREE.PerspectiveCamera(37, 1, .05, 60);
+    this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
+    this.orbit.enableDamping = true; this.orbit.enablePan = false;
+    this.orbit.minDistance = 4.7; this.orbit.maxDistance = 10;
+    this.orbit.minPolarAngle = .3; this.orbit.maxPolarAngle = Math.PI / 2;
+    this.orbit.minAzimuthAngle = -.7; this.orbit.maxAzimuthAngle = .7;
+    this.scene.add(new THREE.HemisphereLight(0xfff8e7, 0x729e88, 2.4));
+    const key = new THREE.DirectionalLight(0xfff5da, 3.5); key.position.set(2, 6, 5);
+    key.castShadow = true; key.shadow.mapSize.set(1024,1024);
+    Object.assign(key.shadow.camera, {left:-3,right:3,top:5,bottom:-2,near:.1,far:15});
+    key.shadow.bias = -.001; this.scene.add(key);
+    const fill = new THREE.DirectionalLight(0xe5fff3, 1.5); fill.position.set(-3, 2, 1); this.scene.add(fill);
+    const loaded = await new GLTFLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
+    if (!this.active || session !== this.session) { this.disposeObject(loaded.scene); return; }
+    this.pack = loaded.scene;
+    const ollyPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/olly-reference.glb?v=5', import.meta.url).href);
+    if (!this.active || session !== this.session) { this.disposeObject(ollyPack.scene); return; }
+    const olly = ollyPack.scene.getObjectByName('OllyReference');
+    if (!olly) { this.disposeObject(ollyPack.scene); throw new Error('Missing approved Olly model'); }
+    // Fit the approved model to the existing grip/collision origin, without changing it during play.
+    const bounds = new THREE.Box3().setFromObject(olly);
+    const center = bounds.getCenter(new THREE.Vector3());
+    const scale = .64 / bounds.getSize(new THREE.Vector3()).y;
+    olly.scale.setScalar(scale);
+    olly.position.set(-center.x * scale, -.22 - bounds.min.y * scale, -center.z * scale);
+    const approvedOlly = new THREE.Group(); approvedOlly.name = 'ApprovedOlly';
+    approvedOlly.add(olly); this.pack.add(approvedOlly);
+    this.disposeObject(ollyPack.scene);
+    const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
+    this.assets = Object.fromEntries(names.map(name => {
+      const object = loaded.scene.getObjectByName(name);
+      if (!object) throw new Error('Missing 3D asset: ' + name);
+      return [name,object];
+    }));
+    this.assets.ToyOlly = approvedOlly;
+    for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
+    this.scene.traverse(o => {
+      if (!o.isMesh) return;
+      o.castShadow = !o.material.transparent; o.receiveShadow = true;
+      if (o.material.name === 'Clear acrylic') {
+        o.material.transparent = true; o.material.opacity = .10; o.material.depthWrite = false;
+        o.material.side = THREE.DoubleSide; o.castShadow = false;
+      }
+    });
+    this.claw = this.assets.Claw;
+    this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
+    this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
+    this.scene.add(this.cable);
+    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
+    this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
+    this.buildPhysics(); this.stockToys();
+    for (let i=0;i<150;i++) this.world.step(1/60);
+    this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
+    this.view('angle'); this.resize(); this.bind();
+    this.phase = 'aim'; this.status('READY'); document.getElementById('drop3d').disabled = false;
+    this.previous = performance.now();
+    this.frame = requestAnimationFrame(now => this.update(now));
+  },
+
+  buildPhysics() {
+    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0,-9.82,0) });
+    this.world.defaultContactMaterial.friction = .65;
+    this.world.defaultContactMaterial.restitution = .12;
+    this.world.allowSleep = true;
+    this.world.solver.iterations = 12;
+    const wall = (x,y,z,w,h,d) => {
+      const body=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2)),position:new CANNON.Vec3(x,y,z)});
+      this.world.addBody(body);
+    };
+    wall(0,-.08,0,2.65,.16,1.95);
+    wall(-1.29,1.7,0,.10,3.5,1.95);wall(1.29,1.7,0,.10,3.5,1.95);
+    wall(0,1.7,-.95,2.65,3.5,.10);wall(0,1.7,.96,2.65,3.5,.10);
+    wall(-.60,.36,.53,.025,.72,.62); wall(-1.22,.36,.53,.025,.72,.62);
+    wall(-.91,.36,.23,.64,.72,.025); wall(-.91,.36,.83,.64,.72,.025);
+  },
+
+  stockToys() {
+    const stock = Store.machineStock(this.machine,12).dolls.slice(0,12);
+    this.toys = stock.map((id,i) => {
+      const type = id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
+      const mesh = this.assets[type].clone(true);
+      mesh.position.set(0,0,0);
+      mesh.traverse(o => {
+        if (!o.isMesh) return;
+        o.material = o.material.clone(); o.material.metalness = 0;
+        if (type !== 'ToyOlly') o.material.roughness = .9;
+        o.castShadow = true; o.receiveShadow = true;
+        if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
+      });
+      const body = new CANNON.Body({ mass: .22, linearDamping:.38, angularDamping:.75, sleepSpeedLimit:.06, sleepTimeLimit:.6 });
+      body.addShape(new CANNON.Sphere(.205),new CANNON.Vec3(0,-.015,0));
+      body.addShape(new CANNON.Sphere(.17),new CANNON.Vec3(0,.21,0));
+      const col=i%4,row=Math.floor(i/4);
+      body.position.set(-.86+col*.53,.4+Math.floor(row/2)*.60,-.56+(row%2)*.53);
+      if (body.position.x<-.55 && body.position.z>.1) body.position.x=-.28;
+      body.quaternion.setFromEuler(0,(Math.random()-.5)*.65,0);
+      this.world.addBody(body); this.scene.add(mesh);
+      return { id,mesh,body };
+    });
+  },
+
+  bind() {
+    this.events = new AbortController(); const signal=this.events.signal;
+    const stick=document.getElementById('stick3d'); let pointer=null;
+    const keys=new Set();
+    this.release = () => { pointer=null; keys.clear(); this.input.set(0,0); this.paintStick(); };
+    const track=ev => {
+      if (ev.pointerId!==pointer || this.phase!=='aim') return;
+      const r=stick.getBoundingClientRect(),max=r.width*.34;
+      this.input.set((ev.clientX-r.left-r.width/2)/max,(ev.clientY-r.top-r.height/2)/max);
+      if (this.input.length()>1) this.input.normalize();
+      if (this.input.length()<.12) this.input.set(0,0);
+      this.paintStick();
+    };
+    stick.addEventListener('pointerdown',ev=>{
+      if(this.phase!=='aim'||pointer!==null)return;
+      ev.preventDefault();pointer=ev.pointerId;stick.setPointerCapture(pointer);track(ev);haptic(8);
+    },{signal});
+    stick.addEventListener('pointermove',track,{signal});
+    for(const type of ['pointerup','pointercancel','lostpointercapture']) stick.addEventListener(type,ev=>{if(ev.pointerId===pointer)this.release();},{signal});
+    const direction = () => {
+      this.input.set(Number(keys.has('ArrowRight')||keys.has('d'))-Number(keys.has('ArrowLeft')||keys.has('a')),Number(keys.has('ArrowDown')||keys.has('s'))-Number(keys.has('ArrowUp')||keys.has('w')));
+      if(this.input.length()>1)this.input.normalize();this.paintStick();
+    };
+    window.addEventListener('keydown',ev=>{
+      if(this.phase!=='aim'||ev.target.closest('input,textarea,select')||document.querySelector('#overlays .scrim'))return;
+      if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','w','a','s','d'].includes(ev.key)){ev.preventDefault();keys.add(ev.key);direction();}
+      if((ev.key===' '||ev.key==='Enter')&&!ev.repeat&&!ev.target.closest('button')){ev.preventDefault();this.drop();}
+    },{signal});
+    window.addEventListener('keyup',ev=>{keys.delete(ev.key);direction();},{signal});
+    window.addEventListener('blur',this.release,{signal});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden)this.release();},{signal});
+    document.getElementById('drop3d').onclick=()=>this.drop();
+    this.root.querySelectorAll('[data-view]').forEach(btn=>btn.onclick=()=>this.view(btn.dataset.view));
+    this.renderer.domElement.addEventListener('webglcontextlost',ev=>{
+      ev.preventDefault();this.release();this.phase='error';this.status('화면 연결이 끊겼어요');
+      document.getElementById('drop3d').disabled=true;
+    },{signal});
+  },
+
+  paintStick() {
+    const knob=document.getElementById('knob3d');
+    if(knob)knob.style.transform=`translate(${this.input.x*22}px,${this.input.y*22}px)`;
+    const handle=this.assets?.Joystick.getObjectByName('JoystickHandle');
+    if(handle){handle.rotation.z=-this.input.x*.30;handle.rotation.x=this.input.y*.30;}
+  },
+
+  view(name) {
+    this.viewName=name;
+    const positions={front:[0,2.15,7.2],angle:[2.3,2.85,7.1],top:[0,6.8,5]};
+    this.camera.position.fromArray(positions[name]);
+    this.orbit.target.set(0,1.45,0);this.orbit.update();
+    this.root.querySelectorAll('[data-view]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.view===name)));
+    this.resize();
+  },
+
+  resize() {
+    if(!this.active || !this.renderer)return;
+    const {width,height}=this.root.getBoundingClientRect();if(!width||!height)return;
+    this.renderer.setSize(width,height,false);this.camera.aspect=width/height;
+    this.camera.fov=THREE.MathUtils.radToDeg(2*Math.atan(Math.max(2.05,1.8/this.camera.aspect)/7.5));
+    this.camera.updateProjectionMatrix();
+  },
+
+  nearest() {
+    let best=null;
+    for(const toy of this.toys){
+      const p=toy.body.position;
+      const distance=Math.hypot(p.x-this.position.x,p.z-this.position.z);
+      if(!best || (distance<.29 && best.distance<.29 ? p.y>best.toy.body.position.y : distance<best.distance))best={toy,distance};
+    }
+    return best;
+  },
+  odds(near=this.nearest()) {return near&&near.distance<.32 ? Math.round(Store.odds(this.machine)*(.25+.75*(1-near.distance/.32))) : 0;},
+  status(text) {const el=document.getElementById('status3d');if(el)el.textContent=text;},
+
+  update(now) {
+    if(!this.active)return;
+    const dt=clamp((now-this.previous)/1000,0,.05);this.previous=now;
+    if(this.phase==='aim') {
+      this.time=Math.max(0,this.time-dt);
+      const target=this.input.clone().multiplyScalar(1.05);
+      this.velocity.lerp(target,1-Math.exp(-dt*13));
+      this.position.x=clamp(this.position.x+this.velocity.x*dt,-1.02,1.02);
+      this.position.z=clamp(this.position.z+this.velocity.y*dt,-.66,.67);
+      if(this.time<=0){App.lastAttempt={dollId:null,accuracy:0,kind:'timeout'};this.finish(false);return;}
+      const near=this.nearest();
+      const id=near&&near.distance<.32?near.toy.id:null;
+      if(id!==this.lastTarget){
+        this.lastTarget=id;document.getElementById('target3d').textContent=id?DOLLS[id].name:'조준 대기';
+        const img=document.getElementById('targetImg3d');img.hidden=!id;if(id)img.src=dollArt(id);
+      }
+      document.getElementById('odds3d').textContent=id?this.odds(near)+'%':'';
+      document.getElementById('clock3d').textContent=mmss(this.time);
+      document.getElementById('clock3d').classList.toggle('warn',this.time<=5);
+      document.getElementById('time3d').style.width=(this.time/PLAY_SECONDS*100)+'%';
+    }
+    if(this.tween){
+      this.tween.elapsed+=dt;const t=clamp(this.tween.elapsed/this.tween.duration,0,1);
+      this.position.lerpVectors(this.tween.from,this.tween.to,ease(t));
+      if(t===1){const done=this.tween.resolve;this.tween=null;done(true);}
+    }
+    if(this.held){
+      this.held.body.position.set(this.position.x,this.position.y-.40,this.position.z);
+      this.held.body.velocity.setZero();this.held.body.angularVelocity.setZero();
+    }
+    this.world.step(1/60,dt,3);
+    for(const toy of this.toys){toy.mesh.position.copy(toy.body.position);toy.mesh.quaternion.copy(toy.body.quaternion);}
+    this.claw.position.copy(this.position);
+    this.claw.rotation.z=this.phase==='aim'?-this.velocity.x*.06:0;
+    this.assets.Carriage.position.set(this.position.x,3.06,this.position.z);
+    this.assets.Gantry.position.z=this.position.z;
+    const length=Math.max(.08,3.03-this.position.y-.12);
+    this.cable.scale.y=length;this.cable.position.set(this.position.x,this.position.y+.12+length/2,this.position.z);
+    this.shadow.position.set(this.position.x,.015,this.position.z);this.shadow.visible=this.phase==='aim';
+    this.orbit.update();this.renderer.render(this.scene,this.camera);
+    this.frame=requestAnimationFrame(t=>this.update(t));
+  },
+
+  travel(to,duration) {
+    return new Promise(resolve=>{this.tween={from:this.position.clone(),to:new THREE.Vector3(...to),elapsed:0,duration,resolve};});
+  },
+  pause(ms) {
+    return new Promise(resolve=>{this.delayResolve=resolve;this.delay=setTimeout(()=>{this.delayResolve=null;resolve(this.active);},ms);});
+  },
+  grip(closed) {for(const finger of this.fingers)finger.scale.set(closed?.63:1,1,closed?.63:1);},
+  releaseToy() {
+    if(!this.held)return;
+    this.held.body.type=CANNON.Body.DYNAMIC;this.held.body.mass=.22;this.held.body.updateMassProperties();
+    this.held.body.collisionResponse=true;this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
+    this.held=null;this.grip(false);
+  },
+
+  async drop() {
+    if(this.phase!=='aim')return;
+    const session=this.session;const alive=()=>this.active&&this.session===session;
+    const near=this.nearest(),chance=this.odds(near);
+    this.phase='dropping';this.release();this.velocity.set(0,0);
+    document.getElementById('drop3d').disabled=true;this.status('DROPPING');haptic(20);
+    const target=near&&near.distance<.29?near.toy:null;
+    const won=!!target&&Math.random()*100<chance;
+    const slipped=!!target&&!won&&Math.random()>.3;
+    App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
+    const down=target?target.body.position.y+.42:.52;
+    await this.travel([this.position.x,down,this.position.z],.95);if(!alive())return;
+    this.grip(true);await this.pause(280);if(!alive())return;
+    if(target&&(won||slipped)){
+      this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
+      target.body.collisionResponse=false;target.body.quaternion.set(0,0,0,1);target.body.wakeUp();
+    }
+    this.phase='lifting';this.status('LIFTING');
+    await this.travel([this.position.x,REST_Y,this.position.z],1.1);if(!alive())return;
+    if(!this.held){this.grip(false);await this.pause(350);if(alive())this.finish(false,target?.id);return;}
+    if(slipped){
+      this.releaseToy();App.lastAttempt.kind='slip';this.status('DROPPED');haptic(25);
+      await this.pause(1050);if(alive())this.finish(false,target.id);return;
+    }
+    this.phase='carrying';this.status('CARRYING');
+    await this.travel([CHUTE.x,REST_Y,CHUTE.z],1.25);if(!alive())return;
+    this.phase='releasing';this.status('PRIZE OUT');this.releaseToy();haptic(35);
+    await this.pause(1400);if(!alive())return;
+    const p=target.body.position;
+    this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id);
+  },
+
+  finish(won,id=null) {
+    if(!this.active)return;
+    const machine=this.machine;this.stop();
+    App.levelUpTo=Store.recordPlay(machine,won,won?id:null);
+    go(won?'win':'lose',id||'');
+  },
+  exit() {
+    this.release?.();
+    dialog(`<h3>인형뽑기를 나갈까요?</h3><p>이번 판에 사용한 티켓은 돌려받을 수 없어요.</p><div class="actions"><button class="btn btn--primary" data-close>계속 플레이</button><button class="btn btn--neutral" data-act="leave">나가기</button></div>`,(node,close)=>bind(node,{leave:()=>{close();this.stop();go('home');}}));
+  },
+  disposeObject(root) {
+    const geometries=new Set(),materials=new Set(),textures=new Set();
+    root?.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material)for(const m of Array.isArray(o.material)?o.material:[o.material])materials.add(m);});
+    materials.forEach(m=>{for(const value of Object.values(m))if(value?.isTexture)textures.add(value);});
+    geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
+  },
+  stop() {
+    this.active=false;this.session++;
+    cancelAnimationFrame(this.frame);clearTimeout(this.delay);
+    this.delayResolve?.(false);this.delayResolve=null;
+    this.tween?.resolve(false);this.tween=null;
+    this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();
+    this.disposeObject(this.scene);this.disposeObject(this.pack);
+    this.renderer?.dispose();this.renderer?.forceContextLoss();
+    this.scene=null;this.pack=null;this.renderer=null;this.assets=null;this.held=null;
+  }
+};

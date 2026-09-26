@@ -31,7 +31,7 @@ function go(route, arg) {
 
 function render(route, arg) {
   // Leaving the machine tears down its timers and key handlers.
-  if (App.route === 'play' && route !== 'play') Play.stop();
+  if (App.route === 'play' && route !== 'play') { Play.stop(); window.Play3D?.stop(); }
   if (App.adTimer) { clearInterval(App.adTimer); App.adTimer = null; }
   if (App.adPlayer) { try { App.adPlayer.destroy(); } catch (_) {} App.adPlayer = null; }
   if (App.heroTimer) { clearInterval(App.heroTimer); App.heroTimer = null; }

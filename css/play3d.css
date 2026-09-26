@@ -1,0 +1,34 @@
+.green3d-loading { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; padding: 24px; background: #d8eee1; }
+.green3d { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: #cce5d8; }
+.green3d-stage { position: relative; flex: 1; min-height: 230px; overflow: hidden; }
+.green3d-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+.green3d-top { position: absolute; inset: calc(12px + var(--safe-t)) 16px auto; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.green3d-top button, .green3d-views { pointer-events: auto; }
+.green3d-top .iconbtn { width: 40px; height: 40px; background: #f4fff4de; }
+.green3d-status { padding: 7px 11px; border-radius: 6px; color: #235e47; background: #f4fff4de; font-size: 11px; font-weight: 700; }
+.green3d-status::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #00a650; margin-right: 6px; }
+.green3d-views { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; background: #ffffffd9; padding: 3px; border-radius: 6px; }
+.green3d-views button { font-size: 11px; padding: 6px 12px; border-radius: 4px; white-space: nowrap; }
+.green3d-views button[aria-pressed="true"] { background: #007d49; color: white; }
+.green3d-deck { flex: 0 0 auto; padding: 12px 18px calc(12px + var(--safe-b)); background: linear-gradient(#e9f7ee,#b3d7c2); border-top: 1px solid #f4fff6; }
+.green3d-console { display: grid; grid-template-columns: 104px minmax(0,1fr) 86px; align-items: center; gap: 12px; }
+.green3d-stick { width: 104px; height: 104px; position: relative; border-radius: 50%; background: radial-gradient(ellipse, #91b69f 0 25%, #d9e9dc 27% 54%, #a1c9af 56% 58%, #eef7ef 60%); box-shadow: inset 0 2px 4px #487a5f30; touch-action: none; }
+.green3d-stick::before, .green3d-stick::after { content: ''; position: absolute; background: #68947780; pointer-events: none; }
+.green3d-stick::before { left: 50%; top: 10px; bottom: 10px; width: 1px; }
+.green3d-stick::after { top: 50%; left: 10px; right: 10px; height: 1px; }
+.green3d-knob { position: absolute; left: 30px; top: 30px; width: 44px; height: 44px; border-radius: 50%; z-index: 1; background: radial-gradient(circle at 32% 26%, #95efb3, #12b869 43%, #00763f 78%); box-shadow: 0 5px 0 #36634b, 0 8px 10px #17462c44; pointer-events: none; }
+.green3d-readout { text-align: center; min-width: 0; }
+.green3d-clock { display: block; font-size: 27px; font-variant-numeric: tabular-nums; font-weight: 750; color: #006e42; }
+.green3d-clock.warn { color: #bd4333; }
+.green3d-label { color: #547c64; font-size: 10px; }
+.green3d-meter { height: 4px; background: #9ac6aa; margin-top: 8px; border-radius: 2px; overflow: hidden; }
+.green3d-meter i { display: block; height: 100%; background: #00894e; }
+.green3d-drop { width: 86px; height: 86px; border-radius: 50%; color: #fff; background: radial-gradient(circle at 32% 23%,#6ad99a,#00a650 65%); box-shadow: 0 5px 0 #006d39,0 8px 10px #006d3930; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 2px; }
+.green3d-drop:active { transform: translateY(4px); box-shadow: 0 1px 0 #006d39; }
+.green3d-drop:disabled { background: #a3c4af; box-shadow: 0 3px 0 #80a38d; color: #eaf4ec; }
+.green3d-target { display: flex; align-items: center; height: 34px; margin-top: 10px; gap: 8px; font-size: 12px; color: #285e43; }
+.green3d-target span { flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.green3d-target img { width: 30px; height: 30px; object-fit: contain; }
+.green3d-target b { font-variant-numeric: tabular-nums; }
+@media(max-height:650px) { .green3d-console { grid-template-columns: 82px minmax(0,1fr) 72px; } .green3d-stick { width: 82px; height: 82px; } .green3d-knob { left: 19px; top: 19px; } .green3d-drop { width: 72px; height: 72px; } .green3d-deck { padding-top: 8px; } }
+@media(max-width:340px) { .green3d-console { gap: 7px; } .green3d-deck { padding-left: 12px; padding-right: 12px; } }
