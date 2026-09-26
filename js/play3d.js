@@ -43,26 +43,24 @@ export const Play3D = {
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.45;
+    this.renderer.toneMappingExposure = 1.3;
     this.root.prepend(this.renderer.domElement);
-    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#e9f7ef');
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#cce5d8');
     this.camera = new THREE.PerspectiveCamera(37, 1, .05, 60);
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true; this.orbit.enablePan = false;
     this.orbit.minDistance = 4.7; this.orbit.maxDistance = 10;
     this.orbit.minPolarAngle = .3; this.orbit.maxPolarAngle = Math.PI / 2;
     this.orbit.minAzimuthAngle = -.7; this.orbit.maxAzimuthAngle = .7;
-    /* 조명 — 캐비닛 안이 어두워 보이지 않게 넉넉히 채운다. 천장·유리에 가려
-       그늘이 지기 쉬워서, 하늘빛(hemisphere)과 앞쪽 채움광을 함께 올렸다. */
-    this.scene.add(new THREE.AmbientLight(0xffffff, .32));
-    this.scene.add(new THREE.HemisphereLight(0xfffdf4, 0x9fd8bd, 2.9));
-    const key = new THREE.DirectionalLight(0xfff8e6, 3.6); key.position.set(2, 6, 5);
-    key.castShadow = true; key.shadow.mapSize.set(1024,1024);
-    Object.assign(key.shadow.camera, {left:-3,right:3,top:5,bottom:-2,near:.1,far:15});
-    key.shadow.bias = -.001; this.scene.add(key);
-    const fill = new THREE.DirectionalLight(0xeafff5, 1.8); fill.position.set(-3, 2, 1); this.scene.add(fill);
-    // 카메라 쪽에서 정면을 받쳐 인형 얼굴이 그늘에 묻히지 않게
-    const front = new THREE.DirectionalLight(0xffffff, .9); front.position.set(0, 1.6, 8); this.scene.add(front);
+    this.scene.add(new THREE.HemisphereLight(0xfff8e7, 0x729e88, 2.4));
+    const key = new THREE.DirectionalLight(0xfff5da, 3.5); key.position.set(2, 6, 5);
+    /* 그림자 범위가 캐비닛보다 훨씬 넓어 그림자맵 한 칸이 굵었고, 그래서 인형·집게
+       표면에 자기 그림자가 얼룩덜룩 찍혔다(어두운 때처럼 보이던 것). 범위를 캐비닛에
+       맞춰 좁히고 해상도를 올린 뒤, 곡면에 맞는 normalBias 로 남은 얼룩을 지운다. */
+    key.castShadow = true; key.shadow.mapSize.set(2048,2048);
+    Object.assign(key.shadow.camera, {left:-1.7,right:1.7,top:3.6,bottom:-.3,near:.5,far:12});
+    key.shadow.bias = -.0004; key.shadow.normalBias = .035; this.scene.add(key);
+    const fill = new THREE.DirectionalLight(0xe5fff3, 1.5); fill.position.set(-3, 2, 1); this.scene.add(fill);
     const loaded = await new GLTFLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(loaded.scene); return; }
     this.pack = loaded.scene;
@@ -91,7 +89,7 @@ export const Play3D = {
       if (!o.isMesh) return;
       o.castShadow = !o.material.transparent; o.receiveShadow = true;
       if (o.material.name === 'Clear acrylic') {
-        o.material.transparent = true; o.material.opacity = .06; o.material.depthWrite = false;
+        o.material.transparent = true; o.material.opacity = .10; o.material.depthWrite = false;
         o.material.side = THREE.DoubleSide; o.castShadow = false;
       }
     });
@@ -144,7 +142,7 @@ export const Play3D = {
       mesh.traverse(o => {
         if (!o.isMesh) return;
         o.material = o.material.clone(); o.material.metalness = 0;
-        if (type !== 'ToyOlly') o.material.roughness = .72;
+        if (type !== 'ToyOlly') o.material.roughness = .9;
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
@@ -284,15 +282,15 @@ export const Play3D = {
       this.position.z+Math.sin(this.swing.y)*hang);
 
     if(this.held){
-      /* 매달린 인형은 집게와 한 몸이다. 줄이 기운 방향으로 집게 아래 매달리고,
-         기울기도 집게와 같은 각도를 쓴다 — 따로 노는 것처럼 보이지 않게. */
+      /* 매달린 인형은 집게와 한 몸이다. 잡힌 순간의 자세와 잡힌 지점을 그대로 두고,
+         줄이 흔들리는 회전만 그 위에 얹는다. */
+      const sq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x));
+      const off=this.heldOffset.clone().applyQuaternion(sq);
       const b=this.held.body;
-      b.position.set(
-        this.clawPos.x+Math.sin(this.swing.x)*.40,
-        this.clawPos.y-Math.cos(this.swing.x)*Math.cos(this.swing.y)*.40,
-        this.clawPos.z+Math.sin(this.swing.y)*.40);
+      b.position.set(this.clawPos.x+off.x,this.clawPos.y+off.y,this.clawPos.z+off.z);
       b.velocity.setZero();b.angularVelocity.setZero();
-      b.quaternion.setFromEuler(-this.swing.y,0,this.swing.x);
+      const q=sq.clone().multiply(this.heldQuat);
+      b.quaternion.set(q.x,q.y,q.z,q.w);
     }
 
     this.clawBody.position.set(this.clawPos.x,this.clawPos.y,this.clawPos.z);
@@ -357,7 +355,13 @@ export const Play3D = {
     this.grip(true);await this.pause(280);if(!alive())return;
     if(target&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
-      target.body.collisionResponse=false;target.body.quaternion.set(0,0,0,1);target.body.wakeUp();
+      target.body.collisionResponse=false;target.body.wakeUp();
+      /* 인형을 똑바로 세우지 않는다. 누워 있으면 누운 채로, 집게가 닿은 그 지점을
+         잡고 들어 올린다 — 배를 물었는데 머리를 문 것처럼 보이지 않도록. */
+      const q=target.body.quaternion, p=target.body.position;
+      this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w);
+      this.heldOffset=new THREE.Vector3(
+        clamp(p.x-this.clawPos.x,-.13,.13), p.y-this.clawPos.y, clamp(p.z-this.clawPos.z,-.13,.13));
     }
     this.phase='lifting';this.status('LIFTING');
     await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
