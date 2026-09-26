@@ -265,35 +265,35 @@ export const Play3D = {
       this.position.lerpVectors(this.tween.from,this.tween.to,ease(t));
       if(t===1){const done=this.tween.resolve;this.tween=null;done(true);}
     }
-    if(this.held){
-      // 집게 끝에 매달린 인형 — 곧바로 따라붙지 않고 한 박자 늦게 쫓아온다
-      const b=this.held.body, want={x:this.clawPos.x,y:this.clawPos.y-.40,z:this.clawPos.z};
-      const follow=1-Math.exp(-dt*11);
-      b.position.x+=(want.x-b.position.x)*follow;
-      b.position.y+=(want.y-b.position.y)*follow;
-      b.position.z+=(want.z-b.position.z)*follow;
-      b.velocity.setZero();b.angularVelocity.setZero();
-      // 뒤처진 만큼 기울어 대롱대롱 매달린 것처럼
-      const lagX=clamp((want.x-b.position.x)*2.2,-.5,.5), lagZ=clamp((want.z-b.position.z)*2.2,-.5,.5);
-      b.quaternion.setFromEuler(lagZ,0,-lagX);
-    }
     /* 진자: 집게는 줄에 매달려 캐리지에 끌려온다. 움직이는 동안은 속도에 비례해
        뒤로 처지고, 멈추면 스프링이 끌어당겨 두어 번 흔들리다 선다. 캐리지의 실제
        이동량으로 계산하므로 레버 조작뿐 아니라 내리기·옮기기에서도 같이 흔들린다. */
     const carVelX=(this.position.x-this.prevPos.x)/Math.max(dt,1e-4);
     const carVelZ=(this.position.z-this.prevPos.z)/Math.max(dt,1e-4);
     this.prevPos.copy(this.position);
-    const K=40, D=5, DRAG=9;                     // 스프링 · 감쇠 · 끌림
+    const K=40, D=6, DRAG=6;                     // 스프링 · 감쇠 · 끌림
     this.swingVel.x+=(-K*this.swing.x-D*this.swingVel.x-clamp(carVelX,-2.5,2.5)*DRAG)*dt;
     this.swingVel.y+=(-K*this.swing.y-D*this.swingVel.y-clamp(carVelZ,-2.5,2.5)*DRAG)*dt;
-    this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.42,.42);
-    this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.42,.42);
+    this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.28,.28);
+    this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.28,.28);
     // 매달린 지점(캐리지)에서 줄 길이만큼 기울어진 자리가 집게의 실제 위치
     const pivotY=3.03, hang=Math.max(.2,pivotY-this.position.y);
     this.clawPos.set(
       this.position.x+Math.sin(this.swing.x)*hang,
       pivotY-Math.cos(this.swing.x)*Math.cos(this.swing.y)*hang,
       this.position.z+Math.sin(this.swing.y)*hang);
+
+    if(this.held){
+      /* 매달린 인형은 집게와 한 몸이다. 줄이 기운 방향으로 집게 아래 매달리고,
+         기울기도 집게와 같은 각도를 쓴다 — 따로 노는 것처럼 보이지 않게. */
+      const b=this.held.body;
+      b.position.set(
+        this.clawPos.x+Math.sin(this.swing.x)*.40,
+        this.clawPos.y-Math.cos(this.swing.x)*Math.cos(this.swing.y)*.40,
+        this.clawPos.z+Math.sin(this.swing.y)*.40);
+      b.velocity.setZero();b.angularVelocity.setZero();
+      b.quaternion.setFromEuler(this.swing.y,0,-this.swing.x);
+    }
 
     this.clawBody.position.set(this.clawPos.x,this.clawPos.y,this.clawPos.z);
     this.world.step(1/60,dt,3);
