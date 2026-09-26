@@ -292,14 +292,14 @@ export const Play3D = {
         this.clawPos.y-Math.cos(this.swing.x)*Math.cos(this.swing.y)*.40,
         this.clawPos.z+Math.sin(this.swing.y)*.40);
       b.velocity.setZero();b.angularVelocity.setZero();
-      b.quaternion.setFromEuler(this.swing.y,0,-this.swing.x);
+      b.quaternion.setFromEuler(-this.swing.y,0,this.swing.x);
     }
 
     this.clawBody.position.set(this.clawPos.x,this.clawPos.y,this.clawPos.z);
     this.world.step(1/60,dt,3);
     for(const toy of this.toys){toy.mesh.position.copy(toy.body.position);toy.mesh.quaternion.copy(toy.body.quaternion);}
     this.claw.position.copy(this.clawPos);
-    this.claw.rotation.set(this.swing.y,0,-this.swing.x);   // 줄을 따라 같이 기운다
+    this.claw.rotation.set(-this.swing.y,0,this.swing.x);   // 줄이 기운 쪽과 같은 방향으로
     this.assets.Carriage.position.set(this.position.x,3.06,this.position.z);
     this.assets.Gantry.position.z=this.position.z;
     // 줄은 캐리지와 집게를 잇는다 — 흔들리면 같이 비스듬해진다
