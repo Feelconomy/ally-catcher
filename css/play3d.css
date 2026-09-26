@@ -5,8 +5,6 @@
 .green3d-top { position: absolute; inset: calc(12px + var(--safe-t)) 16px auto; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
 .green3d-top button, .green3d-views { pointer-events: auto; }
 .green3d-top .iconbtn { width: 40px; height: 40px; background: #f4fff4de; }
-.green3d-status { padding: 7px 11px; border-radius: 6px; color: #235e47; background: #f4fff4de; font-size: 11px; font-weight: 700; }
-.green3d-status::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #00a650; margin-right: 6px; }
 .green3d-views { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; background: #ffffffd9; padding: 3px; border-radius: 6px; }
 .green3d-views button { font-size: 11px; padding: 6px 12px; border-radius: 4px; white-space: nowrap; }
 .green3d-views button[aria-pressed="true"] { background: #007d49; color: white; }

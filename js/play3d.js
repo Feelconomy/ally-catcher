@@ -11,18 +11,32 @@ const gltfLoader = () => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
    굴러 떨어진다. 그래서 앞줄(z>0.23)은 x 를 오른쪽으로 당겨 둔다.
    아래 한 층만 깔면 휑해 보여서 위에 한 층을 더 얹어 수북하게 만든다.
    인형 반지름이 0.205 라 두 층 간격은 0.43 이다. */
+/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
+   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
+   재고 수는 2D와 공유하므로 늘리지 않는다. 대신 아래층을 촘촘히 깔고 그
+   골짜기에 윗층을 얹어, 물리가 평평하게 눕히지 못하게 처음부터 쌓아 둔다. */
+/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
+   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
+   재고 수는 2D와 공유하므로 늘리지 않는다. 대신 아래층을 지름(0.41)보다
+   좁은 간격으로 촘촘히 깔아 틈을 없애고, 그 위에 얹는다. 간격을 넓히면
+   윗층이 틈으로 빠져 결국 한 층이 된다 — 0.50 으로 두었다가 그렇게 됐다. */
+/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
+   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
+
+   재고 수는 2D와 공유하므로 늘리지 않는다. 12마리는 바닥이 넓어 물리에
+   맡기면 결국 한 층으로 밀려난다(0.50 간격도 0.38 간격도 그랬다). 그래서
+   '서로 닿아 있는' 정확한 높이에 쌓아 놓고 바로 재운다.
+   반지름 0.205 · 간격 0.38 일 때 네 개가 만드는 오목한 자리의 높이는
+   0.21 + sqrt(0.41^2 - (0.38/√2)^2) = 0.52 다. */
 const TOY_SLOTS = [
-  // 아래층 11
-  [-0.92, 0.40, -0.65], [-0.35, 0.40, -0.65], [0.22, 0.40, -0.65], [0.79, 0.40, -0.65],
-  [-0.92, 0.40, -0.08], [-0.35, 0.40, -0.08], [0.22, 0.40, -0.08], [0.79, 0.40, -0.08],
-  [-0.25, 0.40,  0.48], [0.32, 0.40,  0.48], [0.89, 0.40,  0.48],
-  // 위층 11 — 아래층 사이사이에 얹는다
-  [-0.62, 0.83, -0.65], [-0.05, 0.83, -0.65], [0.52, 0.83, -0.65],
-  [-0.62, 0.83, -0.08], [-0.05, 0.83, -0.08], [0.52, 0.83, -0.08],
-  [-0.30, 0.83,  0.44], [0.28, 0.83,  0.44], [0.86, 0.83,  0.44],
-  [-0.92, 0.83, -0.36], [0.85, 0.83, -0.36],
-  // 꼭대기 4
-  [-0.30, 1.26, -0.38], [0.26, 1.26, -0.38], [-0.30, 1.26, 0.12], [0.26, 1.26, 0.12],
+  // 아래층 8 — 서로 닿도록 0.38 간격
+  [-0.57, 0.21, -0.28], [-0.19, 0.21, -0.28], [0.19, 0.21, -0.28], [0.57, 0.21, -0.28],
+  [-0.57, 0.21,  0.10], [-0.19, 0.21,  0.10], [0.19, 0.21,  0.10], [0.57, 0.21,  0.10],
+  // 윗층 3 — 아래층 네 개 사이 오목한 자리
+  [-0.38, 0.53, -0.09], [0.00, 0.53, -0.09], [0.38, 0.53, -0.09],
+  // 꼭대기 1 — 윗층 두 개 '사이'에 얹는다. 가운데 바로 위(간격 0.37)에 두면
+  //            지름 0.41 보다 좁아 파고들고, 그 반동으로 허공까지 솟는다.
+  [0.19, 0.90, -0.09],
 ];
 const TOY_COUNT = TOY_SLOTS.length;
 
@@ -57,7 +71,7 @@ export const Play3D = {
     this.gripT = 0;
     screenEl().innerHTML = `<section class="green3d">
       <div class="green3d-stage" id="stage3d">
-        <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><div class="green3d-topright"><span class="green3d-wallet" role="status" aria-label="보유 티켓 ${Store.state.tickets}장">${icon('ticketFill',16)}<span id="walletN3d">${Store.state.tickets}</span></span><span class="green3d-status" id="status3d" role="status">준비 중</span></div></div>
+        <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><span class="green3d-wallet" role="status" aria-label="보유 티켓 ${Store.state.tickets}장">${icon('ticketFill',16)}<span id="walletN3d">${Store.state.tickets}</span></span></div>
         <div class="green3d-views" aria-label="카메라 시점"><button data-view="front" aria-pressed="false">정면</button><button data-view="angle" aria-pressed="true">입체</button><button data-view="top" aria-pressed="false">위</button></div>
       </div>
       <div class="green3d-deck"><div class="green3d-console">
@@ -178,27 +192,10 @@ export const Play3D = {
         o.material.side = THREE.DoubleSide; o.castShadow = false;
       }
     });
-    const meadowPack = await gltfLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(meadowPack.scene); return; }
-    const meadow = meadowPack.scene; meadow.name = 'Meadow';
-    const sceneExtras = [];
-    const meadowMaterials = new Set();
-    meadow.traverse(o => {
-      if (o.isLight || o.isCamera) sceneExtras.push(o);
-      if (o.isMesh) {
-        meadowMaterials.add(o.material);
-        o.receiveShadow = o.name.startsWith('Meadow');
-        o.castShadow = false;
-        if (/Wildflowers|Detailed.flowers|Fine.grass/.test(o.name)) o.material.side = THREE.DoubleSide;
-      }
-    });
-    meadowMaterials.forEach(m => {
-      m.envMapIntensity = .2;
-      if (/Grass|Meadow|Leaf/.test(m.name)) m.color.multiplyScalar(.65);
-      for (const value of Object.values(m)) if (value?.isTexture) value.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
-    });
-    sceneExtras.forEach(o => o.removeFromParent());
-    this.scene.add(meadow);
+    /* 배경은 기계보다 훨씬 무겁다(9MB · 삼각형 100만). 이걸 기다렸다 화면을
+       띄우면 시작이 한참 늦어지므로, 기계·인형만 먼저 세우고 배경은 뒤에서
+       받아 끼운다. 도중에 나가면 받은 걸 버린다. */
+    this.loadMeadow(session);
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
@@ -214,7 +211,10 @@ export const Play3D = {
     this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
     this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
     this.buildPhysics(); this.stockToys();
-    if (!this.restoredLayout) for (let i=0;i<150;i++) this.world.step(1/60);
+    /* 굴리지 않는다. TOY_SLOTS 가 이미 서로 닿는 정확한 높이라 자리를 잡을 필요가
+       없고, 조금만 굴려도(40스텝) 더미가 평평해진다. 바로 재워 모양을 유지하고,
+       집게가 건드리면 그때 깨어나 제대로 무너진다. */
+    if (!this.restoredLayout) for (const toy of this.toys) toy.body.sleep();
     this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
@@ -356,7 +356,9 @@ export const Play3D = {
     return best;
   },
   odds(near=this.nearest()) {return near&&near.distance<.32 ? Math.round(Store.odds(this.machine)*(.25+.75*(1-near.distance/.32))) : 0;},
-  status(text) {const el=document.getElementById('status3d');if(el)el.textContent=text;},
+  /* 상태 배지는 없앴다 — 조작 덱의 대상·확률 표시로 충분하고 상단이 복잡했다.
+     호출부는 그대로 두고 여기서만 받아 넘긴다. */
+  status() {},
 
   update(now) {
     if(!this.active)return;
@@ -491,8 +493,10 @@ export const Play3D = {
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    // 팁이 인형 머리 높이에 오도록 — 더 내려가면 몸통을 뚫고 들어간 것처럼 보인다
-    const down=target?target.body.position.y+.60:.52;
+    /* 0.60 은 인형 위에서 멈춰 주워 가는 것처럼 보였다. 0.42 면 집게 몸통이
+       인형 정수리까지 내려오고 손가락 끝이 몸통 한가운데를 지나, 실제로
+       감싸 쥐는 것처럼 보인다. 빈손일 때는 바닥까지 내려간다. */
+    const down=target?target.body.position.y+.42:.46;
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
@@ -572,6 +576,32 @@ export const Play3D = {
     this.saveToyLayout();
     this.status('다시 채웠어요');
     haptic(20);
+  },
+
+  async loadMeadow(session) {
+    let pack;
+    try { pack = await gltfLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href); }
+    catch { return; }                                   // 배경이 없어도 게임은 돌아간다
+    if (!this.active || session !== this.session) { this.disposeObject(pack.scene); return; }
+    const meadow = pack.scene; meadow.name = 'Meadow';
+    const sceneExtras = [];
+    const meadowMaterials = new Set();
+    meadow.traverse(o => {
+      if (o.isLight || o.isCamera) sceneExtras.push(o);
+      if (o.isMesh) {
+        meadowMaterials.add(o.material);
+        o.receiveShadow = o.name.startsWith('Meadow');
+        o.castShadow = false;
+        if (/Wildflowers|Detailed.flowers|Fine.grass/.test(o.name)) o.material.side = THREE.DoubleSide;
+      }
+    });
+    meadowMaterials.forEach(m => {
+      m.envMapIntensity = .2;
+      if (/Grass|Meadow|Leaf/.test(m.name)) m.color.multiplyScalar(.65);
+      for (const value of Object.values(m)) if (value?.isTexture) value.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    });
+    sceneExtras.forEach(o => o.removeFromParent());
+    this.scene.add(meadow);
   },
 
   stop() {
