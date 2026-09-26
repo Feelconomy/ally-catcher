@@ -40,6 +40,7 @@ const DOLLS = {
     { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4 },
     { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
     { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
+    { id: 'pig',     name: '꽃분이',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
   ]),
 };
 
@@ -87,8 +88,8 @@ const MACHINES = [
     cost: 2, difficulty: '쉬움', baseRate: 38, grip: '강',
     bg: '#FFF3DC', hero: 'bear',
     blurb: '집게 힘이 강해 초보자도 잡기 쉬운 기계예요. 레어 등급 곰돌이가 3마리 들어 있어요.',
-    contents: ['bear', 'duck', 'cat', 'dog', 'penguin', 'rabbit', 'tiger', 'hanbok'],
-    pool: ['bear', 'bear', 'bear', 'duck', 'cat', 'dog', 'tiger', 'hanbok'],
+    contents: ['bear', 'duck', 'cat', 'dog', 'penguin', 'rabbit', 'tiger', 'hanbok', 'pig'],
+    pool: ['bear', 'bear', 'bear', 'duck', 'cat', 'dog', 'tiger', 'hanbok', 'pig'],
     reward: 120,
     open: true,
   },
