@@ -23,9 +23,10 @@ import * as CANNON from '../vendor/cannon-es.js';
 const CHUTE = { x: -.91, z: .53 };
 const GROUP_TOY = 1, GROUP_CLAW = 2;   // 집게가 더미를 밀고 지나가도록 (아래 clawBody)
 const REST_Y = 2.72;
-/* 집게 입 벌어짐. 내려갈 때 활짝 열고(OPEN) 바닥에서 움켜쥔다(SHUT).
-   예전에는 기본값 그대로 내려가 닫기만 해서, 인형을 뚫고 집어 올리는 것처럼 보였다. */
-const GRIP_REST = 1.0, GRIP_OPEN = 1.5, GRIP_SHUT = 0.5;
+/* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
+   것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
+   실측: +0.55 = 팁 반경 0.36(활짝) · 0 = 0.18(기본) · -0.12 = 0.13(움켜쥠) · -0.42 = 0.01(맞닿음) */
+const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_HOLD = -.12, GRIP_SHUT = -.42;
 const clamp = THREE.MathUtils.clamp;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -189,6 +190,14 @@ export const Play3D = {
     this.scene.add(meadow);
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
+    /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
+       여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
+    this.fingerAxes = this.fingers.map(f => {
+      let sx = 0, sz = 0;
+      for (const c of f.children) { sx += c.position.x; sz += c.position.z; }
+      const len = Math.hypot(sx, sz) || 1;
+      return new THREE.Vector3(-sz / len, 0, sx / len);
+    });
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
     this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
@@ -381,7 +390,7 @@ export const Play3D = {
     /* 집게 돌리기 — 레버를 민 쪽을 향해 집게가 천천히 돌아간다. 멈추면 그 방향을
        그대로 유지한다 (실제 기계에서 집게를 돌려놓는 것처럼). */
     const speed = Math.hypot(carVelX, carVelZ);
-    if (speed > .12) {
+    if (speed > .12 && this.phase === 'aim') {   // 조준 중 레버로 돌릴 때만
       let d = Math.atan2(carVelX, carVelZ) - this.yaw;
       while (d > Math.PI) d -= Math.PI * 2;
       while (d < -Math.PI) d += Math.PI * 2;
@@ -446,7 +455,7 @@ export const Play3D = {
     this.gripTimer = setInterval(() => {
       const t = clamp((performance.now() - t0) / ms, 0, 1);
       this.gripT = from + (to - from) * ease(t);
-      for (const finger of this.fingers) finger.scale.set(this.gripT, 1, this.gripT);
+      this.fingers.forEach((f, i) => f.setRotationFromAxisAngle(this.fingerAxes[i], this.gripT));
       if (t === 1) clearInterval(this.gripTimer);
     }, 16);
     return this.pause(ms);
@@ -471,13 +480,15 @@ export const Play3D = {
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    const down=target?target.body.position.y+.46:.52;
+    // 팁이 인형 머리 높이에 오도록 — 더 내려가면 몸통을 뚫고 들어간 것처럼 보인다
+    const down=target?target.body.position.y+.60:.52;
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
-    await this.grip(GRIP_SHUT,420);if(!alive())return;           // 다 내려간 뒤에 움켜쥔다
+    // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
+    await this.grip(target?GRIP_HOLD:GRIP_SHUT,420);if(!alive())return;
     await this.pause(160);if(!alive())return;
     if(target&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
