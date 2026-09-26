@@ -84,6 +84,18 @@ export const Play3D = {
     const approvedOlly = new THREE.Group(); approvedOlly.name = 'ApprovedOlly';
     approvedOlly.add(olly); this.pack.add(approvedOlly);
     this.disposeObject(ollyPack.scene);
+    // 호랑이 오리 — 3면도에서 뽑아 천 재질까지 입힌 모델. 올리와 같은 방식으로
+    // 집게 원점에 맞춰 넣는다 (재질은 이미 맞춰 놨으니 아래에서 덮어쓰지 않는다).
+    const tigerPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/tiger-plush.glb?v=1', import.meta.url).href);
+    if (!this.active || session !== this.session) { this.disposeObject(tigerPack.scene); return; }
+    const tiger = tigerPack.scene;
+    const tBounds = new THREE.Box3().setFromObject(tiger);
+    const tCenter = tBounds.getCenter(new THREE.Vector3());
+    const tScale = .64 / tBounds.getSize(new THREE.Vector3()).y;
+    tiger.scale.setScalar(tScale);
+    tiger.position.set(-tCenter.x * tScale, -.22 - tBounds.min.y * tScale, -tCenter.z * tScale);
+    const plushTiger = new THREE.Group(); plushTiger.name = 'PlushTiger';
+    plushTiger.add(tiger); this.pack.add(plushTiger);
     const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
     this.assets = Object.fromEntries(names.map(name => {
       const object = loaded.scene.getObjectByName(name);
@@ -91,6 +103,7 @@ export const Play3D = {
       return [name,object];
     }));
     this.assets.ToyOlly = approvedOlly;
+    this.assets.ToyTiger = plushTiger;
     for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
     this.scene.traverse(o => {
       if (!o.isMesh) return;
@@ -149,7 +162,9 @@ export const Play3D = {
       mesh.traverse(o => {
         if (!o.isMesh) return;
         o.material = o.material.clone(); o.material.metalness = 0;
-        if (type !== 'ToyOlly') o.material.roughness = .9;
+        // 올리·호랑이는 재질을 이미 맞춰 둔 모델이라 거칠기를 덮어쓰지 않는다
+        // (덮어쓰면 눈의 무광 처리까지 날아간다)
+        if (type !== 'ToyOlly' && type !== 'ToyTiger') o.material.roughness = .9;
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
