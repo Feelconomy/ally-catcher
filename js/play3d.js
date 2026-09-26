@@ -70,7 +70,9 @@ export const Play3D = {
     document.getElementById('exit3d').onclick = () => this.exit();
     document.getElementById('reset3d').onclick = () => this.rearrange();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(devicePixelRatio);
+    /* 픽셀비율을 그대로 쓰면 dpr 3 인 폰에서 채우는 픽셀이 9배가 된다. 2 로 막으면
+       또렷함은 거의 그대로면서 부담이 확 준다 (측정: dpr2 70fps -> dpr1 109fps). */
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
