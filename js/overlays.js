@@ -853,43 +853,17 @@ const Dialogs = {
       // (모바일 공유 시트에는 '이미지 저장'도 포함되어 저장까지 커버)
       share: async () => {
         if (!cardReady) return;   // 카드 생성 중엔 무시
-        const url = location.origin + location.pathname;
-        const text = `올리캐쳐에서 '${d.name}'를 뽑았어요! 🎉`;
-        // 메시지 → 빈 줄 → 링크 순서. url을 별도 필드로 넘기면 카톡이 링크 카드를
-        // 위로 올리므로, 항상 text에 합쳐 보낸다.
-        const payload = `${text}\n\n${url}`;
-        // 1) 이미지까지 공유 가능하면 카드 이미지 + 문구 + 링크
-        if (canShareImage()) {
-          try {
-            await navigator.share({ files: [shareFile], title: '올리캐쳐', text: payload });
-            Store.bumpMission('share');
-            close();
-            return;
-          } catch (e) {
-            if (e && e.name === 'AbortError') return;
-            /* 이미지 공유 실패 → 텍스트 공유로 폴백 */
-          }
-        }
-        // 2) 텍스트/링크 공유 (이미지 공유 미지원 기기)
-        if (navigator.share) {
-          try {
-            await navigator.share({ title: '올리캐쳐', text: payload });
-            Store.bumpMission('share');
-            close();
-            return;
-          } catch (e) {
-            if (e && e.name === 'AbortError') return;
-          }
-        }
-        // 3) 데스크톱 등: 클립보드에 문구+링크 복사
-        try {
-          await navigator.clipboard.writeText(payload);
-          Store.bumpMission('share');
-          close();
-          toast('공유 문구를 복사했어요', { tone: 'ok' });
-          return;
-        } catch (_) {}
-        toast('공유를 사용할 수 없어요', { tone: 'warn' });
+        // 1/2/3과 같은 공통 함수 사용: URL은 별도 필드라 본문에 URL 텍스트가 안 뜨고
+        // 카드로만 노출된다. 자랑카드는 이미지도 함께 보낸다.
+        const res = await shareLink({
+          text: `올리캐쳐에서 '${d.name}'를 뽑았어요! 🎉`,
+          file: shareFile,
+        });
+        if (res === 'cancel') return;
+        if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
+        Store.bumpMission('share');
+        close();
+        if (res === 'copied') toast('공유 문구를 복사했어요', { tone: 'ok' });
       },
     });
   },

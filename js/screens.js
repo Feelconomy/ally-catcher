@@ -660,7 +660,7 @@ const Screens = {
         </div>`
       : `
         <div class="empty">
-          <div class="art">${dollImg('penguin', 88, 'opacity:.22')}</div>
+          <div class="art">${dollImg('olly', 88, 'opacity:.22')}</div>
           <h3>첫 인형을 뽑아보세요</h3>
           <p>뽑은 인형은 여기에 모이고<br>등급에 따라 포인트가 적립돼요</p>
           <button class="btn md auto btn--primary" style="margin-top:24px" data-tab="home">기계 보러 가기</button>
@@ -990,7 +990,7 @@ const Screens = {
         if (!item) return;
         if (item.route) { go(item.route); return; }
         if (item.action === 'invite') {
-          shareLink({ text: '올리캐쳐에서 같이 인형 뽑자! 🧸🦖 무료로 시작해요 👇' }).then(res => {
+          shareLink({ text: '👆 올리캐쳐에서 같이 인형 뽑자! 🧸🦖' }).then(res => {
             if (res === 'cancel') return;
             if (res === 'fail') { toast('공유를 사용할 수 없어요', { tone: 'warn' }); return; }
             toast(res === 'copied' ? '초대 링크를 복사했어요' : '친구를 초대했어요', { tone: 'ok' });

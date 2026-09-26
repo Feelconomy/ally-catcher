@@ -88,29 +88,32 @@ async function shareLink(opts) {
   const url = o.url || (location.origin + location.pathname);
   const text = o.text || '올리캐쳐 · AI 인형뽑기';
   const title = o.title || '올리캐쳐';
-  const payload = `${text}\n${url}`;
+  const file = o.file || null;   // 자랑카드처럼 이미지까지 함께 보낼 때
 
   // 1) 네이티브 공유 시트
-  //   url을 별도 필드로 넘기면 카톡이 링크 카드를 메시지 '위'로 올려 어색해지므로,
-  //   문구+링크를 하나의 text로 합쳐 보낸다. → 메시지 먼저, 끝의 링크 아래에 OG 카드가 붙음.
+  //   url을 '별도 필드'로 넘긴다 → 카톡은 URL을 본문 텍스트로 쓰지 않고
+  //   OG 썸네일 카드만 만든다(본문엔 문구만, 링크는 카드로). 카드가 메시지 위에
+  //   붙는 건 카톡 렌더링이라 제어 불가.
   if (navigator.share) {
+    const withFile = file && navigator.canShare && navigator.canShare({ files: [file] });
     try {
-      await navigator.share({ title, text: payload });
+      await navigator.share(withFile ? { files: [file], title, text, url } : { title, text, url });
       return 'shared';
     } catch (e) {
       if (e && e.name === 'AbortError') return 'cancel';
       /* 그 외 실패 → 복사 폴백 */
     }
   }
-  // 2) 클립보드 복사 (데스크톱 등)
+  // 2) 클립보드 복사 (데스크톱 등) — 여기선 카드가 없으니 링크를 문구와 함께 담는다
+  const clip = `${text}\n${url}`;
   try {
-    await navigator.clipboard.writeText(payload);
+    await navigator.clipboard.writeText(clip);
     return 'copied';
   } catch (_) {}
   // 3) 구형/비보안 컨텍스트 폴백
   try {
     const ta = document.createElement('textarea');
-    ta.value = payload;
+    ta.value = clip;
     ta.style.position = 'fixed'; ta.style.opacity = '0';
     document.body.appendChild(ta); ta.focus(); ta.select();
     const ok = document.execCommand('copy');
