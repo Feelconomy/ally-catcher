@@ -42,3 +42,12 @@
   background: #f4fff4de; color: #235e47; font-size: 12px; font-weight: 800;
 }
 .green3d-wallet svg { color: #f2b705; }
+
+/* 재배치 — 인형이 한쪽으로 쏠리거나 수가 줄었을 때 처음 상태로 되돌린다 */
+.green3d-reset {
+  margin-left: auto; flex: 0 0 auto;
+  padding: 7px 12px; border-radius: 6px;
+  background: #ffffffd9; color: #235e47;
+  font-size: 12px; font-weight: 800; white-space: nowrap;
+}
+.green3d-reset:active { background: #dff0e4; }

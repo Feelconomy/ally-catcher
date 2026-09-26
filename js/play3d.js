@@ -5,6 +5,18 @@ import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
 const gltfLoader = () => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+
+/* 인형통 바닥은 x ±1.24, z -0.90~+0.91 인데 예전 격자는 z 를 두 줄(-0.56, -0.03)만
+   써서 앞쪽 절반이 통째로 비어 있었다. 그래서 인형이 뒤 구석에 몰려 보였다.
+   통 전체에 고르게 펴되, 앞왼쪽 배출구(x -1.22~-0.60, z 0.23~0.83) 위에는
+   놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다. */
+const TOY_SLOTS = [
+  [-0.88, 0.40, -0.62], [-0.30, 0.40, -0.62], [0.28, 0.40, -0.62], [0.86, 0.40, -0.62],
+  [-0.88, 0.40, -0.05], [-0.30, 0.40, -0.05], [0.28, 0.40, -0.05], [0.86, 0.40, -0.05],
+  [-0.20, 0.40,  0.50], [0.35, 0.40,  0.50], [0.90, 0.40,  0.50],
+  [ 0.30, 0.95, -0.33],
+];
+
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import * as CANNON from '../vendor/cannon-es.js';
 
@@ -39,10 +51,11 @@ export const Play3D = {
         <div class="green3d-stick" id="stick3d" role="group" aria-label="집게 이동 조이스틱" tabindex="0"><span class="green3d-knob" id="knob3d"></span></div>
         <div class="green3d-readout"><span class="green3d-label">남은 시간</span><strong class="green3d-clock" id="clock3d">00:20</strong><div class="green3d-meter"><i id="time3d" style="width:100%"></i></div></div>
         <button class="green3d-drop" id="drop3d" disabled aria-label="집게 내리기">${icon('caretDown',24)}<span>드롭</span></button>
-      </div><div class="green3d-target"><img id="targetImg3d" alt="" hidden><span id="target3d">준비 중</span><b id="odds3d"></b></div></div>
+      </div><div class="green3d-target"><img id="targetImg3d" alt="" hidden><span id="target3d">준비 중</span><b id="odds3d"></b><button class="green3d-reset" id="reset3d" type="button">재배치</button></div></div>
     </section>`;
     this.root = document.getElementById('stage3d');
     document.getElementById('exit3d').onclick = () => this.exit();
+    document.getElementById('reset3d').onclick = () => this.rearrange();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
     this.renderer.setPixelRatio(devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
@@ -234,9 +247,8 @@ export const Play3D = {
         collisionFilterGroup: GROUP_TOY, collisionFilterMask: GROUP_TOY | GROUP_CLAW });
       body.addShape(new CANNON.Sphere(.205),new CANNON.Vec3(0,-.015,0));
       body.addShape(new CANNON.Sphere(.17),new CANNON.Vec3(0,.21,0));
-      const col=i%4,row=Math.floor(i/4);
-      body.position.set(-.86+col*.53,.4+Math.floor(row/2)*.60,-.56+(row%2)*.53);
-      if (body.position.x<-.55 && body.position.z>.1) body.position.x=-.28;
+      const s = TOY_SLOTS[i] || TOY_SLOTS[i % TOY_SLOTS.length];
+      body.position.set(s[0], s[1], s[2]);
       // ±18도로는 전부 같은 방향을 봐서 진열대처럼 보였다. 앞은 보되 제각각이도록
       // 벌린다. 더 벌리거나 자리를 흔들면 서로 밀려 넘어져 얼굴이 안 보인다.
       body.quaternion.setFromEuler(0,(Math.random()-.5)*1.6,0);
@@ -510,6 +522,25 @@ export const Play3D = {
       }));
     }
   },
+  /* 인형을 새로 채우고 배치를 처음 상태로 되돌린다. 집게에 밀려 한쪽으로
+     쏠리거나 남은 수가 줄었을 때 쓴다. 티켓은 쓰지 않는다. */
+  rearrange() {
+    if (!this.toys || this.phase !== 'aim' || this.held) return;
+    for (const toy of this.toys) {
+      this.world.removeBody(toy.body);
+      this.scene.remove(toy.mesh);
+      // 지오메트리는 원본 에셋과 공유하므로 두고, 인형마다 복제한 재질만 버린다
+      toy.mesh.traverse(o => { if (o.isMesh) o.material.dispose(); });
+    }
+    this.toys = null; this.wonToy = null;
+    Store.refillMachine(this.machine, 12);   // 재고를 채우고 저장된 배치를 지운다
+    this.stockToys();
+    for (let i = 0; i < 150; i++) this.world.step(1 / 60);
+    this.saveToyLayout();
+    this.status('다시 채웠어요');
+    haptic(20);
+  },
+
   stop() {
     if (this.active && this.phase !== 'loading') this.saveToyLayout();
     this.toys=null;this.wonToy=null;
