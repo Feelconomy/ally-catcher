@@ -35,7 +35,7 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
    layer 가 클수록 앞(아래) 줄이다 — 기본 모드와 같은 규칙이라 z-index(2 + layer×2)
    그대로 앞줄이 위에 그려진다. 집게는 닿는 인형 중 머리가 가장 높은 것, 즉 더미
    꼭대기부터 문다 (SKINS.arcade.pickTop). */
-const ARCADE_DOLL = 76;       // 그린 모드 인형 한 마리 크기(px, 배율 1 기준)
+const ARCADE_DOLL = 100;      // 몸통을 겹치되 얼굴은 드러내는 기준 크기
 const arcadeRow = (layer, xs, base, bumps) =>
   xs.map((x, i) => ({ x, layer, size: ARCADE_DOLL, bottom: base + bumps[i] }));
 const BED_ARCADE = [
@@ -143,9 +143,7 @@ const Play = {
     this.stickActive = false;
     this.targetI = -2;          // -1(없음)과도 달라야 첫 그리기가 돈다
 
-    /* The bed carries over between visits: dolls already won are missing, and
-       the machine restocks only once it has been emptied. Which slot each doll
-       sits in is reshuffled every time, so the pile never looks identical. */
+    /* Keep each remaining doll in its saved slot until the machine is empty. */
     const { dolls: stock, refilled } = Store.machineStock(machine, BED.length);
     this.refilled = refilled;
 
@@ -154,7 +152,7 @@ const Play = {
       .sort((a, b) => a - b);
     const order = shuffle(stock.slice());
 
-    this.dolls = slots.map((slotIdx, k) => {
+    this.dolls = Store.machineLayout(machine, this.skinId, stock, () => slots.map((slotIdx, k) => {
       const slot = BED[slotIdx];
       return {
         dollId: order[k],
@@ -166,7 +164,7 @@ const Play = {
         rot: Math.round((Math.random() - 0.5) * this.skin.tilt),
         taken: false,
       };
-    });
+    }));
     this.render();
   },
 
@@ -361,6 +359,9 @@ const Play = {
        집게보다 지나치게 크면 잡힌 모양이 어색해지므로 그것도 상한으로 둔다. */
     this.dollScale = Math.max(0.42, Math.min(
       1, (bedH - 6) / PILE_H, this.clawScale * 1.15));
+    if (this.skinId === 'arcade') {
+      this.dollScale = Math.min(cab.clientWidth * .24 / ARCADE_DOLL, (bedH - 6) / PILE_H);
+    }
 
     cab.style.setProperty('--rail-top', railTop + 'px');
     cab.style.setProperty('--bed-h', bedH + 'px');
@@ -829,6 +830,7 @@ const Play = {
       // Clamp back onto the bed, clear of the chute mouth.
       this.dolls[idx].x = Math.max(BED_MIN_X, Math.min(0.9, x));
       this.dolls[idx].rot = Math.round((Math.random() - 0.5) * 26);
+      Store.saveLayout(this.machine, this.skinId, this.dolls.map(d => ({...d, taken:false})));
       this.paintPit();
       const el = $(`.doll[data-i="${idx}"]`, screenEl());
       if (el) {
@@ -861,6 +863,7 @@ const Play = {
   finish(won, dollId) {
     if (this.over) return;
     this.over = true;
+    Store.saveLayout(this.machine, this.skinId, this.dolls.filter(d => !won || !d.taken).map(d => ({...d, taken:false})));
     this.stop();
     // `dollId` on a loss is the doll that slipped, so the fail screen can show it.
     App.levelUpTo = Store.recordPlay(this.machine, won, won ? dollId : null);

@@ -1026,6 +1026,7 @@ a:hover { color: var(--green-deep); }
   z-index: -1;
 }
 .screen.arcade .pit .doll { position: absolute; transition: opacity .2s ease, transform .3s ease, bottom .3s ease, left .3s ease; }
+.screen.arcade .pit .doll img { filter: drop-shadow(0 2px 2px #244c3c30); }
 .screen.arcade .pit .doll.taken { opacity: 0; transform: scale(.4) !important; }
 .screen.arcade .pit .doll.dropping { animation: dropIn .34s cubic-bezier(.4, 1.5, .6, 1) both; }
 /* 상품 수거함 — 유리 안 왼쪽에 세워 둔 투명 상자. 배출구 바로 아래다. */

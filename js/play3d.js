@@ -38,27 +38,37 @@ export const Play3D = {
     </section>`;
     this.root = document.getElementById('stage3d');
     document.getElementById('exit3d').onclick = () => this.exit();
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    this.renderer.setPixelRatio(devicePixelRatio);
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.3;
+    this.renderer.toneMappingExposure = .95;
     this.root.prepend(this.renderer.domElement);
-    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#a9def4');
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color('#a9def4');
     this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    // Bright surroundings keep coated surfaces reflective instead of black.
+    const studio = new THREE.Scene(); studio.background = new THREE.Color('#eaf6ff');
+    const softbox = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshBasicMaterial({color: new THREE.Color(3, 2.8, 2.5), side: THREE.DoubleSide}));
+    softbox.position.set(-4, 7, 5); softbox.lookAt(0, 0, 0); studio.add(softbox);
+    const pmrem = new THREE.PMREMGenerator(this.renderer);
+    this.environment = pmrem.fromScene(studio, .12);
+    this.scene.environment = this.environment.texture;
+    this.scene.environmentIntensity = .45;
+    pmrem.dispose(); this.disposeObject(studio);
     this.camera = new THREE.PerspectiveCamera(37, 1, .05, 100);
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true; this.orbit.enablePan = false;
     this.orbit.minDistance = 4.7; this.orbit.maxDistance = 10;
     this.orbit.minPolarAngle = .3; this.orbit.maxPolarAngle = Math.PI / 2;
     this.orbit.minAzimuthAngle = -.7; this.orbit.maxAzimuthAngle = .7;
-    this.scene.add(new THREE.HemisphereLight(0xfff8e7, 0x729e88, 2.4));
-    const key = new THREE.DirectionalLight(0xfff5da, 3.5); key.position.set(2, 6, 5);
+    this.scene.add(new THREE.HemisphereLight(0xf4fbff, 0xd4e8bc, 1.5));
+    const key = new THREE.DirectionalLight(0xfff3dd, 2.2); key.position.set(-3, 6, 5);
     /* 그림자 범위가 캐비닛보다 훨씬 넓어 그림자맵 한 칸이 굵었고, 그래서 인형·집게
        표면에 자기 그림자가 얼룩덜룩 찍혔다(어두운 때처럼 보이던 것). 범위를 캐비닛에
        맞춰 좁히고 해상도를 올린 뒤, 곡면에 맞는 normalBias 로 남은 얼룩을 지운다. */
-    key.castShadow = true; key.shadow.mapSize.set(2048,2048);
+    key.castShadow = true; key.shadow.mapSize.set(4096,4096);
     Object.assign(key.shadow.camera, {left:-1.7,right:1.7,top:3.6,bottom:-.3,near:.5,far:12});
     key.shadow.bias = -.0004; key.shadow.normalBias = .035; this.scene.add(key);
     const fill = new THREE.DirectionalLight(0xe5fff3, 1.5); fill.position.set(-3, 2, 1); this.scene.add(fill);
@@ -66,7 +76,7 @@ export const Play3D = {
        내지는 않았다. 그래서 집게가 있는 윗부분이 어두웠다. 램프 자리에 실제 광원을
        둔다. */
     for (const x of [-.7, .7]) {
-      const lamp = new THREE.PointLight(0xfff0c8, 5, 6, 2);
+      const lamp = new THREE.PointLight(0xfff0c8, 2, 6, 2);
       lamp.position.set(x, 3.2, 0); this.scene.add(lamp);
     }
     const loaded = await new GLTFLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
@@ -108,6 +118,11 @@ export const Play3D = {
     for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
     this.scene.traverse(o => {
       if (!o.isMesh) return;
+      const finishes = {'Mint enamel':'#b5edce', 'Pale mint trim':'#fff0b5', 'Mint floor':'#ecf7dc', 'Green joystick':'#69d9b1', 'Blush':'#f6b6c9'};
+      if (finishes[o.material.name]) {
+        o.material.color.set(finishes[o.material.name]);
+        o.material.metalness = .05; o.material.roughness = .27;
+      }
       o.castShadow = !o.material.transparent; o.receiveShadow = true;
       if (o.material.name === 'Clear acrylic') {
         o.material.transparent = true; o.material.opacity = .10; o.material.depthWrite = false;
@@ -117,21 +132,23 @@ export const Play3D = {
     const meadowPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(meadowPack.scene); return; }
     const meadow = meadowPack.scene; meadow.name = 'Meadow';
-    const extras = [], materials = new Set();
+    const sceneExtras = [];
+    const meadowMaterials = new Set();
     meadow.traverse(o => {
-      if (o.isLight || o.isCamera) extras.push(o);
-      if (!o.isMesh) return;
-      materials.add(o.material);
-      o.receiveShadow = o.name.startsWith('Meadow');
-      o.castShadow = false;
-      if (/Wildflowers|Detailed.flowers|Fine.grass/.test(o.name)) o.material.side = THREE.DoubleSide;
+      if (o.isLight || o.isCamera) sceneExtras.push(o);
+      if (o.isMesh) {
+        meadowMaterials.add(o.material);
+        o.receiveShadow = o.name.startsWith('Meadow');
+        o.castShadow = false;
+        if (/Wildflowers|Detailed.flowers|Fine.grass/.test(o.name)) o.material.side = THREE.DoubleSide;
+      }
     });
-    materials.forEach(m => {
+    meadowMaterials.forEach(m => {
       m.envMapIntensity = .2;
       if (/Grass|Meadow|Leaf/.test(m.name)) m.color.multiplyScalar(.65);
       for (const value of Object.values(m)) if (value?.isTexture) value.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
     });
-    extras.forEach(o => o.removeFromParent());
+    sceneExtras.forEach(o => o.removeFromParent());
     this.scene.add(meadow);
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
@@ -140,7 +157,8 @@ export const Play3D = {
     this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
     this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
     this.buildPhysics(); this.stockToys();
-    for (let i=0;i<150;i++) this.world.step(1/60);
+    if (!this.restoredLayout) for (let i=0;i<150;i++) this.world.step(1/60);
+    this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
     this.phase = 'aim'; this.status('READY'); document.getElementById('drop3d').disabled = false;
@@ -175,7 +193,10 @@ export const Play3D = {
 
   stockToys() {
     const stock = Store.machineStock(this.machine,12).dolls.slice(0,12);
-    this.toys = stock.map((id,i) => {
+    const layout = Store.machineLayout(this.machine, 'green3d', stock, () => stock.map(dollId => ({dollId})));
+    this.restoredLayout = layout.every(d => d.position);
+    this.toys = layout.map((saved,i) => {
+      const id = saved.dollId;
       const type = id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
       const mesh = this.assets[type].clone(true);
       mesh.position.set(0,0,0);
@@ -196,6 +217,9 @@ export const Play3D = {
       body.position.set(-.86+col*.53,.4+Math.floor(row/2)*.60,-.56+(row%2)*.53);
       if (body.position.x<-.55 && body.position.z>.1) body.position.x=-.28;
       body.quaternion.setFromEuler(0,(Math.random()-.5)*.65,0);
+      if (saved.position) {
+        body.position.set(...saved.position); body.quaternion.set(...saved.quaternion); body.sleep();
+      }
       this.world.addBody(body); this.scene.add(mesh);
       return { id,mesh,body };
     });
@@ -433,11 +457,12 @@ export const Play3D = {
     this.phase='releasing';this.status('PRIZE OUT');this.releaseToy();haptic(35);
     await this.pause(1400);if(!alive())return;
     const p=target.body.position;
-    this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id);
+    this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id,target);
   },
 
-  finish(won,id=null) {
+  finish(won,id=null,toy=null) {
     if(!this.active)return;
+    this.wonToy = won ? toy : null;
     const machine=this.machine;this.stop();
     App.levelUpTo=Store.recordPlay(machine,won,won?id:null);
     go(won?'win':'lose',id||'');
@@ -452,13 +477,26 @@ export const Play3D = {
     materials.forEach(m=>{for(const value of Object.values(m))if(value?.isTexture)textures.add(value);});
     geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
   },
+  saveToyLayout() {
+    if (this.toys) {
+      const prior = Store.state.layouts?.[this.machine.id + ':green3d'] || [];
+      Store.saveLayout(this.machine, 'green3d', this.toys.filter(t => t !== this.wonToy).map(t => {
+        const i = this.toys.indexOf(t);
+        if (t === this.held && prior[i]) return prior[i];
+        return {dollId:t.id,position:[t.body.position.x,t.body.position.y,t.body.position.z],quaternion:[t.body.quaternion.x,t.body.quaternion.y,t.body.quaternion.z,t.body.quaternion.w]};
+      }));
+    }
+  },
   stop() {
+    if (this.active && this.phase !== 'loading') this.saveToyLayout();
+    this.toys=null;this.wonToy=null;
     this.active=false;this.session++;
     cancelAnimationFrame(this.frame);clearTimeout(this.delay);clearInterval(this.gripTimer);
     this.delayResolve?.(false);this.delayResolve=null;
     this.tween?.resolve(false);this.tween=null;
     this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();
     this.disposeObject(this.scene);this.disposeObject(this.pack);
+    this.environment?.dispose();this.environment=null;
     this.renderer?.dispose();this.renderer?.forceContextLoss();
     this.scene=null;this.pack=null;this.renderer=null;this.assets=null;this.held=null;
   }

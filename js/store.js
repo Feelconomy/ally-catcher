@@ -333,6 +333,25 @@ const Store = {
   },
 
   // --- machine stock -----------------------------------------------------
+  machineLayout(machine, mode, stock, create) {
+    const layouts = this.state.layouts ||= {};
+    const key = machine.id + ':' + mode;
+    const remaining = stock.slice();
+    const kept = (layouts[key] || []).filter(d => {
+      const i = remaining.indexOf(d.dollId);
+      if (i < 0) return false;
+      remaining.splice(i, 1); return true;
+    });
+    const result = kept.length ? kept : create();
+    layouts[key] = result;
+    this.save();
+    return structuredClone(result);
+  },
+
+  saveLayout(machine, mode, dolls) {
+    (this.state.layouts ||= {})[machine.id + ':' + mode] = structuredClone(dolls);
+    this.save();
+  },
 
   /* Each machine keeps its own bed between visits: dolls you have already won
      are gone when you come back, and the machine is restocked once emptied.
@@ -347,6 +366,9 @@ const Store = {
   },
 
   refillMachine(machine, slots) {
+    for (const key of Object.keys(this.state.layouts || {})) {
+      if (key.startsWith(machine.id + ':')) delete this.state.layouts[key];
+    }
     const n = Math.max(1, slots || 9);
     const filled = [];
     const pool = machine.pool.filter(id => DOLLS[id] && !DOLLS[id].hidden);
