@@ -6,16 +6,25 @@ import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
 const gltfLoader = () => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
-/* 인형통 바닥은 x ±1.24, z -0.90~+0.91 인데 예전 격자는 z 를 두 줄(-0.56, -0.03)만
-   써서 앞쪽 절반이 통째로 비어 있었다. 그래서 인형이 뒤 구석에 몰려 보였다.
-   통 전체에 고르게 펴되, 앞왼쪽 배출구(x -1.22~-0.60, z 0.23~0.83) 위에는
-   놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다. */
+/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 통 전체에 고르게 펴되, 앞왼쪽
+   배출구(x -1.22~-0.60, z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자
+   굴러 떨어진다. 그래서 앞줄(z>0.23)은 x 를 오른쪽으로 당겨 둔다.
+   아래 한 층만 깔면 휑해 보여서 위에 한 층을 더 얹어 수북하게 만든다.
+   인형 반지름이 0.205 라 두 층 간격은 0.43 이다. */
 const TOY_SLOTS = [
-  [-0.88, 0.40, -0.62], [-0.30, 0.40, -0.62], [0.28, 0.40, -0.62], [0.86, 0.40, -0.62],
-  [-0.88, 0.40, -0.05], [-0.30, 0.40, -0.05], [0.28, 0.40, -0.05], [0.86, 0.40, -0.05],
-  [-0.20, 0.40,  0.50], [0.35, 0.40,  0.50], [0.90, 0.40,  0.50],
-  [ 0.30, 0.95, -0.33],
+  // 아래층 11
+  [-0.92, 0.40, -0.65], [-0.35, 0.40, -0.65], [0.22, 0.40, -0.65], [0.79, 0.40, -0.65],
+  [-0.92, 0.40, -0.08], [-0.35, 0.40, -0.08], [0.22, 0.40, -0.08], [0.79, 0.40, -0.08],
+  [-0.25, 0.40,  0.48], [0.32, 0.40,  0.48], [0.89, 0.40,  0.48],
+  // 위층 11 — 아래층 사이사이에 얹는다
+  [-0.62, 0.83, -0.65], [-0.05, 0.83, -0.65], [0.52, 0.83, -0.65],
+  [-0.62, 0.83, -0.08], [-0.05, 0.83, -0.08], [0.52, 0.83, -0.08],
+  [-0.30, 0.83,  0.44], [0.28, 0.83,  0.44], [0.86, 0.83,  0.44],
+  [-0.92, 0.83, -0.36], [0.85, 0.83, -0.36],
+  // 꼭대기 4
+  [-0.30, 1.26, -0.38], [0.26, 1.26, -0.38], [-0.30, 1.26, 0.12], [0.26, 1.26, 0.12],
 ];
+const TOY_COUNT = TOY_SLOTS.length;
 
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import * as CANNON from '../vendor/cannon-es.js';
@@ -238,7 +247,7 @@ export const Play3D = {
   },
 
   stockToys() {
-    const stock = Store.machineStock(this.machine,12).dolls.slice(0,12);
+    const stock = Store.machineStock(this.machine,TOY_COUNT).dolls.slice(0,TOY_COUNT);
     const layout = Store.machineLayout(this.machine, 'green3d', stock, () => stock.map(dollId => ({dollId})));
     this.restoredLayout = layout.every(d => d.position);
     this.toys = layout.map((saved,i) => {
@@ -555,7 +564,7 @@ export const Play3D = {
       toy.mesh.traverse(o => { if (o.isMesh) o.material.dispose(); });
     }
     this.toys = null; this.wonToy = null;
-    Store.refillMachine(this.machine, 12);   // 재고를 채우고 저장된 배치를 지운다
+    Store.refillMachine(this.machine, TOY_COUNT);   // 재고를 채우고 저장된 배치를 지운다
     this.stockToys();
     for (let i = 0; i < 150; i++) this.world.step(1 / 60);
     this.saveToyLayout();

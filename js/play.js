@@ -811,9 +811,10 @@ const Play = {
     if (inRange && near) {
       const el = $(`.doll[data-i="${near.i}"]`, cabinet);
       /* 정수리에서 16px 고정이라 인형이 클수록 머리를 스치기만 했다. 높이 비율로
-         잡아 어느 크기에서도 머리 한가운데를 문 것처럼 보이게 한다. */
+         잡아 어느 크기에서도 같은 깊이로 문다. 0.26 은 아직 머리만 스쳐 보여서,
+         집게 팁이 몸통 한가운데까지 내려가도록 0.46 으로 둔다. */
       const r = el && el.getBoundingClientRect();
-      targetY = r ? r.top + r.height * 0.26 : bedRect.bottom - 56;
+      targetY = r ? r.top + r.height * 0.46 : bedRect.bottom - 56;
     } else {
       targetY = bedRect.bottom - 26;           // clean miss: reach the bed floor
     }
