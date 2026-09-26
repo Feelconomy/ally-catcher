@@ -23,6 +23,9 @@ import * as CANNON from '../vendor/cannon-es.js';
 const CHUTE = { x: -.91, z: .53 };
 const GROUP_TOY = 1, GROUP_CLAW = 2;   // 집게가 더미를 밀고 지나가도록 (아래 clawBody)
 const REST_Y = 2.72;
+/* 집게 입 벌어짐. 내려갈 때 활짝 열고(OPEN) 바닥에서 움켜쥔다(SHUT).
+   예전에는 기본값 그대로 내려가 닫기만 해서, 인형을 뚫고 집어 올리는 것처럼 보였다. */
+const GRIP_REST = 1.0, GRIP_OPEN = 1.5, GRIP_SHUT = 0.5;
 const clamp = THREE.MathUtils.clamp;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -195,7 +198,7 @@ export const Play3D = {
     this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
-    this.phase = 'aim'; this.status('READY'); document.getElementById('drop3d').disabled = false;
+    this.phase = 'aim'; this.status('뽑을 준비 완료'); document.getElementById('drop3d').disabled = false;
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
   },
@@ -433,24 +436,27 @@ export const Play3D = {
   pause(ms) {
     return new Promise(resolve=>{this.delayResolve=resolve;this.delay=setTimeout(()=>{this.delayResolve=null;resolve(this.active);},ms);});
   },
-  /** 손가락 오므리기 — 탁 닫히지 않고 0.22초에 걸쳐 스르르 오므린다. */
-  grip(closed) {
+  /** 집게 입 벌리기/오므리기. v 는 벌어짐(1 = 모델 기본, 클수록 활짝).
+      끝날 때까지 기다릴 수 있게 약속을 돌려준다 — 다 내려간 뒤에 움켜쥐는
+      순서를 만들려면 애니메이션이 끝나는 시점을 알아야 한다. */
+  grip(v, ms = 220) {
     clearInterval(this.gripTimer);
-    const to=closed?.63:1, from=this.gripT||(closed?1:.63);
-    const t0=performance.now();
-    this.gripTimer=setInterval(()=>{
-      const t=clamp((performance.now()-t0)/220,0,1), v=from+(to-from)*ease(t);
-      this.gripT=v;
-      for(const finger of this.fingers)finger.scale.set(v,1,v);
-      if(t===1)clearInterval(this.gripTimer);
-    },16);
+    const to = v, from = this.gripT ?? GRIP_REST;
+    const t0 = performance.now();
+    this.gripTimer = setInterval(() => {
+      const t = clamp((performance.now() - t0) / ms, 0, 1);
+      this.gripT = from + (to - from) * ease(t);
+      for (const finger of this.fingers) finger.scale.set(this.gripT, 1, this.gripT);
+      if (t === 1) clearInterval(this.gripTimer);
+    }, 16);
+    return this.pause(ms);
   },
   releaseToy() {
     if(!this.held)return;
     this.held.body.type=CANNON.Body.DYNAMIC;this.held.body.mass=.22;this.held.body.updateMassProperties();
     this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY|GROUP_CLAW;
     this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
-    this.held=null;this.grip(false);
+    this.held=null;this.grip(GRIP_REST);
   },
 
   async drop() {
@@ -458,16 +464,21 @@ export const Play3D = {
     const session=this.session;const alive=()=>this.active&&this.session===session;
     const near=this.nearest(),chance=this.odds(near);
     this.phase='dropping';this.release();this.velocity.set(0,0);
-    document.getElementById('drop3d').disabled=true;this.status('DROPPING');haptic(20);
+    document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);
     const target=near&&near.distance<.29?near.toy:null;
     // 물려는 인형만 집게 몸통을 통과시킨다 — 안 그러면 집기 전에 밀려난다
     if(target)target.body.collisionFilterMask=GROUP_TOY;
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    const down=target?target.body.position.y+.42:.52;
+    const down=target?target.body.position.y+.46:.52;
+    // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
+    await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
-    this.grip(true);await this.pause(280);if(!alive())return;
+    await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
+    this.status('움켜쥐는 중');
+    await this.grip(GRIP_SHUT,420);if(!alive())return;           // 다 내려간 뒤에 움켜쥔다
+    await this.pause(160);if(!alive())return;
     if(target&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
       target.body.collisionResponse=false;target.body.wakeUp();
@@ -478,18 +489,18 @@ export const Play3D = {
       this.heldOffset=new THREE.Vector3(
         clamp(p.x-this.clawPos.x,-.13,.13), p.y-this.clawPos.y, clamp(p.z-this.clawPos.z,-.13,.13));
     }
-    this.phase='lifting';this.status('LIFTING');
+    this.phase='lifting';this.status('들어 올리는 중');
     await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
     if(!this.held){
       if(target)target.body.collisionFilterMask=GROUP_TOY|GROUP_CLAW;
-      this.grip(false);await this.pause(350);if(alive())this.finish(false,target?.id);return;}
+      this.grip(GRIP_REST,260);await this.pause(350);if(alive())this.finish(false,target?.id);return;}
     if(slipped){
-      this.releaseToy();App.lastAttempt.kind='slip';this.status('DROPPED');haptic(25);
+      this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);
       await this.pause(1050);if(alive())this.finish(false,target.id);return;
     }
-    this.phase='carrying';this.status('CARRYING');
+    this.phase='carrying';this.status('배출구로 옮기는 중');
     await this.travel([CHUTE.x,REST_Y,CHUTE.z],1.25);if(!alive())return;
-    this.phase='releasing';this.status('PRIZE OUT');this.releaseToy();haptic(35);
+    this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
     await this.pause(1400);if(!alive())return;
     const p=target.body.position;
     this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id,target);
