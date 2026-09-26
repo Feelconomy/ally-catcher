@@ -1,5 +1,10 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
+import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
+
+/* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
+   디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
+const gltfLoader = () => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import * as CANNON from '../vendor/cannon-es.js';
 
@@ -79,10 +84,10 @@ export const Play3D = {
       const lamp = new THREE.PointLight(0xfff0c8, 2, 6, 2);
       lamp.position.set(x, 3.2, 0); this.scene.add(lamp);
     }
-    const loaded = await new GLTFLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
+    const loaded = await gltfLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(loaded.scene); return; }
     this.pack = loaded.scene;
-    const ollyPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/olly-reference.glb?v=5', import.meta.url).href);
+    const ollyPack = await gltfLoader().loadAsync(new URL('../assets/3d/olly-reference.glb?v=5', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(ollyPack.scene); return; }
     const olly = ollyPack.scene.getObjectByName('OllyReference');
     if (!olly) { this.disposeObject(ollyPack.scene); throw new Error('Missing approved Olly model'); }
@@ -97,7 +102,7 @@ export const Play3D = {
     this.disposeObject(ollyPack.scene);
     // 호랑이 오리 — 3면도에서 뽑아 천 재질까지 입힌 모델. 올리와 같은 방식으로
     // 집게 원점에 맞춰 넣는다 (재질은 이미 맞춰 놨으니 아래에서 덮어쓰지 않는다).
-    const tigerPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/tiger-plush.glb?v=1', import.meta.url).href);
+    const tigerPack = await gltfLoader().loadAsync(new URL('../assets/3d/tiger-plush.glb?v=1', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(tigerPack.scene); return; }
     const tiger = tigerPack.scene;
     const tBounds = new THREE.Box3().setFromObject(tiger);
@@ -111,7 +116,7 @@ export const Play3D = {
     // 여기서 한 번 돌려 두면 아래 무작위 회전이 정면 기준으로 얹힌다.
     plushTiger.rotation.y = -Math.PI / 2;
     // 꽃분이 — 같은 파이프라인으로 뽑은 분홍 돼지
-    const pigPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/pig-plush.glb?v=1', import.meta.url).href);
+    const pigPack = await gltfLoader().loadAsync(new URL('../assets/3d/pig-plush.glb?v=1', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(pigPack.scene); return; }
     const pig = pigPack.scene;
     const pBounds = new THREE.Box3().setFromObject(pig);
@@ -145,7 +150,7 @@ export const Play3D = {
         o.material.side = THREE.DoubleSide; o.castShadow = false;
       }
     });
-    const meadowPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href);
+    const meadowPack = await gltfLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(meadowPack.scene); return; }
     const meadow = meadowPack.scene; meadow.name = 'Meadow';
     const sceneExtras = [];
