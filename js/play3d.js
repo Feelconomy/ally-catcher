@@ -22,7 +22,7 @@ export const Play3D = {
        캐리지 가속도로 밀린 만큼 뒤로 처졌다가 좌우로 흔들리는 진자를 둔다.
        흔들림은 눈에만 보이고 조준 판정은 캐리지 위치(this.position)로 해서,
        보기엔 흐물흐물해도 겨냥은 예측 가능하게 남긴다. */
-    this.swing = new THREE.Vector2(); this.swingVel = new THREE.Vector2();
+    this.swing = new THREE.Vector2(); this.swingVel = new THREE.Vector2(); this.yaw = 0;
     this.clawPos = this.position.clone(); this.prevPos = this.position.clone();
     this.gripT = 0;
     screenEl().innerHTML = `<section class="green3d">
@@ -61,6 +61,13 @@ export const Play3D = {
     Object.assign(key.shadow.camera, {left:-1.7,right:1.7,top:3.6,bottom:-.3,near:.5,far:12});
     key.shadow.bias = -.0004; key.shadow.normalBias = .035; this.scene.add(key);
     const fill = new THREE.DirectionalLight(0xe5fff3, 1.5); fill.position.set(-3, 2, 1); this.scene.add(fill);
+    /* 캐비닛 천장의 Ceiling_lamp 는 발광 재질이라 '켜진 것처럼' 보이기만 하고 빛을
+       내지는 않았다. 그래서 집게가 있는 윗부분이 어두웠다. 램프 자리에 실제 광원을
+       둔다. */
+    for (const x of [-.7, .7]) {
+      const lamp = new THREE.PointLight(0xfff0c8, 5, 6, 2);
+      lamp.position.set(x, 3.2, 0); this.scene.add(lamp);
+    }
     const loaded = await new GLTFLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(loaded.scene); return; }
     this.pack = loaded.scene;
@@ -274,6 +281,15 @@ export const Play3D = {
     this.swingVel.y+=(-K*this.swing.y-D*this.swingVel.y-clamp(carVelZ,-2.5,2.5)*DRAG)*dt;
     this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.28,.28);
     this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.28,.28);
+    /* 집게 돌리기 — 레버를 민 쪽을 향해 집게가 천천히 돌아간다. 멈추면 그 방향을
+       그대로 유지한다 (실제 기계에서 집게를 돌려놓는 것처럼). */
+    const speed = Math.hypot(carVelX, carVelZ);
+    if (speed > .12) {
+      let d = Math.atan2(carVelX, carVelZ) - this.yaw;
+      while (d > Math.PI) d -= Math.PI * 2;
+      while (d < -Math.PI) d += Math.PI * 2;
+      this.yaw += d * (1 - Math.exp(-dt * 4));
+    }
     // 매달린 지점(캐리지)에서 줄 길이만큼 기울어진 자리가 집게의 실제 위치
     const pivotY=3.03, hang=Math.max(.2,pivotY-this.position.y);
     this.clawPos.set(
@@ -284,7 +300,9 @@ export const Play3D = {
     if(this.held){
       /* 매달린 인형은 집게와 한 몸이다. 잡힌 순간의 자세와 잡힌 지점을 그대로 두고,
          줄이 흔들리는 회전만 그 위에 얹는다. */
-      const sq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x));
+      // 줄 기울기 + 잡은 뒤 집게가 돌아간 만큼. 인형도 집게를 따라 같이 돌아간다.
+      const sq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x))
+        .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw-this.heldYaw));
       const off=this.heldOffset.clone().applyQuaternion(sq);
       const b=this.held.body;
       b.position.set(this.clawPos.x+off.x,this.clawPos.y+off.y,this.clawPos.z+off.z);
@@ -297,7 +315,10 @@ export const Play3D = {
     this.world.step(1/60,dt,3);
     for(const toy of this.toys){toy.mesh.position.copy(toy.body.position);toy.mesh.quaternion.copy(toy.body.quaternion);}
     this.claw.position.copy(this.clawPos);
-    this.claw.rotation.set(-this.swing.y,0,this.swing.x);   // 줄이 기운 쪽과 같은 방향으로
+    // 줄이 기운 방향으로 눕히고, 그 위에 돌아간 각도를 얹는다
+    const tilt=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x));
+    const spin=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
+    this.claw.quaternion.copy(tilt.clone().multiply(spin));
     this.assets.Carriage.position.set(this.position.x,3.06,this.position.z);
     this.assets.Gantry.position.z=this.position.z;
     // 줄은 캐리지와 집게를 잇는다 — 흔들리면 같이 비스듬해진다
@@ -359,7 +380,7 @@ export const Play3D = {
       /* 인형을 똑바로 세우지 않는다. 누워 있으면 누운 채로, 집게가 닿은 그 지점을
          잡고 들어 올린다 — 배를 물었는데 머리를 문 것처럼 보이지 않도록. */
       const q=target.body.quaternion, p=target.body.position;
-      this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w);
+      this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w); this.heldYaw=this.yaw;
       this.heldOffset=new THREE.Vector3(
         clamp(p.x-this.clawPos.x,-.13,.13), p.y-this.clawPos.y, clamp(p.z-this.clawPos.z,-.13,.13));
     }
