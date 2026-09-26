@@ -45,8 +45,9 @@ export const Play3D = {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.3;
     this.root.prepend(this.renderer.domElement);
-    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#cce5d8');
-    this.camera = new THREE.PerspectiveCamera(37, 1, .05, 60);
+    this.scene = new THREE.Scene(); this.scene.background = new THREE.Color('#a9def4');
+    this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    this.camera = new THREE.PerspectiveCamera(37, 1, .05, 100);
     this.orbit = new OrbitControls(this.camera, this.renderer.domElement);
     this.orbit.enableDamping = true; this.orbit.enablePan = false;
     this.orbit.minDistance = 4.7; this.orbit.maxDistance = 10;
@@ -113,6 +114,25 @@ export const Play3D = {
         o.material.side = THREE.DoubleSide; o.castShadow = false;
       }
     });
+    const meadowPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href);
+    if (!this.active || session !== this.session) { this.disposeObject(meadowPack.scene); return; }
+    const meadow = meadowPack.scene; meadow.name = 'Meadow';
+    const extras = [], materials = new Set();
+    meadow.traverse(o => {
+      if (o.isLight || o.isCamera) extras.push(o);
+      if (!o.isMesh) return;
+      materials.add(o.material);
+      o.receiveShadow = o.name.startsWith('Meadow');
+      o.castShadow = false;
+      if (/Wildflowers|Detailed.flowers|Fine.grass/.test(o.name)) o.material.side = THREE.DoubleSide;
+    });
+    materials.forEach(m => {
+      m.envMapIntensity = .2;
+      if (/Grass|Meadow|Leaf/.test(m.name)) m.color.multiplyScalar(.65);
+      for (const value of Object.values(m)) if (value?.isTexture) value.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+    });
+    extras.forEach(o => o.removeFromParent());
+    this.scene.add(meadow);
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
