@@ -1642,3 +1642,13 @@ a:hover { color: var(--green-deep); }
     border-radius: 34px; box-shadow: 0 18px 44px rgba(23, 23, 23, .16);
   }
 }
+
+/* 아케이드(그린 2D) 보유 티켓 — 나가기 버튼 맞은편 */
+.screen.arcade .play-head .arc-wallet {
+  position: absolute; top: 14px; right: 26px; z-index: 31;
+  display: flex; align-items: center; gap: 5px;
+  height: 40px; padding: 0 13px 0 11px; border-radius: 13px;
+  background: #ffffffe0; box-shadow: 0 2px 6px #2b543c26;
+}
+.screen.arcade .play-head .arc-wallet .tk { color: #f2b705; display: flex; }
+.screen.arcade .play-head .arc-wallet .n { font-size: 14px; font-weight: 800; color: #235e47; }

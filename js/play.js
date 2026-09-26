@@ -260,8 +260,13 @@ const Play = {
   },
 
   headArcade() {
+    // 보유 티켓을 여기서도 보여 준다 — 한 판에 티켓이 빠져나가는데 화면에
+    // 잔액이 없으면 몇 장 남았는지 모르고 계속 누르게 된다.
     return `<div class="play-head">
       <button class="iconbtn arc-btn" data-act="exit" aria-label="나가기">${icon('chevronLeft3', 20)}</button>
+      <div class="arc-wallet" role="status" aria-label="보유 티켓 ${Store.state.tickets}장">
+        <span class="tk">${icon('ticketFill', 16)}</span><span class="n">${Store.state.tickets}</span>
+      </div>
     </div>`;
   },
 

@@ -27,7 +27,7 @@ export const Play3D = {
     this.gripT = 0;
     screenEl().innerHTML = `<section class="green3d">
       <div class="green3d-stage" id="stage3d">
-        <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><span class="green3d-status" id="status3d" role="status">준비 중</span></div>
+        <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><div class="green3d-topright"><span class="green3d-wallet" role="status" aria-label="보유 티켓 ${Store.state.tickets}장">${icon('ticketFill',16)}<span id="walletN3d">${Store.state.tickets}</span></span><span class="green3d-status" id="status3d" role="status">준비 중</span></div></div>
         <div class="green3d-views" aria-label="카메라 시점"><button data-view="front" aria-pressed="false">정면</button><button data-view="angle" aria-pressed="true">입체</button><button data-view="top" aria-pressed="false">위</button></div>
       </div>
       <div class="green3d-deck"><div class="green3d-console">
@@ -107,6 +107,9 @@ export const Play3D = {
     tiger.position.set(-tCenter.x * tScale, -.22 - tBounds.min.y * tScale, -tCenter.z * tScale);
     const plushTiger = new THREE.Group(); plushTiger.name = 'PlushTiger';
     plushTiger.add(tiger); this.pack.add(plushTiger);
+    // Tripo 로 뽑은 모델은 정면이 -X 라 캐비닛 정면(+Z)과 90도 어긋난다.
+    // 여기서 한 번 돌려 두면 아래 무작위 회전이 정면 기준으로 얹힌다.
+    plushTiger.rotation.y = -Math.PI / 2;
     // 꽃분이 — 같은 파이프라인으로 뽑은 분홍 돼지
     const pigPack = await new GLTFLoader().loadAsync(new URL('../assets/3d/pig-plush.glb?v=1', import.meta.url).href);
     if (!this.active || session !== this.session) { this.disposeObject(pigPack.scene); return; }
@@ -118,6 +121,7 @@ export const Play3D = {
     pig.position.set(-pCenter.x * pScale, -.22 - pBounds.min.y * pScale, -pCenter.z * pScale);
     const plushPig = new THREE.Group(); plushPig.name = 'PlushPig';
     plushPig.add(pig); this.pack.add(plushPig);
+    plushPig.rotation.y = -Math.PI / 2;
     const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
     this.assets = Object.fromEntries(names.map(name => {
       const object = loaded.scene.getObjectByName(name);
@@ -228,7 +232,9 @@ export const Play3D = {
       const col=i%4,row=Math.floor(i/4);
       body.position.set(-.86+col*.53,.4+Math.floor(row/2)*.60,-.56+(row%2)*.53);
       if (body.position.x<-.55 && body.position.z>.1) body.position.x=-.28;
-      body.quaternion.setFromEuler(0,(Math.random()-.5)*.65,0);
+      // ±18도로는 전부 같은 방향을 봐서 진열대처럼 보였다. 앞은 보되 제각각이도록
+      // 벌린다. 더 벌리거나 자리를 흔들면 서로 밀려 넘어져 얼굴이 안 보인다.
+      body.quaternion.setFromEuler(0,(Math.random()-.5)*1.6,0);
       if (saved.position) {
         body.position.set(...saved.position); body.quaternion.set(...saved.quaternion); body.sleep();
       }

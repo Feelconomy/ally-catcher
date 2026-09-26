@@ -10,7 +10,7 @@ async function startGreen3D(machine) {
   screenEl().innerHTML = `<div class="green3d-loading" role="status">인형통 준비 중…</div>`;
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=127');
+    const { Play3D } = await import('./play3d.js?v=128');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);

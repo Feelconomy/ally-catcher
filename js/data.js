@@ -40,7 +40,7 @@ const DOLLS = {
     { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4 },
     { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
     { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
-    { id: 'pig',     name: '꽃분이',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
+    { id: 'pig',     name: '단지',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
   ]),
 };
 
