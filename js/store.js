@@ -358,7 +358,10 @@ const Store = {
      `slots` is how many the bed can hold. */
   machineStock(machine, slots) {
     const cur = this.state.stock[machine.id];
-    if (Array.isArray(cur) && cur.length) return { dolls: cur, refilled: false };
+    /* 기계 구성은 서버 카탈로그에서 오는데 앱이 옛 버전이면 그 인형이 아직
+       DOLLS 에 없다. 그대로 그리면 그림 주소가 없는 빈 칸이 된다 — 모르는
+       인형은 빼고 돌려준다. 저장분은 그대로 둬서 앱이 새로워지면 다시 나온다. */
+    if (Array.isArray(cur) && cur.length) return { dolls: cur.filter(id => DOLLS[id]), refilled: false };
     // Only call it a restock if the player actually emptied it — a first visit
     // is just the machine being stocked for the first time.
     const emptied = Array.isArray(cur) && cur.length === 0;
