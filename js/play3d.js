@@ -6,40 +6,34 @@ import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
 const gltfLoader = () => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
-/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 통 전체에 고르게 펴되, 앞왼쪽
-   배출구(x -1.22~-0.60, z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자
-   굴러 떨어진다. 그래서 앞줄(z>0.23)은 x 를 오른쪽으로 당겨 둔다.
-   아래 한 층만 깔면 휑해 보여서 위에 한 층을 더 얹어 수북하게 만든다.
-   인형 반지름이 0.205 라 두 층 간격은 0.43 이다. */
-/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
-   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
-   재고 수는 2D와 공유하므로 늘리지 않는다. 대신 아래층을 촘촘히 깔고 그
-   골짜기에 윗층을 얹어, 물리가 평평하게 눕히지 못하게 처음부터 쌓아 둔다. */
-/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
-   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
-   재고 수는 2D와 공유하므로 늘리지 않는다. 대신 아래층을 지름(0.41)보다
-   좁은 간격으로 촘촘히 깔아 틈을 없애고, 그 위에 얹는다. 간격을 넓히면
-   윗층이 틈으로 빠져 결국 한 층이 된다 — 0.50 으로 두었다가 그렇게 됐다. */
-/* 인형통 바닥은 x ±1.24, z -0.90~+0.91. 앞왼쪽 배출구(x -1.22~-0.60,
-   z 0.23~0.83) 위에는 놓지 않는다 — 놓으면 시작하자마자 굴러 떨어진다.
-
-   재고 수는 2D와 공유하므로 늘리지 않는다. 12마리는 바닥이 넓어 물리에
-   맡기면 결국 한 층으로 밀려난다(0.50 간격도 0.38 간격도 그랬다). 그래서
-   '서로 닿아 있는' 정확한 높이에 쌓아 놓고 바로 재운다.
-   반지름 0.205 · 간격 0.38 일 때 네 개가 만드는 오목한 자리의 높이는
-   0.21 + sqrt(0.41^2 - (0.38/√2)^2) = 0.52 다. */
-const TOY_SLOTS = [
-  // 아래층 8 — 서로 닿도록 0.38 간격
-  [-0.57, 0.21, -0.28], [-0.19, 0.21, -0.28], [0.19, 0.21, -0.28], [0.57, 0.21, -0.28],
-  [-0.57, 0.21,  0.10], [-0.19, 0.21,  0.10], [0.19, 0.21,  0.10], [0.57, 0.21,  0.10],
-  // 윗층 3 — 아래층 네 개 사이 오목한 자리
-  [-0.38, 0.53, -0.09], [0.00, 0.53, -0.09], [0.38, 0.53, -0.09],
-  // 꼭대기 1 — 윗층 두 개 '사이'에 얹는다. 가운데 바로 위(간격 0.37)에 두면
-  //            지름 0.41 보다 좁아 파고들고, 그 반동으로 허공까지 솟는다.
-  [0.19, 0.90, -0.09],
-];
+// Two full layers, leaving the front-left prize chute unobstructed.
+const TOY_SLOTS = [];
+for (const y of [.23, .81]) {
+  for (const z of [-.61, -.12, .37]) {
+    for (const x of [-.98, -.49, 0, .49, .98]) {
+      if (z > .2 && x < -.35) continue;
+      TOY_SLOTS.push([x, y, z]);
+    }
+  }
+}
 const TOY_COUNT = TOY_SLOTS.length;
+const LAYOUT_VERSION = 3;
+const toyType = id => id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig' : id === 'bunny' ? 'ToyRabbit' : id === 'dali' ? 'ToyDali' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
 
+// Keep parsed source assets for repeat visits; instances get their own materials.
+const modelCache = new Map();
+async function loadModel(file) {
+  if (!modelCache.has(file)) {
+    modelCache.set(file, gltfLoader().loadAsync(new URL('../assets/3d/' + file, import.meta.url).href)
+      .catch(error => { modelCache.delete(file); throw error; }));
+  }
+  const source = await modelCache.get(file);
+  const scene = source.scene.clone(true);
+  scene.traverse(o => {
+    if (o.isMesh) o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone();
+  });
+  return {scene};
+}
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import * as CANNON from '../vendor/cannon-es.js';
 
@@ -49,7 +43,7 @@ const REST_Y = 2.72;
 /* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
    것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
    실측: +0.55 = 팁 반경 0.36(활짝) · 0 = 0.18(기본) · -0.12 = 0.13(움켜쥠) · -0.42 = 0.01(맞닿음) */
-const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_HOLD = -.12, GRIP_SHUT = -.42;
+const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_HOLD = -.24, GRIP_SHUT = -.42;
 const clamp = THREE.MathUtils.clamp;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -79,6 +73,7 @@ export const Play3D = {
         <div class="green3d-readout"><span class="green3d-label">남은 시간</span><strong class="green3d-clock" id="clock3d">00:20</strong><div class="green3d-meter"><i id="time3d" style="width:100%"></i></div></div>
         <button class="green3d-drop" id="drop3d" disabled aria-label="집게 내리기">${icon('caretDown',24)}<span>드롭</span></button>
       </div><div class="green3d-target"><img id="targetImg3d" alt="" hidden><span id="target3d">준비 중</span><b id="odds3d"></b><button class="green3d-reset" id="reset3d" type="button">재배치</button></div></div>
+      ${green3DLoading()}
     </section>`;
     this.root = document.getElementById('stage3d');
     document.getElementById('exit3d').onclick = () => this.exit();
@@ -126,71 +121,54 @@ export const Play3D = {
       const lamp = new THREE.PointLight(0xfff0c8, 2, 6, 2);
       lamp.position.set(x, 3.2, 0); this.scene.add(lamp);
     }
-    const loaded = await gltfLoader().loadAsync(new URL('../assets/3d/mint-machine.glb', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(loaded.scene); return; }
+    const specs = [
+      ['ToyOlly', 'olly-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyTiger', 'tiger-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyPig', 'pig-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyRabbit', 'rabbit-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyDali', 'dali-plush.glb?v=1', null, -Math.PI / 2],
+    ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
+    let completed = 0;
+    const files = ['mint-machine.glb', ...specs.map(s => s[1])];
+    // Download and decode independent assets concurrently, instead of five serial waits.
+    const results = await Promise.allSettled(files.map(async file => {
+      const pack = await loadModel(file);
+      if (this.active && session === this.session) {
+        const label = document.getElementById('loading3dText');
+        if (label) label.textContent = `인형과 기계 준비 중 · ${++completed}/${files.length}`;
+      }
+      return pack;
+    }));
+    if (!this.active || session !== this.session || results.some(r => r.status === 'rejected')) {
+      for (const r of results) if (r.status === 'fulfilled') this.disposeObject(r.value.scene);
+      const failed = results.find(r => r.status === 'rejected');
+      if (failed && this.active && session === this.session) throw failed.reason;
+      return;
+    }
+    const [loaded, ...plushPacks] = results.map(r => r.value);
     this.pack = loaded.scene;
-    const ollyPack = await gltfLoader().loadAsync(new URL('../assets/3d/olly-reference.glb?v=5', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(ollyPack.scene); return; }
-    const olly = ollyPack.scene.getObjectByName('OllyReference');
-    if (!olly) { this.disposeObject(ollyPack.scene); throw new Error('Missing approved Olly model'); }
-    // Fit the approved model to the existing grip/collision origin, without changing it during play.
-    const bounds = new THREE.Box3().setFromObject(olly);
-    const center = bounds.getCenter(new THREE.Vector3());
-    const scale = .64 / bounds.getSize(new THREE.Vector3()).y;
-    olly.scale.setScalar(scale);
-    olly.position.set(-center.x * scale, -.22 - bounds.min.y * scale, -center.z * scale);
-    const approvedOlly = new THREE.Group(); approvedOlly.name = 'ApprovedOlly';
-    approvedOlly.add(olly); this.pack.add(approvedOlly);
-    this.disposeObject(ollyPack.scene);
-    // 호랑이 오리 — 3면도에서 뽑아 천 재질까지 입힌 모델. 올리와 같은 방식으로
-    // 집게 원점에 맞춰 넣는다 (재질은 이미 맞춰 놨으니 아래에서 덮어쓰지 않는다).
-    const tigerPack = await gltfLoader().loadAsync(new URL('../assets/3d/tiger-plush.glb?v=1', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(tigerPack.scene); return; }
-    const tiger = tigerPack.scene;
-    const tBounds = new THREE.Box3().setFromObject(tiger);
-    const tCenter = tBounds.getCenter(new THREE.Vector3());
-    const tScale = .64 / tBounds.getSize(new THREE.Vector3()).y;
-    tiger.scale.setScalar(tScale);
-    tiger.position.set(-tCenter.x * tScale, -.22 - tBounds.min.y * tScale, -tCenter.z * tScale);
-    const plushTiger = new THREE.Group(); plushTiger.name = 'PlushTiger';
-    plushTiger.add(tiger); this.pack.add(plushTiger);
-    // Tripo 로 뽑은 모델은 정면이 -X 라 캐비닛 정면(+Z)과 90도 어긋난다.
-    // 여기서 한 번 돌려 두면 아래 무작위 회전이 정면 기준으로 얹힌다.
-    plushTiger.rotation.y = -Math.PI / 2;
-    // 꽃분이 — 같은 파이프라인으로 뽑은 분홍 돼지
-    const pigPack = await gltfLoader().loadAsync(new URL('../assets/3d/pig-plush.glb?v=1', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(pigPack.scene); return; }
-    const pig = pigPack.scene;
-    const pBounds = new THREE.Box3().setFromObject(pig);
-    const pCenter = pBounds.getCenter(new THREE.Vector3());
-    const pScale = .64 / pBounds.getSize(new THREE.Vector3()).y;
-    pig.scale.setScalar(pScale);
-    pig.position.set(-pCenter.x * pScale, -.22 - pBounds.min.y * pScale, -pCenter.z * pScale);
-    const plushPig = new THREE.Group(); plushPig.name = 'PlushPig';
-    plushPig.add(pig); this.pack.add(plushPig);
-    plushPig.rotation.y = -Math.PI / 2;
-    // 토끼모자 올리 — 같은 파이프라인
-    const rabbitPack = await gltfLoader().loadAsync(new URL('../assets/3d/rabbit-plush.glb?v=1', import.meta.url).href);
-    if (!this.active || session !== this.session) { this.disposeObject(rabbitPack.scene); return; }
-    const rabbit = rabbitPack.scene;
-    const rBounds = new THREE.Box3().setFromObject(rabbit);
-    const rCenter = rBounds.getCenter(new THREE.Vector3());
-    const rScale = .64 / rBounds.getSize(new THREE.Vector3()).y;
-    rabbit.scale.setScalar(rScale);
-    rabbit.position.set(-rCenter.x * rScale, -.22 - rBounds.min.y * rScale, -rCenter.z * rScale);
-    const plushRabbit = new THREE.Group(); plushRabbit.name = 'PlushRabbit';
-    plushRabbit.add(rabbit); this.pack.add(plushRabbit);
-    plushRabbit.rotation.y = -Math.PI / 2;
     const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
     this.assets = Object.fromEntries(names.map(name => {
       const object = loaded.scene.getObjectByName(name);
       if (!object) throw new Error('Missing 3D asset: ' + name);
-      return [name,object];
+      return [name, object];
     }));
-    this.assets.ToyOlly = approvedOlly;
-    this.assets.ToyTiger = plushTiger;
-    this.assets.ToyPig = plushPig;
-    this.assets.ToyRabbit = plushRabbit;
+    specs.forEach(([type, , rootName, yaw], i) => {
+      const pack = plushPacks[i];
+      const model = rootName ? pack.scene.getObjectByName(rootName) : pack.scene;
+      if (!model) throw new Error('Missing model: ' + type);
+      const bounds = new THREE.Box3().setFromObject(model);
+      const center = bounds.getCenter(new THREE.Vector3());
+      const scale = .64 / bounds.getSize(new THREE.Vector3()).y;
+      model.scale.setScalar(scale);
+      model.position.set(-center.x * scale, -.22 - bounds.min.y * scale, -center.z * scale);
+      // The physics quaternion belongs to the outer group. Keep axis correction inside it.
+      const facing = new THREE.Group(); facing.name = 'ModelFacing'; facing.rotation.y = yaw;
+      facing.add(model);
+      const toy = new THREE.Group(); toy.name = type; toy.add(facing);
+      this.pack.add(toy); this.assets[type] = toy;
+      if (rootName) this.disposeObject(pack.scene);
+    });
     for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
     this.scene.traverse(o => {
       if (!o.isMesh) return;
@@ -208,7 +186,6 @@ export const Play3D = {
     /* 배경은 기계보다 훨씬 무겁다(9MB · 삼각형 100만). 이걸 기다렸다 화면을
        띄우면 시작이 한참 늦어지므로, 기계·인형만 먼저 세우고 배경은 뒤에서
        받아 끼운다. 도중에 나가면 받은 걸 버린다. */
-    this.loadMeadow(session);
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
@@ -231,9 +208,16 @@ export const Play3D = {
     this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
+    for (const toy of this.toys) { toy.mesh.position.copy(toy.body.position); toy.mesh.quaternion.copy(toy.body.quaternion); }
+    document.getElementById('loading3dText').textContent = '조명과 화면 준비 중';
+    await this.renderer.compileAsync(this.scene, this.camera);
+    if (!this.active || session !== this.session) return;
+    this.renderer.render(this.scene, this.camera);
+    document.getElementById('loading3d')?.remove();
     this.phase = 'aim'; this.status('뽑을 준비 완료'); document.getElementById('drop3d').disabled = false;
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
+    this.meadowTimer = setTimeout(() => this.loadMeadow(session), 250);
   },
 
   buildPhysics() {
@@ -262,12 +246,24 @@ export const Play3D = {
   },
 
   stockToys() {
+    const versions = Store.state.layout3dVersions ||= {};
+    if (versions[this.machine.id] !== LAYOUT_VERSION) {
+      const stock = Store.state.stock[this.machine.id];
+      const pool = this.machine.pool.filter(id => DOLLS[id] && !DOLLS[id].hidden);
+      // Add the increased capacity once, without putting already-won prizes back.
+      if (!versions[this.machine.id] && stock?.length && pool.length) {
+        for (let i = 0; i < TOY_COUNT - 12; i++) stock.push(pool[i % pool.length]);
+      }
+      if (Store.state.layouts) delete Store.state.layouts[this.machine.id + ':green3d'];
+      versions[this.machine.id] = LAYOUT_VERSION;
+      Store.save();
+    }
     const stock = Store.machineStock(this.machine,TOY_COUNT).dolls.slice(0,TOY_COUNT);
     const layout = Store.machineLayout(this.machine, 'green3d', stock, () => stock.map(dollId => ({dollId})));
     this.restoredLayout = layout.every(d => d.position);
     this.toys = layout.map((saved,i) => {
       const id = saved.dollId;
-      const type = id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig' : id === 'bunny' ? 'ToyRabbit' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
+      const type = toyType(id);
       const mesh = this.assets[type].clone(true);
       mesh.position.set(0,0,0);
       mesh.traverse(o => {
@@ -275,7 +271,7 @@ export const Play3D = {
         o.material = o.material.clone(); o.material.metalness = 0;
         // 올리·호랑이는 재질을 이미 맞춰 둔 모델이라 거칠기를 덮어쓰지 않는다
         // (덮어쓰면 눈의 무광 처리까지 날아간다)
-        if (!['ToyOlly','ToyTiger','ToyPig','ToyRabbit'].includes(type)) o.material.roughness = .9;
+        if (!['ToyOlly','ToyTiger','ToyPig','ToyRabbit','ToyDali'].includes(type)) o.material.roughness = .9;
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
@@ -284,10 +280,20 @@ export const Play3D = {
       body.addShape(new CANNON.Sphere(.205),new CANNON.Vec3(0,-.015,0));
       body.addShape(new CANNON.Sphere(.17),new CANNON.Vec3(0,.21,0));
       const s = TOY_SLOTS[i] || TOY_SLOTS[i % TOY_SLOTS.length];
-      body.position.set(s[0], s[1], s[2]);
-      // ±18도로는 전부 같은 방향을 봐서 진열대처럼 보였다. 앞은 보되 제각각이도록
-      // 벌린다. 더 벌리거나 자리를 흔들면 서로 밀려 넘어져 얼굴이 안 보인다.
-      body.quaternion.setFromEuler(0,(Math.random()-.5)*1.6,0);
+      const yaw = [-.95, .45, -.25, 1.05, .05, -.60, .70][i % 7] + (Math.random() - .5) * .18;
+      const pitch = [.12, -.32, .95, -.16, .08, -.64, .22][i % 7];
+      const roll = [-1.18, .24, -.32, .84, -.20, .12, 1.30][i % 7];
+      body.quaternion.setFromEuler(pitch, yaw, roll, 'YZX');
+      mesh.quaternion.copy(body.quaternion);
+      const box = new THREE.Box3().setFromObject(mesh);
+      let x = s[0] + (Math.random() - .5) * .12;
+      let z = s[2] + (Math.random() - .5) * .12;
+      x = clamp(x, -1.22 - box.min.x, 1.22 - box.max.x);
+      z = clamp(z, -.88 - box.min.z, .89 - box.max.z);
+      if (x + box.min.x < -.60 && z + box.max.z > .23) z = .20 - box.max.z;
+      // Rotated feet and ears must stay above the floor and inside the glass.
+      const y = Math.max(.035 - box.min.y, s[1] + (Math.random() - .5) * .10);
+      body.position.set(x, y, z);
       if (saved.position) {
         body.position.set(...saved.position); body.quaternion.set(...saved.quaternion); body.sleep();
       }
@@ -385,7 +391,7 @@ export const Play3D = {
       this.position.x=clamp(nx,-1.02,1.02); this.position.z=clamp(nz,-.66,.67);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
       if(nz!==this.position.z)this.velocity.y*=-.3;
-      if(this.time<=0){App.lastAttempt={dollId:null,accuracy:0,kind:'timeout'};this.finish(false);return;}
+      if(this.time<=0)this.drop();
       const near=this.nearest();
       const id=near&&near.distance<.32?near.toy.id:null;
       if(id!==this.lastTarget){
@@ -506,17 +512,16 @@ export const Play3D = {
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    /* 0.60 은 인형 위에서 멈춰 주워 가는 것처럼 보였다. 0.42 면 집게 몸통이
-       인형 정수리까지 내려오고 손가락 끝이 몸통 한가운데를 지나, 실제로
-       감싸 쥐는 것처럼 보인다. 빈손일 때는 바닥까지 내려간다. */
-    const down=target?target.body.position.y+.42:.46;
+    // Use the rotated toy's visible center so lying prizes are not grasped above their bodies.
+    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh) : null;
+    const down = targetBounds ? Math.max(.30, targetBounds.getCenter(new THREE.Vector3()).y + .20) : .46;
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
     // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
-    await this.grip(target?GRIP_HOLD:GRIP_SHUT,420);if(!alive())return;
+    await this.grip(target?GRIP_HOLD:GRIP_SHUT,560);if(!alive())return;
     await this.pause(160);if(!alive())return;
     if(target&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
@@ -538,9 +543,13 @@ export const Play3D = {
       await this.pause(1050);if(alive())this.finish(false,target.id);return;
     }
     this.phase='carrying';this.status('배출구로 옮기는 중');
-    await this.travel([CHUTE.x,REST_Y,CHUTE.z],1.25);if(!alive())return;
+    // Align the prize center with the chute, then let travel sway settle.
+    const centerOffset = new THREE.Vector3(0,.09,0).applyQuaternion(this.heldQuat).add(this.heldOffset);
+    await this.travel([CHUTE.x-centerOffset.x,REST_Y,CHUTE.z-centerOffset.z],1.25);if(!alive())return;
+    await this.travel([this.position.x,this.position.y,this.position.z],.9);if(!alive())return;
     this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
-    await this.pause(1400);if(!alive())return;
+    // Wait on the simulation clock: wall time can expire before a slow frame loop lets the prize fall.
+    await this.travel([this.position.x,this.position.y,this.position.z],1.4);if(!alive())return;
     const p=target.body.position;
     this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id,target);
   },
@@ -585,7 +594,7 @@ export const Play3D = {
     this.toys = null; this.wonToy = null;
     Store.refillMachine(this.machine, TOY_COUNT);   // 재고를 채우고 저장된 배치를 지운다
     this.stockToys();
-    for (let i = 0; i < 150; i++) this.world.step(1 / 60);
+    for (const toy of this.toys) toy.body.sleep();
     this.saveToyLayout();
     this.status('다시 채웠어요');
     haptic(20);
@@ -593,7 +602,7 @@ export const Play3D = {
 
   async loadMeadow(session) {
     let pack;
-    try { pack = await gltfLoader().loadAsync(new URL('../assets/3d/higgsfield-meadow-detailed.glb', import.meta.url).href); }
+    try { pack = await loadModel('higgsfield-meadow-detailed.glb'); }
     catch { return; }                                   // 배경이 없어도 게임은 돌아간다
     if (!this.active || session !== this.session) { this.disposeObject(pack.scene); return; }
     const meadow = pack.scene; meadow.name = 'Meadow';
@@ -622,6 +631,7 @@ export const Play3D = {
     this.toys=null;this.wonToy=null;
     this.active=false;this.session++;
     cancelAnimationFrame(this.frame);clearTimeout(this.delay);clearInterval(this.gripTimer);
+    clearTimeout(this.meadowTimer);
     this.delayResolve?.(false);this.delayResolve=null;
     this.tween?.resolve(false);this.tween=null;
     this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();

@@ -28,22 +28,32 @@ const os = require('node:os');
   await page.setViewportSize({width:390,height:844});await start();
   await page.evaluate(()=>{
    window.originalStock=Store.machineStock;
+   window.originalPool=MACHINES[0].pool;
+   MACHINES[0].pool=['olly'];
    Store.machineStock=()=>({dolls:Array(12).fill('olly')});
   });
   await start();
-  await page.evaluate(()=>{Store.machineStock=window.originalStock;delete window.originalStock;});
-  assert(await page.evaluate(()=>Play3D.toys.every(t=>t.id==='olly'&&t.mesh.getObjectByName('OllyReference')?.userData.torso_elongation===1.14)));
+  await page.evaluate(()=>{Store.machineStock=window.originalStock;MACHINES[0].pool=window.originalPool;delete window.originalStock;delete window.originalPool;});
+  // Olly now comes from the same plush pipeline as the others: check it is the
+  // fabric model (sheen) rather than the old script-built OllyReference node.
+  assert(await page.evaluate(()=>Play3D.toys.every(t=>{
+   if(t.id!=='olly'||!t.mesh.getObjectByName('ModelFacing'))return false;
+   let ok=false;t.mesh.traverse(o=>{if(o.isMesh&&o.material.sheen>0)ok=true;});return ok;
+  })));
   await page.screenshot({path:path.join(os.tmpdir(),'ally3d-approved-olly.png')});
   await page.evaluate(()=>{
    const g=Play3D,toy=g.toys.reduce((a,b)=>a.body.position.y>b.body.position.y?a:b);
    g.position.x=toy.body.position.x;g.position.z=toy.body.position.z;
    window.ollyScaleSamples=[];
-   const model=toy.mesh.getObjectByName('OllyReference');
+   const model=toy.mesh.getObjectByName('ModelFacing');
    const timer=setInterval(()=>ollyScaleSamples.push(model.scale.toArray()),30);
+   const finish=g.finish;
+   g.finish=function(...args){window.lastFinish={won:args[0],position:toy.body.position.toArray()};g.finish=finish;return finish.apply(this,args);};
    const random=Math.random;Math.random=()=>0;
    g.drop().finally(()=>{Math.random=random;clearInterval(timer);});
   });
-  await page.waitForFunction(()=>App.route==='win',null,{timeout:20000});
+  await page.waitForFunction(()=>App.route!=='play',null,{timeout:20000});
+  assert.equal(await page.evaluate(()=>App.route),'win',JSON.stringify(await page.evaluate(()=>window.lastFinish)));
   assert(await page.evaluate(()=>ollyScaleSamples.length>10&&ollyScaleSamples.every(s=>s.every((v,i)=>v===ollyScaleSamples[0][i]))),'Olly keeps its size through grasp and drop');
   await start();
   const initial=await page.evaluate(()=>[Play3D.position.x,Play3D.position.z]);
@@ -70,7 +80,9 @@ const os = require('node:os');
   await start();await page.evaluate(()=>{Play3D.drop();go('home');});await page.waitForTimeout(1500);
   assert.equal(await page.evaluate(()=>App.route),'home');
   assert.equal(await page.evaluate(()=>Play3D.active),false);
-  await start();await page.evaluate(()=>{Play3D.time=.02;});
+  await start();await page.evaluate(()=>{Play3D.position.x=-1.02;Play3D.position.z=.66;Play3D.time=.02;});
+  await page.waitForFunction(()=>Play3D.phase==='dropping');
+  assert.notEqual(await page.evaluate(()=>App.lastAttempt.kind),'timeout');
   await page.waitForFunction(()=>App.route==='lose');
   await page.evaluate(()=>{Store.state.settings.skin='classic';render('play',MACHINES[0].id);});
   assert.equal(await page.locator('.screen.classic').count(),1);

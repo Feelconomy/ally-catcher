@@ -7,7 +7,8 @@ const os=require('node:os');
  try{
   const page=await browser.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://**/*',r=>r.abort());
-  await page.goto('http://127.0.0.1:4173/');
+  await page.goto(process.env.APP_URL||'http://127.0.0.1:4173/');
+  await page.evaluate(()=>{Store.state.coachDone=true;});
   for(const width of [320,390,1200]){
    await page.setViewportSize({width,height:850});
    await page.evaluate(()=>{App.guest=true;render('machine',MACHINES[0].id);});
@@ -20,9 +21,19 @@ const os=require('node:os');
    await page.locator(`[data-act="mode"][data-s="${id}"]`).click();
    assert.equal(await page.evaluate(()=>Store.state.settings.skin),id);
    assert.equal(await page.locator('.md-seg [aria-pressed="true"]').count(),1);
-   await page.evaluate(()=>render('play',MACHINES[0].id));
+   await page.evaluate(()=>{Store.state.stock={};render('play',MACHINES[0].id);});
    if(id==='green3d')await page.waitForFunction(()=>window.Play3D?.phase==='aim');
    assert.equal(await page.locator(selector).count(),1);
+   for(const width of [390,1200]){
+    await page.setViewportSize({width,height:850});
+    await page.waitForTimeout(300);
+    await page.screenshot({path:path.join(os.tmpdir(),`ally-${id}-${width}.png`)});
+    if(id==='green3d')assert(await page.evaluate(()=>{
+     const gl=Play3D.renderer.getContext(),p=new Uint8Array(4);
+     gl.readPixels(10,gl.drawingBufferHeight-10,1,1,gl.RGBA,gl.UNSIGNED_BYTE,p);
+     return p[3]===255&&!!Play3D.scene.environment&&!!Play3D.scene.getObjectByName('Meadow');
+    }));
+   }
   }
   await page.evaluate(()=>{render('home');Store.state.settings.skin=null;Store.state.admin.skin='green3d';render('play',MACHINES[0].id);});
   await page.waitForFunction(()=>Play3D.phase==='aim');

@@ -639,7 +639,7 @@ const Play = {
     clearInterval(this.timer);
     this.timer = setInterval(() => {
       if (this.over || this.dropped || this.coaching) return; // 튜토리얼 중엔 시간 정지
-      this.left -= 0.1;
+      this.left = Math.max(0, this.left - 0.1);
       const clock = document.getElementById('clock');
       if (clock) {
         clock.textContent = mmss(this.left);
@@ -649,11 +649,7 @@ const Play = {
       if (bar) bar.style.width = (this.left / PLAY_SECONDS * 100) + '%';
       if (this.left <= 0) {
         clearInterval(this.timer);
-        this.setState('TIME UP');
-        toast('시간이 다 됐어요', { tone: 'error', duration: 1400 });
-        App.lastAttempt = { dollId: null, accuracy: 0, kind: 'timeout' };
-        const session = this.session;
-        setTimeout(() => { if (this.session === session) this.finish(false, null); }, 700);
+        this.drop();
       }
     }, 100);
   },
@@ -661,7 +657,7 @@ const Play = {
   /* ---------------------------------------------------------------- drop */
 
   async drop() {
-    if (!this.canMove()) return;
+    if (this.busy || this.over || this.dropped || this.coaching) return;
     this.releaseControls?.();
     this.velocity = 0;
 
