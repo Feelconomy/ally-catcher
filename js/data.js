@@ -42,6 +42,10 @@ const DOLLS = {
     { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
     { id: 'pig',     name: '단지',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
     { id: 'dali',    name: '달리',        grade: 'R',  points: 120, bg: '#F6EEDC', rate: 2.4 },
+    // 3D 모델이 따로 있는 인형은 model3d 로 짝을 지어 준다 (없으면 id 로 짐작 → 곰)
+    { id: 'hanbokolly', name: '한복 올리',  grade: 'SR', points: 400, bg: '#E8F3EE', rate: 1.8, model3d: 'ToyHanbokOlly' },
+    { id: 'hanbokpig',  name: '한복 단지',  grade: 'R',  points: 120, bg: '#FBE9EF', rate: 2.4, model3d: 'ToyHanbokPig' },
+    { id: 'bearpig',    name: '곰돌이 단지', grade: 'R',  points: 120, bg: '#F7ECE4', rate: 2.4, model3d: 'ToyBearPig' },
   ]),
 };
 
