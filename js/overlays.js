@@ -371,6 +371,13 @@ const Sheets = {
             aria-pressed="${(d ? d.grade : 'R') === g}">${g} · ${fmt(GRADE_POINTS[g])}P</button>`).join('')}
       </div>
 
+      <div class="lbl" style="margin-top:16px">3D 인형통 모양</div>
+      <div class="shape-pick" id="shapes">
+        ${Object.keys(TOY_SHAPES).map(k => `<button class="chip" data-act="shape" data-s="${k}"
+            aria-pressed="${toyShape(id) === k}">${TOY_SHAPES[k]}</button>`).join('')}
+      </div>
+      <div class="adm-note">2D 그림과 따로예요 — 3D 인형통에서는 여기서 고른 모양으로 나와요.</div>
+
       ${d ? `<div class="entry-calc" style="margin-top:16px">
         <div class="ln">
           <span class="l">기계에 넣기</span>
@@ -383,8 +390,11 @@ const Sheets = {
       ${d ? `<button class="btn md btn--text" style="margin-top:6px;color:var(--danger)" data-act="del">이 인형 삭제</button>` : ''}`,
       (node, close) => {
         let grade = d ? d.grade : 'R';
+        let shape = toyShape(id);
         const paintGrade = () => $$('[data-act="grade"]', node)
           .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.g === grade)));
+        const paintShape = () => $$('[data-act="shape"]', node)
+          .forEach(b => b.setAttribute('aria-pressed', String(b.dataset.s === shape)));
 
         const paintPoses = () => {
           $('#poses', node).innerHTML = poseTiles(art, true);
@@ -443,6 +453,7 @@ const Sheets = {
 
         bind(node, {
           grade: el => { grade = el.dataset.g; paintGrade(); },
+          shape: el => { shape = el.dataset.s; paintShape(); },
           hide: el => {
             // applyAdmin 이 인형 객체를 새로 세우므로 d 는 옛 값이다 — 매번 다시 찾는다
             const off = !DOLLS[id].hidden;
@@ -469,12 +480,12 @@ const Sheets = {
               // 원래 그림과 다른 칸만 남긴다 — 서버·저장소에 원본을 다시 싣지 않도록
               const base = baseArt(id), changed = {};
               DOLL_STATES.forEach(st => { if (art[st] !== base[st]) changed[st] = art[st]; });
-              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade], art: changed });
+              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade], art: changed, model3d: shape });
             } else {
               const newId = id || 'c' + Date.now().toString(36);
               const ok = Store.addCustomDoll({
                 id: newId, name, grade, points: GRADE_POINTS[grade],
-                bg: GRADE_BG[grade], rate: d ? d.rate : 2.4, art,
+                bg: GRADE_BG[grade], rate: d ? d.rate : 2.4, art, model3d: shape,
                 hidden: d ? !!d.hidden : false,
               });
               if (!ok) return toast('저장 공간이 부족해요. 인형을 몇 개 지워보세요', { tone: 'error' });

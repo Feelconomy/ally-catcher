@@ -18,7 +18,7 @@ for (const y of [.23, .81]) {
 }
 const TOY_COUNT = TOY_SLOTS.length;
 const LAYOUT_VERSION = 3;
-const toyType = id => id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig' : id === 'bunny' ? 'ToyRabbit' : id === 'dali' ? 'ToyDali' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
+const toyType = id => toyShape(id);   // data.js — 관리자가 고른 모양을 먼저 본다
 
 // Keep parsed source assets for repeat visits; instances get their own materials.
 const modelCache = new Map();

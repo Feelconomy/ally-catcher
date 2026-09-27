@@ -63,6 +63,24 @@ function poseDolls(list) {
 
 const DOLL_IDS = Object.keys(DOLLS);
 
+/* 3D 인형통에서 쓸 수 있는 입체 모양. 관리자 화면에서 인형을 추가해도 여기서
+   하나를 골라 붙일 수 있게 이름을 밖에 내둔다 — 안 그러면 새로 추가한 인형은
+   전부 곰 모양으로만 나온다. 앞의 다섯은 전용 모델, 뒤 셋은 기계에 들어 있다. */
+const TOY_SHAPES = {
+  ToyOlly: '올리', ToyTiger: '호랑이모자 올리', ToyRabbit: '토끼모자 올리',
+  ToyPig: '단지', ToyDali: '달리', ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
+};
+
+/** 인형 id 로 3D 모양 고르기. 관리자가 지정했으면 그걸, 없으면 이름으로 짐작한다. */
+function toyShape(id) {
+  const picked = DOLLS[id] && DOLLS[id].model3d;
+  if (TOY_SHAPES[picked]) return picked;
+  return id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig'
+    : id === 'bunny' ? 'ToyRabbit' : id === 'dali' ? 'ToyDali'
+    : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny'
+    : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
+}
+
 /* 원본 카탈로그 사본. 관리자가 기본 인형을 지우거나 포즈 그림을 바꿔도 되돌릴 수
    있도록, Store.applyAdmin() 은 기본 인형을 매번 여기서 다시 세운 뒤 수정분을 얹는다. */
 const DOLL_BASE = JSON.parse(JSON.stringify(DOLLS));

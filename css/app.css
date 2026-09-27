@@ -1651,3 +1651,7 @@ a:hover { color: var(--green-deep); }
 }
 .screen.arcade .play-head .arc-wallet .tk { color: #f2b705; display: flex; }
 .screen.arcade .play-head .arc-wallet .n { font-size: 14px; font-weight: 800; color: #235e47; }
+
+/* 관리자 인형 편집 — 3D 모양 고르기. 칸이 8개라 줄바꿈으로 흘린다. */
+.shape-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.shape-pick .chip { flex: 0 0 auto; }
