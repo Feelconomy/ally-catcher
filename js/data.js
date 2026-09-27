@@ -68,7 +68,8 @@ const DOLL_IDS = Object.keys(DOLLS);
    전부 곰 모양으로만 나온다. 앞의 다섯은 전용 모델, 뒤 셋은 기계에 들어 있다. */
 const TOY_SHAPES = {
   ToyOlly: '올리', ToyTiger: '호랑이모자 올리', ToyRabbit: '토끼모자 올리',
-  ToyPig: '단지', ToyDali: '달리', ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
+  ToyPig: '단지', ToyDali: '달리', ToyBearPig: '곰돌이단지', ToyHanbokPig: '한복단지',
+  ToyHanbokOlly: '한복올리', ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
 /** 인형 id 로 3D 모양 고르기. 관리자가 지정했으면 그걸, 없으면 이름으로 짐작한다. */

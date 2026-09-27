@@ -131,6 +131,9 @@ export const Play3D = {
       ['ToyPig', 'pig-plush.glb?v=3', null, -Math.PI / 2],
       ['ToyRabbit', 'rabbit-plush.glb?v=3', null, -Math.PI / 2],
       ['ToyDali', 'dali-plush.glb?v=3', null, -Math.PI / 2],
+      ['ToyBearPig', 'bearpig-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyHanbokPig', 'hanbokpig-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyHanbokOlly', 'hanbokolly-plush.glb?v=1', null, -Math.PI / 2],
     ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
     let completed = 0;
     const files = ['mint-machine.glb', ...specs.map(s => s[1])];
@@ -284,7 +287,7 @@ export const Play3D = {
         o.material = o.material.clone(); o.material.metalness = 0;
         // 올리·호랑이는 재질을 이미 맞춰 둔 모델이라 거칠기를 덮어쓰지 않는다
         // (덮어쓰면 눈의 무광 처리까지 날아간다)
-        if (!['ToyOlly','ToyTiger','ToyPig','ToyRabbit','ToyDali'].includes(type)) o.material.roughness = .9;
+        if (!TOY_SHAPES[type] || type === 'ToyBear' || type === 'ToyBunny' || type === 'ToyDuck') o.material.roughness = .9;
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
