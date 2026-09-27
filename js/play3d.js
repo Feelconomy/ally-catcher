@@ -169,6 +169,18 @@ export const Play3D = {
     const plushPig = new THREE.Group(); plushPig.name = 'PlushPig';
     plushPig.add(pig); this.pack.add(plushPig);
     plushPig.rotation.y = -Math.PI / 2;
+    // 토끼모자 올리 — 같은 파이프라인
+    const rabbitPack = await gltfLoader().loadAsync(new URL('../assets/3d/rabbit-plush.glb?v=1', import.meta.url).href);
+    if (!this.active || session !== this.session) { this.disposeObject(rabbitPack.scene); return; }
+    const rabbit = rabbitPack.scene;
+    const rBounds = new THREE.Box3().setFromObject(rabbit);
+    const rCenter = rBounds.getCenter(new THREE.Vector3());
+    const rScale = .64 / rBounds.getSize(new THREE.Vector3()).y;
+    rabbit.scale.setScalar(rScale);
+    rabbit.position.set(-rCenter.x * rScale, -.22 - rBounds.min.y * rScale, -rCenter.z * rScale);
+    const plushRabbit = new THREE.Group(); plushRabbit.name = 'PlushRabbit';
+    plushRabbit.add(rabbit); this.pack.add(plushRabbit);
+    plushRabbit.rotation.y = -Math.PI / 2;
     const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
     this.assets = Object.fromEntries(names.map(name => {
       const object = loaded.scene.getObjectByName(name);
@@ -178,6 +190,7 @@ export const Play3D = {
     this.assets.ToyOlly = approvedOlly;
     this.assets.ToyTiger = plushTiger;
     this.assets.ToyPig = plushPig;
+    this.assets.ToyRabbit = plushRabbit;
     for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
     this.scene.traverse(o => {
       if (!o.isMesh) return;
@@ -254,7 +267,7 @@ export const Play3D = {
     this.restoredLayout = layout.every(d => d.position);
     this.toys = layout.map((saved,i) => {
       const id = saved.dollId;
-      const type = id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
+      const type = id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig' : id === 'bunny' ? 'ToyRabbit' : /bunny|rabbit|spring|hanbok|ski|santa/.test(id) ? 'ToyBunny' : /duck|summer|snorkel/.test(id) ? 'ToyDuck' : 'ToyBear';
       const mesh = this.assets[type].clone(true);
       mesh.position.set(0,0,0);
       mesh.traverse(o => {
@@ -262,7 +275,7 @@ export const Play3D = {
         o.material = o.material.clone(); o.material.metalness = 0;
         // 올리·호랑이는 재질을 이미 맞춰 둔 모델이라 거칠기를 덮어쓰지 않는다
         // (덮어쓰면 눈의 무광 처리까지 날아간다)
-        if (type !== 'ToyOlly' && type !== 'ToyTiger' && type !== 'ToyPig') o.material.roughness = .9;
+        if (!['ToyOlly','ToyTiger','ToyPig','ToyRabbit'].includes(type)) o.material.roughness = .9;
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
