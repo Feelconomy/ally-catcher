@@ -483,6 +483,18 @@ export const Play3D = {
   pause(ms) {
     return new Promise(resolve=>{this.delayResolve=resolve;this.delay=setTimeout(()=>{this.delayResolve=null;resolve(this.active);},ms);});
   },
+  /* 놓거나 떨어뜨린 인형이 다 구르고 멈출 때까지 기다린다. 전에는 고정 시간만
+     세고 결과를 냈더니, 인형이 아직 떨어지는 중인데 실패 화면이 떠서 "제대로
+     보여주지도 않고 실패시킨다"는 느낌을 줬다. */
+  async settle(toy, maxMs = 2800) {
+    const t0 = performance.now();
+    while (this.active && performance.now() - t0 < maxMs) {
+      if (!await this.pause(90)) return false;
+      if (performance.now() - t0 < 300) continue;      // 놓자마자 멈춘 것으로 보지 않게
+      if (toy.body.sleepState === CANNON.Body.SLEEPING || toy.body.velocity.length() < .09) break;
+    }
+    return this.active;
+  },
   /** 집게 입 벌리기/오므리기. v 는 벌어짐(1 = 모델 기본, 클수록 활짝).
       끝날 때까지 기다릴 수 있게 약속을 돌려준다 — 다 내려간 뒤에 움켜쥐는
       순서를 만들려면 애니메이션이 끝나는 시점을 알아야 한다. */
@@ -501,7 +513,8 @@ export const Play3D = {
   releaseToy() {
     if(!this.held)return;
     this.held.body.type=CANNON.Body.DYNAMIC;this.held.body.mass=.22;this.held.body.updateMassProperties();
-    this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY|GROUP_CLAW;
+    // The visual fingers open, but the coarse claw collider does not; let the released prize clear it.
+    this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY;
     this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
     this.held=null;this.grip(GRIP_REST);
   },
@@ -543,10 +556,13 @@ export const Play3D = {
     await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
     if(!this.held){
       if(target)target.body.collisionFilterMask=GROUP_TOY|GROUP_CLAW;
-      this.grip(GRIP_REST,260);await this.pause(350);if(alive())this.finish(false,target?.id);return;}
+      this.grip(GRIP_REST,260);this.status('아쉽게 놓쳤어요');
+      await this.pause(760);if(!alive())return;this.finish(false,target?.id);return;}
     if(slipped){
       this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);
-      await this.pause(1050);if(alive())this.finish(false,target.id);return;
+      if(!await this.settle(target))return;
+      await this.pause(420);if(!alive())return;
+      this.finish(false,target.id);return;
     }
     this.phase='carrying';this.status('배출구로 옮기는 중');
     // Align the prize center with the chute, then let travel sway settle.
@@ -554,8 +570,8 @@ export const Play3D = {
     await this.travel([CHUTE.x-centerOffset.x,REST_Y,CHUTE.z-centerOffset.z],1.25);if(!alive())return;
     await this.travel([this.position.x,this.position.y,this.position.z],.9);if(!alive())return;
     this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
-    // Wait on the simulation clock: wall time can expire before a slow frame loop lets the prize fall.
-    await this.travel([this.position.x,this.position.y,this.position.z],1.4);if(!alive())return;
+    if(!await this.settle(target))return;
+    await this.pause(360);if(!alive())return;           // 자리 잡은 모습을 한 박자 보여준다
     const p=target.body.position;
     this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id,target);
   },
