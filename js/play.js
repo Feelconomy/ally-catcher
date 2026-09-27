@@ -196,6 +196,7 @@ const Play = {
         <div class="state"><i></i><span id="stateTxt">READY</span></div>
         ${arcade ? '<div class="glass"></div>' : '<div class="backwall"></div>'}
         <div class="rail"><i class="rail-mount" id="railMount"></i></div>
+        <div class="rear-claw" id="rearClaw">${clawSvg(true)}</div>
         <div class="claw-rig" id="rig">
           <div class="cord" id="cord"></div>
           <div class="claw" id="claw">
@@ -470,6 +471,14 @@ const Play = {
       if (Math.abs(this.velocity) > 0.0005) this.move(this.velocity * dt);
       const claw = $('#claw', root);
       if (claw && !this.busy) claw.style.setProperty('--sway', (-this.velocity * 13).toFixed(2) + 'deg');
+      const rear = $('#rearClaw', root), rig = $('#rig', root);
+      if (rear && claw && rig) {
+        rear.style.left = rig.offsetLeft + 'px';
+        rear.style.top = (rig.offsetTop + claw.offsetTop) + 'px';
+        rear.style.width = rig.offsetWidth + 'px';
+        rear.style.transform = getComputedStyle(claw).transform;
+        rear.toggleAttribute('data-grip', rig.hasAttribute('data-grip'));
+      }
       this.motionFrame = requestAnimationFrame(frame);
     };
     this.motionFrame = requestAnimationFrame(frame);
@@ -711,6 +720,9 @@ const Play = {
 
     let carried = null;
     if (grips) {
+      const dollRect = document.querySelector(`.doll[data-i="${near.i}"]`).getBoundingClientRect();
+      const held = document.getElementById('held');
+      held.style.top = (dollRect.top - document.getElementById('claw').getBoundingClientRect().top) + 'px';
       this.dolls[near.i].taken = true;
       this.paintPit();
       carried = near.d;
@@ -745,11 +757,12 @@ const Play = {
 
     // Carry to the chute.
     this.setState('CARRYING');
-    const overChute = (CHUTE_X * 100) + '%';
+    const chuteX = this.skinId === 'arcade' ? .175 : CHUTE_X;
+    const overChute = (chuteX * 100) + '%';
     rig.style.transition = 'left .75s ease-in-out';
     rig.style.left = overChute;
     const mount = document.getElementById('railMount');
-    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = `calc(${CHUTE_X * 100}% + ${(CHUTE_X - 0.5) * (this.skinId === 'arcade' ? 48 : 32)}px)`; }
+    if (mount) { mount.style.transition = 'left .75s ease-in-out'; mount.style.left = `calc(${chuteX * 100}% + ${(chuteX - 0.5) * (this.skinId === 'arcade' ? 48 : 32)}px)`; }
 
     if (failMode === 'slipCarry') {
       await wait(430);                       // let go partway across
@@ -806,11 +819,9 @@ const Play = {
     let targetY;
     if (inRange && near) {
       const el = $(`.doll[data-i="${near.i}"]`, cabinet);
-      /* 정수리에서 16px 고정이라 인형이 클수록 머리를 스치기만 했다. 높이 비율로
-         잡아 어느 크기에서도 같은 깊이로 문다. 0.26 은 아직 머리만 스쳐 보여서,
-         집게 팁이 몸통 한가운데까지 내려가도록 0.46 으로 둔다. */
+      // Reach below the torso center without sending the fingertips through the floor.
       const r = el && el.getBoundingClientRect();
-      targetY = r ? r.top + r.height * 0.46 : bedRect.bottom - 56;
+      targetY = r ? Math.min(r.top + r.height * 0.50, bedRect.bottom - 8) : bedRect.bottom - 56;
     } else {
       targetY = bedRect.bottom - 26;           // clean miss: reach the bed floor
     }
@@ -948,9 +959,10 @@ const Play = {
 /** A three-talon crane claw: spindle, housing, and hooked arms.
     Talons pivot at the housing rim (x 40 / 60 / 80, y 38) so that open they
     clear a doll and closed they bite into its shoulders. */
-function clawSvg() {
+function clawSvg(rearOnly = false) {
   const arm = 'M0 0 C 4 15, 6 31, 1 44';
   const tip = 'M1 44 l -7 12 l 9.5 -3 z';
+  if (rearOnly) return `<svg class="claw-svg" width="${CLAW_W}" viewBox="0 0 120 116" aria-hidden="true"><g class="talon t-back"><path d="${arm}" fill="none" stroke="#9A7600" stroke-width="10" stroke-linecap="round"/><path d="${tip}" fill="#876600"/></g></svg>`;
   return `<svg class="claw-svg" width="${CLAW_W}" viewBox="0 0 120 116" aria-hidden="true">
     <defs>
       <linearGradient id="clawArm" x1="0" y1="0" x2="1" y2="0.4">

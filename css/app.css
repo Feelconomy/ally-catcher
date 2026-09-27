@@ -1199,7 +1199,7 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .claw-rig[data-busy] .claw { transform: rotate(0deg); }
 .screen.arcade .chute img { animation: none; }
 .screen.arcade .chute {
-  left: 2.5%; width: 26%; height: auto; aspect-ratio: 4 / 5;
+  left: 2.5%; width: 30%; height: auto; aspect-ratio: 4 / 5;
   bottom: 10px; z-index: 26; padding: 0;
   background: none; box-shadow: none; pointer-events: none;
 }
@@ -1215,6 +1215,8 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .bed .hole { visibility: hidden; }
 .screen.arcade .dpad { touch-action: none; }
 .screen.arcade .play-head { padding: 0; }
+.rear-claw { position: absolute; z-index: 1; pointer-events: none; transform-origin: 50% 0; }
+.claw-rig .t-back { visibility: hidden; }
 
 /* Result: success (04) / fail (22) */
 /* Result screens have to survive a 520px-tall browser window as well as a
