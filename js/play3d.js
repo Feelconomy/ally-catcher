@@ -24,7 +24,11 @@ const toyType = id => id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : 
 const modelCache = new Map();
 async function loadModel(file) {
   if (!modelCache.has(file)) {
-    modelCache.set(file, gltfLoader().loadAsync(new URL('../assets/3d/' + file, import.meta.url).href)
+    const url = new URL('../assets/3d/' + file, import.meta.url).href;
+    /* 모바일에서 한 번 끊긴 요청 하나 때문에 인형통 전체가 안 열리는 일이 있었다.
+       끊김은 대개 일시적이라 잠깐 쉬고 한 번은 다시 받아 본다. */
+    modelCache.set(file, gltfLoader().loadAsync(url)
+      .catch(() => new Promise(r => setTimeout(r, 500)).then(() => gltfLoader().loadAsync(url)))
       .catch(error => { modelCache.delete(file); throw error; }));
   }
   const source = await modelCache.get(file);
@@ -139,13 +143,14 @@ export const Play3D = {
       }
       return pack;
     }));
-    if (!this.active || session !== this.session || results.some(r => r.status === 'rejected')) {
+    if (!this.active || session !== this.session) {
       for (const r of results) if (r.status === 'fulfilled') this.disposeObject(r.value.scene);
-      const failed = results.find(r => r.status === 'rejected');
-      if (failed && this.active && session === this.session) throw failed.reason;
       return;
     }
-    const [loaded, ...plushPacks] = results.map(r => r.value);
+    /* 필수는 기계(mint-machine)뿐이다. 인형 모델 하나를 못 받았다고 통을 못 열면
+       안 되니, 빠진 인형은 기계에 들어 있는 기본 인형으로 대신한다(배경과 같은 정책). */
+    if (results[0].status === 'rejected') throw results[0].reason;
+    const [loaded, ...plushPacks] = results.map(r => r.status === 'fulfilled' ? r.value : null);
     this.pack = loaded.scene;
     const names = ['Cabinet','Chute','Gantry','Carriage','Claw','Joystick','DropButton','ToyBear','ToyBunny','ToyDuck','ToyOlly','ToyTiger'];
     this.assets = Object.fromEntries(names.map(name => {
@@ -155,6 +160,7 @@ export const Play3D = {
     }));
     specs.forEach(([type, , rootName, yaw], i) => {
       const pack = plushPacks[i];
+      if (!pack) return;                       // 못 받은 인형은 건너뛴다
       const model = rootName ? pack.scene.getObjectByName(rootName) : pack.scene;
       if (!model) throw new Error('Missing model: ' + type);
       const bounds = new THREE.Box3().setFromObject(model);
@@ -263,7 +269,7 @@ export const Play3D = {
     this.restoredLayout = layout.every(d => d.position);
     this.toys = layout.map((saved,i) => {
       const id = saved.dollId;
-      const type = toyType(id);
+      const type = this.assets[toyType(id)] ? toyType(id) : 'ToyBear';
       const mesh = this.assets[type].clone(true);
       mesh.position.set(0,0,0);
       mesh.traverse(o => {

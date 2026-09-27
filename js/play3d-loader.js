@@ -13,7 +13,7 @@ async function startGreen3D(machine) {
   screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=143');
+    const { Play3D } = await import('./play3d.js?v=144');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);
@@ -22,7 +22,9 @@ async function startGreen3D(machine) {
     window.Play3D?.stop();
     console.error('3D cabinet:', error);
     screenEl().innerHTML = `<div class="green3d-loading">
-      <p>${location.protocol === 'file:' ? '3D 모드는 로컬 서버에서 열어주세요.' : '3D 인형통을 불러오지 못했어요.'}</p>
+      <p>${location.protocol === 'file:' ? '3D 모드는 로컬 서버에서 열어주세요.'
+        : navigator.onLine ? '3D 인형통을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.'
+        : '인터넷 연결이 끊겨서 3D 인형통을 못 받았어요.'}</p>
       <button class="btn btn--primary" id="retry3d">다시 시도</button>
       <button class="btn btn--neutral" id="fallback2d">기본 모드로 계속</button>
     </div>`;
