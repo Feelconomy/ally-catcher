@@ -32,7 +32,10 @@ function dollArt(id, state) {
 function dollImg(id, size, extra, state) {
   const px = size || 84;
   const src = dollArt(id, state || 'idle');
-  return `<img src="${esc(src)}" alt="" width="${px}" height="${px}"
+  /* 관리자 인형 화면은 img 가 90개(내려받기 15MB · 디코딩 35MB)나 되는데 그중
+     절반은 화면 밖이다. 폰 사파리는 디코딩 예산을 넘기면 뒤쪽·큰 그림부터 조용히
+     안 그린다 — 곰돌이 단지가 안 보이던 이유. 보이는 것만 받아 그린다. */
+  return `<img src="${esc(src)}" alt="" width="${px}" height="${px}" loading="lazy" decoding="async"
     style="width:${px}px;height:${px}px;object-fit:contain${extra ? ';' + extra : ''}">`;
 }
 

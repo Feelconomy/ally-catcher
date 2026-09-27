@@ -270,9 +270,14 @@ export const Play3D = {
     const stock = Store.machineStock(this.machine,TOY_COUNT).dolls.slice(0,TOY_COUNT);
     const layout = Store.machineLayout(this.machine, 'green3d', stock, () => stock.map(dollId => ({dollId})));
     this.restoredLayout = layout.every(d => d.position);
-    this.toys = layout.map((saved,i) => {
+    let slot = 0; this.skippedToys = 0;
+    this.toys = layout.map(saved => {
       const id = saved.dollId;
-      const type = this.assets[toyType(id)] ? toyType(id) : 'ToyBear';
+      const type = toyType(id);
+      /* 모델을 못 받은 인형은 다른 인형 모습으로 세워 두지 않고 아예 뺀다 —
+         엉뚱한 모습으로 서 있으면 뽑고 나서 다른 게 나온 것처럼 보인다. */
+      if (!this.assets[type]) { this.skippedToys++; return null; }
+      const i = slot++;
       const mesh = this.assets[type].clone(true);
       mesh.position.set(0,0,0);
       mesh.traverse(o => {
@@ -308,7 +313,7 @@ export const Play3D = {
       }
       this.world.addBody(body); this.scene.add(mesh);
       return { id,mesh,body };
-    });
+    }).filter(Boolean);
   },
 
   bind() {
@@ -597,7 +602,8 @@ export const Play3D = {
     geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());textures.forEach(t=>t.dispose());
   },
   saveToyLayout() {
-    if (this.toys) {
+    // 못 내보낸 인형이 있으면 저장하지 않는다 — 저장하면 그 인형이 영영 빠진다
+    if (this.toys && !this.skippedToys) {
       const prior = Store.state.layouts?.[this.machine.id + ':green3d'] || [];
       Store.saveLayout(this.machine, 'green3d', this.toys.filter(t => t !== this.wonToy).map(t => {
         const i = this.toys.indexOf(t);
