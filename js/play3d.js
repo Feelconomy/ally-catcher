@@ -197,13 +197,6 @@ export const Play3D = {
        받아 끼운다. 도중에 나가면 받은 걸 버린다. */
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
-    this.fingerBases = this.fingers.map(f => f.position.clone());
-    this.fingerSpread = [0,0,0];
-    this.fingers.forEach(f => { f.scale.y *= 1.25; });
-    this.fingerLinks = this.fingers.map(() => {
-      const link = new THREE.Mesh(new THREE.CylinderGeometry(.018,.018,1,12),new THREE.MeshStandardMaterial({color:0xc8b36a,metalness:.65,roughness:.3}));
-      link.visible = false; link.castShadow = true; this.claw.add(link); return link;
-    });
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
        여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
     this.fingerAxes = this.fingers.map(f => {
@@ -508,26 +501,14 @@ export const Play3D = {
   /** 집게 입 벌리기/오므리기. v 는 벌어짐(1 = 모델 기본, 클수록 활짝).
       끝날 때까지 기다릴 수 있게 약속을 돌려준다 — 다 내려간 뒤에 움켜쥐는
       순서를 만들려면 애니메이션이 끝나는 시점을 알아야 한다. */
-  grip(v, ms = 220, spread = this.fingerSpread) {
+  grip(v, ms = 220) {
     clearInterval(this.gripTimer);
     const to = v, from = this.gripT ?? GRIP_REST;
-    const fromSpread = this.fingerSpread.slice();
     const t0 = performance.now();
     this.gripTimer = setInterval(() => {
       const t = clamp((performance.now() - t0) / ms, 0, 1);
       this.gripT = from + (to - from) * ease(t);
-      this.fingers.forEach((f, i) => {
-        f.setRotationFromAxisAngle(this.fingerAxes[i], this.gripT);
-        this.fingerSpread[i] = fromSpread[i] + (spread[i] - fromSpread[i]) * ease(t);
-        const axis = this.fingerAxes[i];
-        const radial = new THREE.Vector3(axis.z,0,-axis.x);
-        f.position.copy(this.fingerBases[i]).addScaledVector(radial, this.fingerSpread[i]);
-        const link = this.fingerLinks[i];
-        link.visible = this.fingerSpread[i] > .005;
-        link.position.copy(this.fingerBases[i]).addScaledVector(radial,this.fingerSpread[i]/2);
-        link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),radial);
-        link.scale.y = Math.max(.001,this.fingerSpread[i]);
-      });
+      this.fingers.forEach((f, i) => f.setRotationFromAxisAngle(this.fingerAxes[i], this.gripT));
       if (t === 1) clearInterval(this.gripTimer);
     }, 16);
     return this.pause(ms);
@@ -555,18 +536,9 @@ export const Play3D = {
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
     // Use the rotated toy's visible center so lying prizes are not grasped above their bodies.
     const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh) : null;
-    const down = targetBounds ? Math.max(.40, targetBounds.getCenter(new THREE.Vector3()).y + .32) : .56;
-    const size = targetBounds?.getSize(new THREE.Vector3());
-    // Fit the three fingertips around the target's horizontal envelope, not through its center.
-    const spread = this.fingerAxes.map(axis => {
-      if (!size) return 0;
-      const direction = new THREE.Vector3(axis.z,0,-axis.x).applyAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
-      const rx = Math.max(.18,size.x*.48), rz = Math.max(.18,size.z*.48);
-      const radius = 1 / Math.hypot(direction.x/rx,direction.z/rz);
-      return clamp(radius - .09, .08, .32);
-    });
+    const down = targetBounds ? Math.max(.30, targetBounds.getCenter(new THREE.Vector3()).y + .20) : .46;
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
-    await this.grip(GRIP_OPEN,260,spread);if(!alive())return;
+    await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
