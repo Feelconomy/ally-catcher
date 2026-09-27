@@ -48,7 +48,7 @@ const os = require('node:os');
    const model=toy.mesh.getObjectByName('ModelFacing');
    const timer=setInterval(()=>ollyScaleSamples.push(model.scale.toArray()),30);
    const finish=g.finish;
-   g.finish=function(...args){window.lastFinish={won:args[0],position:toy.body.position.toArray()};g.finish=finish;return finish.apply(this,args);};
+   g.finish=function(...args){window.lastFinish={won:args[0],position:toy.body.position.toArray(),mass:toy.body.mass,type:toy.body.type,sleep:toy.body.sleepState,invMass:toy.body.invMass,velocity:toy.body.velocity.toArray(),gravity:g.world.gravity.toArray()};g.finish=finish;return finish.apply(this,args);};
    const random=Math.random;Math.random=()=>0;
    g.drop().finally(()=>{Math.random=random;clearInterval(timer);});
   });
