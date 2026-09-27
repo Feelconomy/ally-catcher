@@ -41,6 +41,7 @@ const DOLLS = {
     { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
     { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
     { id: 'pig',     name: '단지',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
+    { id: 'dali',    name: '달리',        grade: 'R',  points: 120, bg: '#F6EEDC', rate: 2.4 },
   ]),
 };
 
@@ -101,8 +102,8 @@ const MACHINES = [
     cost: 2, difficulty: '쉬움', baseRate: 44, grip: '보통',
     bg: '#FFF8E3', hero: 'dog',
     blurb: '넓은 배출구 덕분에 실수해도 인형이 잘 떨어져요. 토끼모자 올리도 한 자리 섞여 있어요.',
-    contents: ['bunny', 'dog', 'duck', 'cat', 'bear', 'summer', 'snorkel'],
-    pool: ['dog', 'bunny', 'duck', 'dog', 'cat', 'summer', 'snorkel'],
+    contents: ['bunny', 'dog', 'duck', 'cat', 'bear', 'summer', 'snorkel', 'dali'],
+    pool: ['dog', 'bunny', 'duck', 'dali', 'cat', 'summer', 'snorkel', 'dali'],
     reward: 80,
     open: true,
   },
