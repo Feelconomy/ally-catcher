@@ -126,11 +126,11 @@ export const Play3D = {
       lamp.position.set(x, 3.2, 0); this.scene.add(lamp);
     }
     const specs = [
-      ['ToyOlly', 'olly-plush.glb?v=1', null, -Math.PI / 2],
-      ['ToyTiger', 'tiger-plush.glb?v=1', null, -Math.PI / 2],
-      ['ToyPig', 'pig-plush.glb?v=1', null, -Math.PI / 2],
-      ['ToyRabbit', 'rabbit-plush.glb?v=1', null, -Math.PI / 2],
-      ['ToyDali', 'dali-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyOlly', 'olly-plush.glb?v=2', null, -Math.PI / 2],
+      ['ToyTiger', 'tiger-plush.glb?v=2', null, -Math.PI / 2],
+      ['ToyPig', 'pig-plush.glb?v=2', null, -Math.PI / 2],
+      ['ToyRabbit', 'rabbit-plush.glb?v=2', null, -Math.PI / 2],
+      ['ToyDali', 'dali-plush.glb?v=2', null, -Math.PI / 2],
     ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
     let completed = 0;
     const files = ['mint-machine.glb', ...specs.map(s => s[1])];
