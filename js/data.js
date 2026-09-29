@@ -36,8 +36,8 @@ const DOLLS = {
     { id: 'spring',  name: '벚꽃 원이',      grade: 'R',  points: 120, bg: '#FDEDF2', rate: 2.4 },
     { id: 'snorkel', name: '물놀이 원이',    grade: 'R',  points: 120, bg: '#E6F3FB', rate: 2.6 },
     { id: 'summer',  name: '수박 원이',      grade: 'R',  points: 120, bg: '#FFF0EC', rate: 2.6 },
-    { id: 'autumn',  name: '단풍 원이',      grade: 'R',  points: 120, bg: '#FBEFE2', rate: 2.4 },
-    { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4 },
+    { id: 'autumn',  name: '단풍 원이',      grade: 'R',  points: 120, bg: '#FBEFE2', rate: 2.4, model3d: 'ToyAutumn' },
+    { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4, model3d: 'ToyAcorn' },
     { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
     { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
     { id: 'pig',     name: '단지',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
@@ -46,6 +46,7 @@ const DOLLS = {
     { id: 'hanbokolly', name: '한복 올리',  grade: 'SR', points: 400, bg: '#E8F3EE', rate: 1.8, model3d: 'ToyHanbokOlly' },
     { id: 'hanbokpig',  name: '한복 단지',  grade: 'R',  points: 120, bg: '#FBE9EF', rate: 2.4, model3d: 'ToyHanbokPig' },
     { id: 'bearpig',    name: '곰돌이 단지', grade: 'R',  points: 120, bg: '#F7ECE4', rate: 2.4, model3d: 'ToyBearPig' },
+    { id: 'hanbokdali', name: '한복 달리',  grade: 'R',  points: 120, bg: '#EAF0F7', rate: 2.4, model3d: 'ToyHanbokDali' },
   ]),
 };
 
@@ -73,12 +74,20 @@ const DOLL_IDS = Object.keys(DOLLS);
 const TOY_SHAPES = {
   ToyOlly: '올리', ToyTiger: '호랑이모자 올리', ToyRabbit: '토끼모자 올리',
   ToyPig: '단지', ToyDali: '달리', ToyBearPig: '곰돌이단지', ToyHanbokPig: '한복단지',
-  ToyHanbokOlly: '한복올리', ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
+  ToyHanbokOlly: '한복올리', ToyHanbokDali: '한복달리', ToyAcorn: '도토리올리',
+  ToyAutumn: '단풍올리', ToySummerWoni: '여름원이',
+  ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
-/** 인형 id 로 3D 모양 고르기. 관리자가 지정했으면 그걸, 없으면 이름으로 짐작한다. */
-function toyShape(id) {
-  const picked = DOLLS[id] && DOLLS[id].model3d;
+/** 인형 id 로 3D 모양 고르기. 관리자가 지정했으면 그걸, 없으면 이름으로 짐작한다.
+    `inferOnly` 는 저장된 지정을 무시하고 짐작만 한다 — 관리자 화면에서 '짐작과
+    같은 값'을 굳이 저장하지 않으려고 쓴다. */
+function toyShape(id, inferOnly) {
+  /* 우선순위: 관리자 지정 → 카탈로그가 원래 달고 나온 짝 → id 로 짐작.
+     inferOnly 는 관리자 지정만 건너뛴다 (관리자 화면에서 '어차피 같은 값'을
+     굳이 저장하지 않으려고 쓴다). */
+  const base = DOLL_BASE[id];
+  const picked = (!inferOnly && DOLLS[id] && DOLLS[id].model3d) || (base && base.model3d);
   if (TOY_SHAPES[picked]) return picked;
   return id === 'olly' ? 'ToyOlly' : id === 'tiger' ? 'ToyTiger' : id === 'pig' ? 'ToyPig'
     : id === 'bunny' ? 'ToyRabbit' : id === 'dali' ? 'ToyDali'

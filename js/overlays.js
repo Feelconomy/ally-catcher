@@ -480,7 +480,10 @@ const Sheets = {
               // 원래 그림과 다른 칸만 남긴다 — 서버·저장소에 원본을 다시 싣지 않도록
               const base = baseArt(id), changed = {};
               DOLL_STATES.forEach(st => { if (art[st] !== base[st]) changed[st] = art[st]; });
-              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade], art: changed, model3d: shape });
+              /* 짐작과 같은 모양이면 저장하지 않는다(null). 저장해 버리면 나중에
+                 그 인형 전용 모델이 생겨도 옛 짐작값이 계속 이겨서 안 바뀐다. */
+              const pick = shape === toyShape(id, true) ? null : shape;
+              Store.setAdmin('dolls', id, { name, grade, points: GRADE_POINTS[grade], art: changed, model3d: pick });
             } else {
               const newId = id || 'c' + Date.now().toString(36);
               const ok = Store.addCustomDoll({

@@ -135,6 +135,10 @@ export const Play3D = {
       ['ToyBearPig', 'bearpig-plush.glb?v=1', null, -Math.PI / 2],
       ['ToyHanbokPig', 'hanbokpig-plush.glb?v=1', null, -Math.PI / 2],
       ['ToyHanbokOlly', 'hanbokolly-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyHanbokDali', 'hanbokdali-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyAcorn', 'acorn-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyAutumn', 'autumn-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToySummerWoni', 'summerwoni-plush.glb?v=1', null, -Math.PI / 2],
     ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
     let completed = 0;
     const files = ['mint-machine.glb', ...specs.map(s => s[1])];
