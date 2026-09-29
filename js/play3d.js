@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
+import { clawContacts } from './claw-contact.js';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -197,6 +198,7 @@ export const Play3D = {
        받아 끼운다. 도중에 나가면 받은 걸 버린다. */
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
+    this.fingerAngles = [GRIP_REST,GRIP_REST,GRIP_REST]; this.contactLimits = null;
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
        여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
     this.fingerAxes = this.fingers.map(f => {
@@ -433,6 +435,7 @@ export const Play3D = {
     this.swingVel.y+=(-K*this.swing.y-D*this.swingVel.y-clamp(carVelZ,-2.5,2.5)*DRAG)*dt;
     this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.28,.28);
     this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.28,.28);
+    if(this.phase==='dropping'){this.swing.set(0,0);this.swingVel.set(0,0);}
     /* 집게 돌리기 — 레버를 민 쪽을 향해 집게가 천천히 돌아간다. 멈추면 그 방향을
        그대로 유지한다 (실제 기계에서 집게를 돌려놓는 것처럼). */
     const speed = Math.hypot(carVelX, carVelZ);
@@ -509,11 +512,16 @@ export const Play3D = {
   grip(v, ms = 220) {
     clearInterval(this.gripTimer);
     const to = v, from = this.gripT ?? GRIP_REST;
+    const fromAngles=this.fingerAngles.slice();
     const t0 = performance.now();
     this.gripTimer = setInterval(() => {
       const t = clamp((performance.now() - t0) / ms, 0, 1);
       this.gripT = from + (to - from) * ease(t);
-      this.fingers.forEach((f, i) => f.setRotationFromAxisAngle(this.fingerAxes[i], this.gripT));
+      this.fingers.forEach((f, i) => {
+        const requested=fromAngles[i]+(v-fromAngles[i])*ease(t);
+        this.fingerAngles[i]=v<fromAngles[i]?Math.max(requested,this.contactLimits?.[i]??v):requested;
+        f.setRotationFromAxisAngle(this.fingerAxes[i],this.fingerAngles[i]);
+      });
       if (t === 1) clearInterval(this.gripTimer);
     }, 16);
     return this.pause(ms);
@@ -524,7 +532,7 @@ export const Play3D = {
     // The visual fingers open, but the coarse claw collider does not; let the released prize clear it.
     this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY;
     this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
-    this.held=null;this.grip(GRIP_REST);
+    this.held=null;this.contactLimits=null;this.grip(GRIP_OPEN);
   },
 
   async drop() {
@@ -535,13 +543,25 @@ export const Play3D = {
     document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);
     const target=near&&near.distance<.29?near.toy:null;
     // 물려는 인형만 집게 몸통을 통과시킨다 — 안 그러면 집기 전에 밀려난다
-    if(target)target.body.collisionFilterMask=GROUP_TOY;
+    if(target){
+      target.body.collisionFilterMask=GROUP_TOY;
+      target.body.type=CANNON.Body.KINEMATIC;target.body.updateMassProperties();
+      target.body.velocity.setZero();target.body.angularVelocity.setZero();
+    }
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    // Use the rotated toy's visible center so lying prizes are not grasped above their bodies.
-    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh) : null;
-    const down = targetBounds ? Math.max(.30, targetBounds.getCenter(new THREE.Vector3()).y + .20) : .46;
+    // Keep the original housing above the toy; only the native hinges may rotate.
+    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh,true) : null;
+    let down = targetBounds ? Math.max(.30,targetBounds.max.y+.095) : .46;
+    if(target){
+      const position=this.claw.position.clone(),quaternion=this.claw.quaternion.clone();
+      this.claw.position.set(this.position.x,down,this.position.z);
+      this.claw.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
+      const contacts=clawContacts(this.claw,this.fingers,this.fingerAxes,target.mesh,GRIP_OPEN,GRIP_HOLD);
+      down+=contacts.lift;this.contactLimits=contacts.limits;
+      this.claw.position.copy(position);this.claw.quaternion.copy(quaternion);this.claw.updateMatrixWorld(true);
+    }
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
@@ -558,7 +578,11 @@ export const Play3D = {
       const q=target.body.quaternion, p=target.body.position;
       this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w); this.heldYaw=this.yaw;
       this.heldOffset=new THREE.Vector3(
-        clamp(p.x-this.clawPos.x,-.13,.13), p.y-this.clawPos.y, clamp(p.z-this.clawPos.z,-.13,.13));
+        p.x-this.clawPos.x, p.y-this.clawPos.y, p.z-this.clawPos.z);
+    }
+    if(target&&!this.held){
+      await this.grip(GRIP_OPEN,220);if(!alive())return;
+      target.body.type=CANNON.Body.DYNAMIC;target.body.updateMassProperties();target.body.wakeUp();
     }
     this.phase='lifting';this.status('들어 올리는 중');
     await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
