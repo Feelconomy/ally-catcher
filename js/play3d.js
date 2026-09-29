@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
+import { pickSurface, surfaceGrip } from './surface-grip.js';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -196,6 +197,7 @@ export const Play3D = {
        띄우면 시작이 한참 늦어지므로, 기계·인형만 먼저 세우고 배경은 뒤에서
        받아 끼운다. 도중에 나가면 받은 걸 버린다. */
     this.claw = this.assets.Claw;
+    this.surfaceGrip = null; this.pickCache = null;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
        여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
@@ -379,14 +381,13 @@ export const Play3D = {
     this.camera.updateProjectionMatrix();
   },
 
-  nearest() {
-    let best=null;
-    for(const toy of this.toys){
-      const p=toy.body.position;
-      const distance=Math.hypot(p.x-this.position.x,p.z-this.position.z);
-      if(!best || (distance<.29 && best.distance<.29 ? p.y>best.toy.body.position.y : distance<best.distance))best={toy,distance};
+  nearest(force=false) {
+    const {x,z}=this.position, now=performance.now();
+    if(force || !this.pickCache || now-this.pickCache.time>100 ||
+       Math.hypot(x-this.pickCache.x,z-this.pickCache.z)>.02) {
+      this.pickCache={x,z,time:now,result:pickSurface(this.toys,x,z)};
     }
-    return best;
+    return this.pickCache.result;
   },
   odds(near=this.nearest()) {return near&&near.distance<.32 ? Math.round(Store.odds(this.machine)*(.25+.75*(1-near.distance/.32))) : 0;},
   /* 상태 배지는 없앴다 — 조작 덱의 대상·확률 표시로 충분하고 상단이 복잡했다.
@@ -433,6 +434,9 @@ export const Play3D = {
     this.swingVel.y+=(-K*this.swing.y-D*this.swingVel.y-clamp(carVelZ,-2.5,2.5)*DRAG)*dt;
     this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.28,.28);
     this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.28,.28);
+    // The drop follows the marked vertical column; do not select on the rail
+    // and then descend elsewhere because the cable is still swinging.
+    if(this.phase==='dropping'){this.swing.set(0,0);this.swingVel.set(0,0);}
     /* 집게 돌리기 — 레버를 민 쪽을 향해 집게가 천천히 돌아간다. 멈추면 그 방향을
        그대로 유지한다 (실제 기계에서 집게를 돌려놓는 것처럼). */
     const speed = Math.hypot(carVelX, carVelZ);
@@ -454,7 +458,7 @@ export const Play3D = {
          줄이 흔들리는 회전만 그 위에 얹는다. */
       // 줄 기울기 + 잡은 뒤 집게가 돌아간 만큼. 인형도 집게를 따라 같이 돌아간다.
       const sq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x))
-        .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw-this.heldYaw));
+        .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw));
       const off=this.heldOffset.clone().applyQuaternion(sq);
       const b=this.held.body;
       b.position.set(this.clawPos.x+off.x,this.clawPos.y+off.y,this.clawPos.z+off.z);
@@ -480,7 +484,7 @@ export const Play3D = {
     this.cable.scale.y=Math.max(.08,span.length());
     this.cable.position.copy(top).addScaledVector(span,.5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),span.clone().normalize());
-    this.shadow.position.set(this.clawPos.x,.015,this.clawPos.z);this.shadow.visible=this.phase==='aim';
+    this.shadow.position.set(this.position.x,.015,this.position.z);this.shadow.visible=this.phase==='aim';
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
   },
@@ -514,6 +518,7 @@ export const Play3D = {
       const t = clamp((performance.now() - t0) / ms, 0, 1);
       this.gripT = from + (to - from) * ease(t);
       this.fingers.forEach((f, i) => f.setRotationFromAxisAngle(this.fingerAxes[i], this.gripT));
+      this.surfaceGrip?.pose(clamp((this.gripT-GRIP_HOLD)/(GRIP_OPEN-GRIP_HOLD),0,1));
       if (t === 1) clearInterval(this.gripTimer);
     }, 16);
     return this.pause(ms);
@@ -524,24 +529,38 @@ export const Play3D = {
     // The visual fingers open, but the coarse claw collider does not; let the released prize clear it.
     this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY;
     this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
-    this.held=null;this.grip(GRIP_REST);
+    this.held=null;
   },
 
   async drop() {
     if(this.phase!=='aim')return;
     const session=this.session;const alive=()=>this.active&&this.session===session;
-    const near=this.nearest(),chance=this.odds(near);
+    const near=this.nearest(true),chance=this.odds(near);
     this.phase='dropping';this.release();this.velocity.set(0,0);
     document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);
-    const target=near&&near.distance<.29?near.toy:null;
-    // 물려는 인형만 집게 몸통을 통과시킨다 — 안 그러면 집기 전에 밀려난다
-    if(target)target.body.collisionFilterMask=GROUP_TOY;
+    let target=near?.toy || null;
+    if(target){
+      let material; this.fingers[0].traverse(o=>{if(o.isMesh)material=o.material;});
+      const grip=surfaceGrip(target.mesh,this.position.x,this.position.z,this.yaw,material);
+      if(grip.valid){
+        this.surfaceGrip=grip;this.claw.add(grip.group);grip.pose(1);
+        this.fingers.forEach(f=>{f.visible=false;});
+      }else{grip.dispose();target=null;}
+    }
+    // Surface-constrained fingers handle the selected toy; the coarse physics
+    // sphere must not shove it away before those fingers make contact.
+    if(target){
+      target.body.collisionFilterMask=GROUP_TOY;
+      // Preserve the measured pose until closing; otherwise gravity can move
+      // the surface after the contact profile has been computed.
+      target.body.type=CANNON.Body.KINEMATIC;target.body.updateMassProperties();
+      target.body.velocity.setZero();target.body.angularVelocity.setZero();
+    }
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    // Use the rotated toy's visible center so lying prizes are not grasped above their bodies.
-    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh) : null;
-    const down = targetBounds ? Math.max(.30, targetBounds.getCenter(new THREE.Vector3()).y + .20) : .46;
+    // Keep the housing above the actual mesh, including a rotated head or ear.
+    const down = this.surfaceGrip?.down ?? (near ? new THREE.Box3().setFromObject(near.toy.mesh).max.y+.55 : .46);
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
@@ -556,9 +575,13 @@ export const Play3D = {
       /* 인형을 똑바로 세우지 않는다. 누워 있으면 누운 채로, 집게가 닿은 그 지점을
          잡고 들어 올린다 — 배를 물었는데 머리를 문 것처럼 보이지 않도록. */
       const q=target.body.quaternion, p=target.body.position;
-      this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w); this.heldYaw=this.yaw;
-      this.heldOffset=new THREE.Vector3(
-        clamp(p.x-this.clawPos.x,-.13,.13), p.y-this.clawPos.y, clamp(p.z-this.clawPos.z,-.13,.13));
+      const inverse=this.claw.quaternion.clone().invert();
+      this.heldQuat=inverse.clone().multiply(new THREE.Quaternion(q.x,q.y,q.z,q.w));
+      this.heldOffset=new THREE.Vector3(p.x,p.y,p.z).sub(this.clawPos).applyQuaternion(inverse);
+    }
+    if(target&&!this.held){
+      target.body.type=CANNON.Body.DYNAMIC;target.body.updateMassProperties();target.body.wakeUp();
+      await this.grip(GRIP_OPEN,220);if(!alive())return;
     }
     this.phase='lifting';this.status('들어 올리는 중');
     await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
@@ -567,6 +590,7 @@ export const Play3D = {
       this.grip(GRIP_REST,260);this.status('아쉽게 놓쳤어요');
       await this.pause(760);if(!alive())return;this.finish(false,target?.id);return;}
     if(slipped){
+      await this.grip(GRIP_OPEN,220);if(!alive())return;
       this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);
       if(!await this.settle(target))return;
       await this.pause(420);if(!alive())return;
@@ -574,10 +598,13 @@ export const Play3D = {
     }
     this.phase='carrying';this.status('배출구로 옮기는 중');
     // Align the prize center with the chute, then let travel sway settle.
-    const centerOffset = new THREE.Vector3(0,.09,0).applyQuaternion(this.heldQuat).add(this.heldOffset);
+    const centerOffset = new THREE.Vector3(0,.09,0).applyQuaternion(this.heldQuat).add(this.heldOffset)
+      .applyAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
     await this.travel([CHUTE.x-centerOffset.x,REST_Y,CHUTE.z-centerOffset.z],1.25);if(!alive())return;
     await this.travel([this.position.x,this.position.y,this.position.z],.9);if(!alive())return;
-    this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
+    this.phase='releasing';this.status('인형을 내려놔요');
+    await this.grip(GRIP_OPEN,220);if(!alive())return;
+    this.releaseToy();haptic(35);
     if(!await this.settle(target))return;
     await this.pause(360);if(!alive())return;           // 자리 잡은 모습을 한 박자 보여준다
     const p=target.body.position;
@@ -666,6 +693,7 @@ export const Play3D = {
     this.delayResolve?.(false);this.delayResolve=null;
     this.tween?.resolve(false);this.tween=null;
     this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();
+    this.surfaceGrip?.dispose();this.surfaceGrip=null;this.pickCache=null;
     this.disposeObject(this.scene);this.disposeObject(this.pack);
     this.environment?.dispose();this.environment=null;
     this.renderer?.dispose();this.renderer?.forceContextLoss();
