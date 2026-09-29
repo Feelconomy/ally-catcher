@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
-import { clawContacts } from './claw-contact.js?v=157';
+import { clawContacts } from './claw-contact.js?v=158';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -139,6 +139,7 @@ export const Play3D = {
       ['ToyAcorn', 'acorn-plush.glb?v=1', null, -Math.PI / 2],
       ['ToyAutumn', 'autumn-plush.glb?v=1', null, -Math.PI / 2],
       ['ToySummerWoni', 'summerwoni-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyKori', 'kori-plush.glb?v=1', null, -Math.PI / 2],
     ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
     let completed = 0;
     const files = ['mint-machine.glb', ...specs.map(s => s[1])];
