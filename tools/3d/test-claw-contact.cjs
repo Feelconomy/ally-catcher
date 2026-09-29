@@ -21,23 +21,38 @@ const os=require('node:os');
    for(const radius of [.12,.24]){
     const toy=new THREE.Mesh(new THREE.SphereGeometry(radius,32,24),new THREE.MeshBasicMaterial());
     toy.position.set(.035,.70,0);
-    const contacts=clawContacts(g.claw,g.fingers,g.fingerAxes,toy,.55,-.24);
+    const contacts=clawContacts(g.claw,g.fingers,g.fingerAxes,toy,.55,-.42);
     g.claw.position.y=1+contacts.lift;
     g.fingers.forEach((f,i)=>f.setRotationFromAxisAngle(g.fingerAxes[i],contacts.limits[i]));
     g.claw.updateMatrixWorld(true);
     let inside=0;
-    g.fingers.forEach(f=>f.traverse(o=>{
+    const gaps=g.fingers.map(()=>Infinity);
+    g.fingers.forEach((f,fi)=>f.traverse(o=>{
      if(!o.isMesh)return;
      for(let i=0;i<o.geometry.attributes.position.count;i++){
       const p=new THREE.Vector3().fromBufferAttribute(o.geometry.attributes.position,i).applyMatrix4(o.matrixWorld);
       if(p.distanceTo(toy.position)<radius-.001)inside++;
      }
+     const positions=o.geometry.attributes.position,index=o.geometry.index;
+     for(let i=0;i<(index?.count??positions.count);i+=3){
+      const points=[0,1,2].map(j=>new THREE.Vector3().fromBufferAttribute(positions,index?index.getX(i+j):i+j).applyMatrix4(o.matrixWorld));
+      const nearest=new THREE.Triangle(...points).closestPointToPoint(toy.position,new THREE.Vector3());
+      gaps[fi]=Math.min(gaps[fi],nearest.distanceTo(toy.position)-radius);
+     }
     }));
-    results.push({...contacts,radius,inside});
+    results.push({...contacts,radius,inside,gaps});
     g.claw.position.y=1;g.fingers.forEach(f=>f.quaternion.identity());
     toy.geometry.dispose();toy.material.dispose();
    }
-   const empty=clawContacts(g.claw,g.fingers,g.fingerAxes,new THREE.Group(),.55,-.24);
+   const empty=clawContacts(g.claw,g.fingers,g.fingerAxes,new THREE.Group(),.55,-.42);
+   const base=new THREE.Mesh(new THREE.SphereGeometry(.12,32,24),new THREE.MeshBasicMaterial());
+   base.position.set(.035,.7,0);
+   const alone=clawContacts(g.claw,g.fingers,g.fingerAxes,base,.55,-.42);
+   const ear=new THREE.Mesh(new THREE.SphereGeometry(.009,16,12),base.material);
+   ear.position.set(.35,.05,.05);base.add(ear);
+   const withEar=clawContacts(g.claw,g.fingers,g.fingerAxes,base,.55,-.42);
+   if(Math.abs(alone.limits[0]-withEar.limits[0])>1e-5)throw new Error('Off-plane ear stopped a finger that cannot touch it');
+   base.geometry.dispose();ear.geometry.dispose();base.material.dispose();
    g.claw.position.copy(position);g.claw.quaternion.copy(quaternion);g.claw.updateMatrixWorld(true);
    window.clawSnapshot=()=>g.fingers.map(f=>{
     const meshes=[];f.traverse(o=>{if(o.isMesh)meshes.push([o.uuid,o.geometry.uuid,o.geometry.attributes.position.array.join(',')]);});
@@ -48,11 +63,14 @@ const os=require('node:os');
   });
   console.log(JSON.stringify(result));
   assert(result.results.every(r=>r.inside===0));
+  assert(result.results.every(r=>r.gaps.every((gap,i)=>r.limits[i]===-.42||Math.abs(gap)<.003)),'stopped fingers touch within .003 world units');
   assert(result.results[1].limits.some(v=>v>-.20),'large toy stops closing');
   assert(new Set(result.results[1].limits).size>1,'independent finger stops');
-  assert(result.empty.limits.every(v=>v===-.24),'empty claw closes normally');
+  assert(result.empty.limits.every(v=>v===-.42),'empty claw closes normally');
   await page.evaluate(()=>{
-   const g=Play3D,t=g.toys.reduce((a,b)=>a.body.position.y>b.body.position.y?a:b);
+   const g=Play3D,t=g.toys.find(t=>t.id==='pig')||g.toys[0];
+   t.body.position.set(0,1.4,0);t.body.quaternion.setFromEuler(.3,1.2,.8);t.body.sleep();
+   t.mesh.position.copy(t.body.position);t.mesh.quaternion.copy(t.body.quaternion);
    g.position.x=t.body.position.x;g.position.z=t.body.position.z;
    const random=Math.random;Math.random=()=>0;g.drop().finally(()=>Math.random=random);
   });

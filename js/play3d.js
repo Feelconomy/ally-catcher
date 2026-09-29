@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
-import { clawContacts } from './claw-contact.js';
+import { clawContacts } from './claw-contact.js?v=156';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -48,7 +48,7 @@ const REST_Y = 2.72;
 /* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
    것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
    실측: +0.55 = 팁 반경 0.36(활짝) · 0 = 0.18(기본) · -0.12 = 0.13(움켜쥠) · -0.42 = 0.01(맞닿음) */
-const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_HOLD = -.24, GRIP_SHUT = -.42;
+const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_SHUT = -.42;
 const clamp = THREE.MathUtils.clamp;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -558,7 +558,7 @@ export const Play3D = {
       const position=this.claw.position.clone(),quaternion=this.claw.quaternion.clone();
       this.claw.position.set(this.position.x,down,this.position.z);
       this.claw.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
-      const contacts=clawContacts(this.claw,this.fingers,this.fingerAxes,target.mesh,GRIP_OPEN,GRIP_HOLD);
+      const contacts=clawContacts(this.claw,this.fingers,this.fingerAxes,target.mesh,GRIP_OPEN,GRIP_SHUT);
       down+=contacts.lift;this.contactLimits=contacts.limits;
       this.claw.position.copy(position);this.claw.quaternion.copy(quaternion);this.claw.updateMatrixWorld(true);
     }
@@ -568,7 +568,7 @@ export const Play3D = {
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
     // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
-    await this.grip(target?GRIP_HOLD:GRIP_SHUT,560);if(!alive())return;
+    await this.grip(GRIP_SHUT,560);if(!alive())return;
     await this.pause(160);if(!alive())return;
     if(target&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();

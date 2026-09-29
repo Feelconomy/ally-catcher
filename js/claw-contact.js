@@ -1,16 +1,5 @@
 import * as THREE from 'three';
 
-function clipWidth(poly, limit, sign) {
-  const out = [];
-  for (let i = 0; i < poly.length; i++) {
-    const a = poly[i], b = poly[(i + 1) % poly.length];
-    const da = sign * (a.z - limit), db = sign * (b.z - limit);
-    if (da <= 0) out.push(a);
-    if ((da <= 0) !== (db <= 0)) out.push(a.clone().lerp(b, da / (da - db)));
-  }
-  return out;
-}
-
 // Calculate hinge stops only. Never modify the GLB's geometry or finger scale.
 export function clawContacts(claw, fingers, axes, toy, open, closed) {
   claw.updateWorldMatrix(true, true); toy.updateWorldMatrix(true, true);
@@ -23,18 +12,21 @@ export function clawContacts(claw, fingers, axes, toy, open, closed) {
     for(let i=0;i<(index?.count ?? p.count);i+=3)
       triangles.push([0,1,2].map(j=>vertices[index?index.getX(i+j):i+j]));
   });
-  const step=.008;
+  const step=.01;
   const probes = fingers.map((finger,i) => {
     const radial=new THREE.Vector3(axes[i].z,0,-axes[i].x), envelope=new Map(), points=[];
     for(const triangle of triangles){
-      let poly=triangle.map(p=>new THREE.Vector3(p.dot(radial),p.y,p.dot(axes[i])));
-      poly=clipWidth(clipWidth(poly,.055,1),-.055,-1);
-      if(!poly.length)continue;
-      const radius=Math.max(...poly.map(p=>p.x));
-      if(radius<=0)continue;
-      const low=Math.floor((Math.min(...poly.map(p=>p.y))-.006)/step);
-      const high=Math.floor((Math.max(...poly.map(p=>p.y))+.006)/step);
-      for(let j=low;j<=high;j++)envelope.set(j,Math.max(envelope.get(j)||0,radius+.006));
+      const poly=triangle.map(p=>new THREE.Vector3(p.dot(radial),p.y,p.dot(axes[i])));
+      if(Math.max(...poly.map(p=>p.x))<=0)continue;
+      const low=Math.floor(Math.min(...poly.map(p=>p.y))/step);
+      const high=Math.floor(Math.max(...poly.map(p=>p.y))/step);
+      const left=Math.max(-6,Math.floor(Math.min(...poly.map(p=>p.z))/step));
+      const right=Math.min(6,Math.floor(Math.max(...poly.map(p=>p.z))/step));
+      for(let y=low;y<=high;y++)for(let z=left;z<=right;z++){
+        const key=y*32+z;
+        if(!envelope.has(key))envelope.set(key,[]);
+        envelope.get(key).push(poly);
+      }
     }
     const local=finger.matrixWorld.clone().invert();
     finger.traverse(mesh=>{
@@ -54,8 +46,19 @@ export function clawContacts(claw, fingers, axes, toy, open, closed) {
     const q=new THREE.Quaternion().setFromAxisAngle(axes[i],angle), p=new THREE.Vector3();
     return probes[i].points.some(point=>{
       p.copy(point).applyQuaternion(q).add(fingers[i].position);
-      const boundary=probes[i].envelope.get(Math.floor((p.y+lift)/step));
-      return boundary!==undefined && p.dot(probes[i].radial)<boundary;
+      const y=p.y+lift,z=p.dot(axes[i]),radius=p.dot(probes[i].radial);
+      const candidates=probes[i].envelope.get(Math.floor(y/step)*32+Math.floor(z/step))||[];
+      // Exact radial intersection at this probe's height AND lateral position.
+      // Grid cells only accelerate lookup; they do not inflate the surface.
+      return candidates.some(([a,b,c])=>{
+        const by=b.y-a.y,bz=b.z-a.z,cy=c.y-a.y,cz=c.z-a.z;
+        const det=by*cz-bz*cy;
+        if(Math.abs(det)<1e-12)return false;
+        const u=((y-a.y)*cz-(z-a.z)*cy)/det;
+        const v=(by*(z-a.z)-bz*(y-a.y))/det;
+        if(u<0||v<0||u+v>1)return false;
+        return radius<a.x+u*(b.x-a.x)+v*(c.x-a.x)+.0008;
+      });
     });
   };
   // If even the open claw overlaps, stop its descent higher, not stretch it.
@@ -65,7 +68,14 @@ export function clawContacts(claw, fingers, axes, toy, open, closed) {
     let safe=open;
     for(let angle=open-.01;angle>=closed-.01;angle-=.01){
       const next=Math.max(closed,angle);
-      if(overlaps(i,next,lift))break;
+      if(overlaps(i,next,lift)){
+        let blocked=next;
+        for(let j=0;j<8;j++){
+          const mid=(safe+blocked)/2;
+          if(overlaps(i,mid,lift))blocked=mid;else safe=mid;
+        }
+        break;
+      }
       safe=next;
       if(next===closed)break;
     }
