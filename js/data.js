@@ -48,6 +48,7 @@ const DOLLS = {
     { id: 'bearpig',    name: '곰돌이 단지', grade: 'R',  points: 120, bg: '#F7ECE4', rate: 2.4, model3d: 'ToyBearPig' },
     { id: 'hanbokdali', name: '한복 달리',  grade: 'R',  points: 120, bg: '#EAF0F7', rate: 2.4, model3d: 'ToyHanbokDali' },
     { id: 'kori',       name: '코리',       grade: 'R',  points: 120, bg: '#E7F1FA', rate: 2.4, model3d: 'ToyKori' },
+    { id: 'frogdali',   name: '개구리 달리', grade: 'R',  points: 120, bg: '#EAF5E2', rate: 2.4 },
   ]),
 };
 
