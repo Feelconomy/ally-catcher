@@ -142,6 +142,12 @@ const Play = {
     this.stickActive = false;
     this.targetI = -2;          // -1(없음)과도 달라야 첫 그리기가 돈다
 
+    this.layoutDolls(machine);
+    this.render();
+  },
+
+  /* 인형통 바닥을 깐다. start() 와 rearrange() 가 같이 쓴다. */
+  layoutDolls(machine) {
     /* Keep each remaining doll in its saved slot until the machine is empty. */
     const { dolls: stock, refilled } = Store.machineStock(machine, BED.length);
     this.refilled = refilled;
@@ -167,7 +173,19 @@ const Play = {
         taken: false,
       };
     }));
+  },
+
+  /* 인형통을 다시 채우고 새로 깐다(3D 의 재배치와 같은 동작). 기계 구성에
+     인형을 새로 넣어도 이미 채워진 인형통은 비워질 때까지 그대로라, 손으로
+     새로 까는 길이 없으면 새 인형이 영영 안 보인다.
+     남은 시간은 건드리지 않는다 — 티켓은 이미 썼다. */
+  rearrange() {
+    if (this.busy || this.over || this.dropped) return;
+    Store.refillMachine(this.machine, BED.length);
+    this.layoutDolls(this.machine);
     this.render();
+    toast('인형을 다시 채웠어요', { mini: true });
+    haptic(20);
   },
 
   stop() {
@@ -287,6 +305,7 @@ const Play = {
         <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 20)}</button>
       </div>
       <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
+      <button class="restock-btn" data-act="restock" type="button">인형 재배치</button>
     </div>`;
   },
 
@@ -322,6 +341,9 @@ const Play = {
           </button>
           <span class="cap">뽑기 시작!</span>
         </div>
+      </div>
+      <div class="restock-row">
+        <button class="restock-btn" data-act="restock" type="button">인형 재배치</button>
       </div>
       <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. -->
       <div class="tipbar odds" id="target">
@@ -396,7 +418,7 @@ const Play = {
 
   wire() {
     const root = screenEl();
-    bind(root, { exit: () => this.confirmExit(), drop: () => this.drop(), wallet: () => go('mission') });
+    bind(root, { exit: () => this.confirmExit(), drop: () => this.drop(), wallet: () => go('mission'), restock: () => this.rearrange() });
     const pressed = new Set();
     let pointer = null;
     this.input = 0;

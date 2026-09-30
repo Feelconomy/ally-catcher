@@ -1662,3 +1662,16 @@ a:hover { color: var(--green-deep); }
 /* 관리자 인형 편집 — 3D 모양 고르기. 칸이 8개라 줄바꿈으로 흘린다. */
 .shape-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .shape-pick .chip { flex: 0 0 auto; }
+
+/* 2D 인형 재배치 — 3D 의 재배치 버튼과 같은 역할. 드롭 버튼과 경쟁하지 않게
+   조작대 아래 가운데에 작은 알약으로 둔다. */
+.restock-row { margin-top: 10px; text-align: center; }
+.restock-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
+  padding: 7px 15px; border: 0; border-radius: 999px; font-size: 12px; font-weight: 700;
+  letter-spacing: -.01em; cursor: pointer; background: rgba(255,255,255,.16); color: rgba(255,255,255,.9); }
+.restock-btn::before { content: '↻'; font-size: 13px; line-height: 1; }
+.restock-btn:hover { background: rgba(255,255,255,.26); color: #fff; }
+.restock-btn:active { transform: scale(.96); }
+.screen.arcade .restock-btn { background: #ffffffcc; color: var(--green-deep); box-shadow: var(--shadow-card); }
+.screen.arcade .restock-btn:hover { background: #fff; }
+.controls > .restock-btn { display: block; margin-left: auto; margin-right: auto; }
