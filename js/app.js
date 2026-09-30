@@ -48,6 +48,8 @@ function render(route, arg) {
   App.route = route;
   App.arg = arg;
   Screens[route](arg);
+  // 3D 로 놀 사람에게는 무거운 배경을 미리 받아 둔다 (한가할 때 한 번만)
+  if ((route === 'home' || route === 'machine') && availablePlayMode(Store.state.settings.skin || Store.state.admin.skin) === 'green3d') warmGreen3D();
   screenEl().scrollTop = 0;
 }
 
