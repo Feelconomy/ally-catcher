@@ -38,6 +38,7 @@ async function loadModel(file) {
   });
   return {scene};
 }
+import { clawContacts } from './claw-contact.js?v=173';
 import { OrbitControls } from '../vendor/OrbitControls.js';
 import * as CANNON from '../vendor/cannon-es.js';
 
@@ -598,22 +599,28 @@ export const Play3D = {
        팁이 인형 옆을 지나갈 수 없을 만큼 인형이 굵으면 아예 못 쥔다 —
        그때는 허공에서 오므리고 빈손으로 올라온다. */
     const open = this.tipAt(GRIP_OPEN);
-    let down = .46, holdAngle = GRIP_SHUT, graspable = false;
-    this.contactLimits = null;                       // 표면에서 멈추지 않는다
+    let down = .46, graspable = false;
+    this.contactLimits = null;
     if (target) {
       const box = new THREE.Box3().setFromObject(target.mesh, true);
       const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
-      /* 쥘 수 있느냐는 물리 몸통으로 판단한다. 시각 박스는 귀·팔까지 포함해
-         실제로 쥐는 덩어리보다 훨씬 굵어(.34 대 .21), 그걸로 재면 멀쩡한
-         인형까지 '못 쥠'이 된다. 얼마나 파고들지는 둘 중 작은 쪽으로 정한다. */
+      /* 쥘 수 있느냐는 물리 몸통으로 본다. 시각 박스는 귀·팔까지 포함해 실제로
+         쥐는 덩어리보다 훨씬 굵어(.34 대 .21), 그걸로 재면 멀쩡한 인형까지
+         '못 쥠'이 된다. */
       const bodyR = target.body.shapes.reduce((m, sh) => Math.max(m, sh.radius || 0), 0) || .2;
-      const half = Math.min(bodyR, Math.max(size.x, size.z) / 2);
-      graspable = bodyR < open.r - .02;              // 활짝 벌린 팁이 옆을 지나가나
+      graspable = bodyR < open.r - .02;
       if (graspable) {
-        // 팁을 인형 중심보다 조금 아래로 (바닥은 뚫지 않게 막는다)
+        /* 퍼올리려면 팁이 인형의 제일 굵은 데보다 아래로 내려가야 한다.
+           일단 그 깊이를 노리고, clawContacts 가 '활짝 편 집게가 인형을 뚫지
+           않는 가장 깊은 자리'까지만 되올린다(lift). 그 뒤 손가락은 각자
+           표면에 닿는 순간 멈춘다(limits) — 감싸 쥐되 뚫지 않는다. */
         down = Math.max(.34, mid.y - size.y * .12 - open.y);
-        // 솜을 눌러 쥔 만큼 팁이 인형 폭 안으로 파고든 각도까지 오므린다
-        holdAngle = this.angleForTipRadius(Math.max(.05, half - .055));
+        const pos = this.claw.position.clone(), quat = this.claw.quaternion.clone();
+        this.claw.position.set(this.position.x, down, this.position.z);
+        this.claw.quaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
+        const contacts = clawContacts(this.claw, this.fingers, this.fingerAxes, target.mesh, GRIP_OPEN, GRIP_SHUT);
+        down += contacts.lift; this.contactLimits = contacts.limits;
+        this.claw.position.copy(pos); this.claw.quaternion.copy(quat); this.claw.updateMatrixWorld(true);
       }
     }
     if (target && !graspable) { won = false; slipped = false; }
@@ -623,7 +630,7 @@ export const Play3D = {
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
     // 쥘 수 있으면 인형 폭 안쪽까지, 아니면 허공에서 끝까지 오므린다
-    await this.grip(graspable?holdAngle:GRIP_SHUT,560);if(!alive())return;
+    await this.grip(GRIP_SHUT,560);if(!alive())return;   // 표면에 닿는 손가락은 limits 에서 멈춘다
     await this.pause(160);if(!alive())return;
     if(target&&graspable&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
