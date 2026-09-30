@@ -43,8 +43,8 @@ const DOLLS = {
     { id: 'summer',  name: '수박 원이',      grade: 'R',  points: 120, bg: '#FFF0EC', rate: 2.6 },
     { id: 'autumn',  name: '단풍 원이',      grade: 'R',  points: 120, bg: '#FBEFE2', rate: 2.4, model3d: 'ToyAutumn' },
     { id: 'acorn',   name: '도토리 원이',    grade: 'R',  points: 120, bg: '#F5EEE2', rate: 2.4, model3d: 'ToyAcorn' },
-    { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4 },
-    { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2 },
+    { id: 'ski',     name: '눈싸움 원이',    grade: 'R',  points: 120, bg: '#E8F1FB', rate: 2.4, model3d: 'ToySki' },
+    { id: 'santa',   name: '산타 원이',      grade: 'R',  points: 120, bg: '#FBE9E9', rate: 2.2, model3d: 'ToySanta' },
     { id: 'pig',     name: '단지',        grade: 'R',  points: 120, bg: '#FDECF1', rate: 2.4 },
     { id: 'dali',    name: '달리',        grade: 'R',  points: 120, bg: '#F6EEDC', rate: 2.4 },
     // 3D 모델이 따로 있는 인형은 model3d 로 짝을 지어 준다 (없으면 id 로 짐작 → 곰)
@@ -83,6 +83,7 @@ const TOY_SHAPES = {
   ToyPig: '단지', ToyDali: '달리', ToyBearPig: '곰돌이단지', ToyHanbokPig: '한복단지',
   ToyHanbokOlly: '한복올리', ToyHanbokDali: '한복달리', ToyAcorn: '도토리올리',
   ToyAutumn: '단풍올리', ToySummerWoni: '여름원이', ToyKori: '코리',
+  ToySki: '눈싸움올리', ToySanta: '산타올리',
   ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
