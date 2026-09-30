@@ -2,6 +2,11 @@
    Claude Design spec's `renderVals()` block; grades and point values come from
    the doll-detail and exchange screens (SR 400P, 레어 +120P). */
 
+/* 인형 그림 주소에 붙이는 판 번호. 그림을 같은 파일명으로 갈아끼우면 폰이
+   캐시에 물고 있던 옛 그림을 계속 보여준다 — 나머지 파일들과 같은 방식으로
+   판 번호를 붙여 둔다. 그림을 교체할 때마다 올린다. */
+const ART_V = '?a=2';
+
 const DOLLS = {
   bear:    { id: 'bear',    name: '말랑 곰돌이', grade: 'R',  points: 120, bg: '#FFF3DC', rate: 2.4 },
   dog:     { id: 'dog',     name: '쫀득 푸딩독', grade: 'N',  points: 60,  bg: '#FFF8E3', rate: 18 },
@@ -15,19 +20,19 @@ const DOLLS = {
   olly: {
     id: 'olly', name: '말랑 올리', grade: 'SR', points: 400, bg: '#EAF7DE', rate: 1.8,
     art: {
-      idle:    'dolls/olly-idle.png',     // 기계 안에 놓여 있을 때
-      grabbed: 'dolls/olly-grabbed.png',  // 집게에 잡혔을 때
-      drop:    'dolls/olly-drop.png',     // 미끄러지거나 배출구로 떨어질 때
-      win:     'dolls/olly-win.png',      // 성공적으로 뽑았을 때
+      idle:    'dolls/olly-idle.png' + ART_V,     // 기계 안에 놓여 있을 때
+      grabbed: 'dolls/olly-grabbed.png' + ART_V,  // 집게에 잡혔을 때
+      drop:    'dolls/olly-drop.png' + ART_V,     // 미끄러지거나 배출구로 떨어질 때
+      win:     'dolls/olly-win.png' + ART_V,      // 성공적으로 뽑았을 때
     },
   },
   bunny: {
     id: 'bunny', name: '토끼모자 올리', grade: 'SR', points: 400, bg: '#F2F7E6', rate: 2.0,
     art: {
-      idle:    'dolls/bunny-idle.png',
-      grabbed: 'dolls/bunny-grabbed.png',
-      drop:    'dolls/bunny-drop.png',
-      win:     'dolls/bunny-win.png',
+      idle:    'dolls/bunny-idle.png' + ART_V,
+      grabbed: 'dolls/bunny-grabbed.png' + ART_V,
+      drop:    'dolls/bunny-drop.png' + ART_V,
+      win:     'dolls/bunny-win.png' + ART_V,
     },
   },
   ...poseDolls([
@@ -58,10 +63,10 @@ function poseDolls(list) {
   for (const d of list) {
     out[d.id] = Object.assign({}, d, {
       art: {
-        idle:    `dolls/${d.id}-idle.png`,
-        grabbed: `dolls/${d.id}-grabbed.png`,
-        drop:    `dolls/${d.id}-drop.png`,
-        win:     `dolls/${d.id}-win.png`,
+        idle:    `dolls/${d.id}-idle.png${ART_V}`,
+        grabbed: `dolls/${d.id}-grabbed.png${ART_V}`,
+        drop:    `dolls/${d.id}-drop.png${ART_V}`,
+        win:     `dolls/${d.id}-win.png${ART_V}`,
       },
     });
   }
@@ -105,7 +110,8 @@ const DOLL_BASE = JSON.parse(JSON.stringify(DOLLS));
 function baseArt(id) {
   const b = DOLL_BASE[id];
   if (b && b.art) return Object.assign({}, b.art);
-  return { idle: `dolls/${id}.svg`, grabbed: `dolls/${id}.svg`, drop: `dolls/${id}.svg`, win: `dolls/${id}.svg` };
+  const svg = `dolls/${id}.svg${ART_V}`;
+  return { idle: svg, grabbed: svg, drop: svg, win: svg };
 }
 
 // 프로필 대표 이미지로 쓸 수 없는 옛 인형들 (신규 올리 시리즈만 허용)
