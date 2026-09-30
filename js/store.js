@@ -8,6 +8,7 @@ const DEFAULT_STATE = {
   onboarded: false,
   signupBonus: false,     // 가입 축하 티켓 지급 여부 (1회만)
   account: null,          // { provider, nickname, avatar }
+  guest: false,           // 둘러보기로 들어온 상태 — 새로고침해도 유지돼야 한다
   terms: { service: false, privacy: false, age: false, marketing: false },
   tickets: 0,
   points: 0,

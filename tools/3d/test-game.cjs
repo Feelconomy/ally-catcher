@@ -12,7 +12,7 @@ const os = require('node:os');
   await page.route('https://**/*',r=>r.abort());
   await page.goto(process.env.TEST_URL || 'http://127.0.0.1:4173/#home');
   const start = async () => {
-   await page.evaluate(()=>{App.guest=true;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
+   await page.evaluate(()=>{Store.state.guest=true;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
    await page.waitForFunction(()=>window.Play3D?.phase==='aim'&&Play3D.active);
   };
   for(const [width,height] of [[390,844],[320,568],[1440,1000]]) {

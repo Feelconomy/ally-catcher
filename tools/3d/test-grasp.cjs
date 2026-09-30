@@ -10,7 +10,7 @@ const os=require('node:os');
   await page.route('https://**/*',r=>r.abort());
   await page.goto('http://127.0.0.1:4176/#home');
   for(const mode of ['classic','arcade','green3d']) {
-   await page.evaluate(mode=>{App.guest=true;Store.state.coachDone=true;Store.state.settings.skin=mode;render('play',MACHINES[0].id);},mode);
+   await page.evaluate(mode=>{Store.state.guest=true;Store.state.coachDone=true;Store.state.settings.skin=mode;render('play',MACHINES[0].id);},mode);
    if(mode==='green3d') {
     await page.waitForFunction(()=>window.Play3D?.active&&Play3D.phase==='aim');
     await page.evaluate(()=>{

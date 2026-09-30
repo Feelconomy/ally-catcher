@@ -11,7 +11,7 @@ const os=require('node:os');
   await page.evaluate(()=>{Store.state.coachDone=true;});
   for(const width of [320,390,1200]){
    await page.setViewportSize({width,height:850});
-   await page.evaluate(()=>{App.guest=true;render('machine',MACHINES[0].id);});
+   await page.evaluate(()=>{Store.state.guest=true;render('machine',MACHINES[0].id);});
    assert.deepEqual(await page.locator('[data-act="mode"]').allTextContents(),['기본','그린','그린 3D']);
    assert(await page.evaluate(()=>Array.from(document.querySelectorAll('.md-seg button')).every(b=>{const r=b.getBoundingClientRect();return r.left>=0&&r.right<=innerWidth;})));
    await page.screenshot({path:path.join(os.tmpdir(),`ally-modes-${width}.png`)});

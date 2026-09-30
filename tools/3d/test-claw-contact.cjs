@@ -9,7 +9,7 @@ const os=require('node:os');
   page.on('pageerror',e=>errors.push(e.message));
   await page.route('https://**/*',r=>r.abort());
   await page.goto(process.env.TEST_URL||'http://127.0.0.1:4177/#home');
-  await page.evaluate(()=>{App.guest=true;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
+  await page.evaluate(()=>{Store.state.guest=true;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
   await page.waitForFunction(()=>window.Play3D?.phase==='aim');
   const result=await page.evaluate(async()=>{
    const THREE=await import('/vendor/three.module.js');

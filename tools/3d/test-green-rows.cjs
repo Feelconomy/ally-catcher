@@ -10,7 +10,7 @@ const path=require('node:path');
   await page.route('https://**/*',r=>r.abort());
   await page.goto(process.env.TEST_URL||'http://127.0.0.1:4178/#home');
   const result=await page.evaluate(()=>{
-   App.guest=true;Store.state.coachDone=true;
+   Store.state.guest=true;Store.state.coachDone=true;
    const m=MACHINES[0];
    Store.state.settings.skin='classic';
    if(modePicker().includes('data-s="classic"')||adminSkinPicker().includes('data-s="classic"'))throw Error('Classic button visible');
@@ -37,7 +37,14 @@ const path=require('node:path');
   await page.evaluate(()=>{Math.random=()=>.5;Store.state.tickets=10;go('machine',MACHINES[0].id);});
   await page.waitForFunction(()=>App.route==='machine');
   assert.equal(await page.locator('.md-mode').count(),0);
-  assert.equal(await page.locator('.md-activity').innerText(),'🧑‍🧑‍🧒‍🧒\n6명의 친구가 인형을 뽑고 있어요!');
+  assert.equal(await page.locator('.md-activity-copy').innerText(),'지금 함께 뽑는 중');
+  assert.equal(await page.locator('.md-activity-count strong').innerText(),'6');
+  for(const width of [320,390,1440]){
+   await page.setViewportSize({width,height:844});
+   assert(await page.locator('.md-activity').evaluate(el=>el.scrollWidth<=el.clientWidth));
+  }
+  await page.setViewportSize({width:390,height:844});
+  await page.screenshot({path:path.join(os.tmpdir(),'ally-activity-card.png')});
   await page.locator('[data-act="play"]').click();
   await page.getByRole('heading',{name:'모드를 선택해주세요!'}).waitFor();
   assert.equal(await page.evaluate(()=>Store.state.tickets),10);
@@ -64,7 +71,7 @@ const path=require('node:path');
   await fallback.route('https://**/*',r=>r.abort());
   await fallback.route('**/js/play3d.js*',r=>r.abort());
   await fallback.goto(process.env.TEST_URL||'http://127.0.0.1:4178/#home');
-  await fallback.evaluate(()=>{App.guest=true;Store.state.coachDone=true;Store.state.tickets=7;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
+  await fallback.evaluate(()=>{Store.state.guest=true;Store.state.coachDone=true;Store.state.tickets=7;Store.state.settings.skin='green3d';render('play',MACHINES[0].id);});
   await fallback.getByRole('button',{name:'기본 모드로 계속',exact:true}).click();
   assert.deepEqual(await fallback.evaluate(()=>({skin:Play.skinId,saved:Store.state.settings.skin,tickets:Store.state.tickets,machine:Play.machine.id===MACHINES[0].id})),{skin:'arcade',saved:'arcade',tickets:7,machine:true});
   await fallback.close();

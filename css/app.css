@@ -407,11 +407,13 @@ a:hover { color: var(--green-deep); }
 .adm-in.num { flex: 0 0 56px; text-align: center; }
 
 /* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
-.md-activity { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 14px; padding: 14px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); font-size: 13px; font-weight: 700; line-height: 1.5; }
-.md-activity strong { color: var(--green); }
+.md-activity { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 16px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); font-size: 13px; font-weight: 700; line-height: 1.5; }
+.md-activity-icon { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 50%; background: #eef8f2; color: #168450; }
+.md-activity-copy { flex: 1; min-width: 0; }
+.md-activity-count { display: flex; align-items: baseline; justify-content: center; gap: 3px; flex: 0 0 58px; padding: 5px 8px; border-radius: 8px; background: #e8f7ee; color: #168450; font-size: 12px; }
+.md-activity-count strong { color: var(--green); font-size: 20px; line-height: 1.4; font-variant-numeric: tabular-nums; }
 .mode-dialog-close { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 36px; height: 36px; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
 .mode-dialog-close:hover { background: var(--surface-sunken); border-radius: 8px; }
-.md-activity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .md-mode {
   margin-top: 14px; padding: 12px 14px; border-radius: var(--r-xl); background: var(--surface);
   box-shadow: var(--shadow-card);

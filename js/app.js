@@ -41,7 +41,7 @@ function render(route, arg) {
 
   if (!Screens[route] && route !== 'play') route = 'home';
 
-  if (App.guarded.includes(route) && !Store.state.account && !App.guest) {
+  if (App.guarded.includes(route) && !Store.state.account && !Store.state.guest) {
     route = 'login'; arg = null;
   }
 

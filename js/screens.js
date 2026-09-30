@@ -77,7 +77,16 @@ const Screens = {
         if (p === '카카오' && window.Auth && Auth.enabled) { Auth.loginKakao(); return; }
         App.pendingProvider = p; Sheets.terms();
       },
-      peek: () => { App.guest = true; go('home'); },
+      /* 둘러보기도 저장해 둔다. 전에는 App.guest 가 메모리에만 있어서 새로고침
+         한 번이면 날아갔고, 그 뒤로는 플레이·미션 같은 화면이 전부 로그인으로
+         튕겼다. 기본 티켓도 가입과 똑같이 준다(기기당 1회). */
+      peek: () => {
+        Store.state.guest = true;
+        const got = Store.claimSignupBonus();
+        Store.save();
+        go('home');
+        if (got) toast(`둘러보기 티켓 ${got}장을 드렸어요`, { tone: 'ok' });
+      },
     });
   },
 
@@ -384,7 +393,7 @@ const Screens = {
             <div class="div"></div>
             <div class="st"><div class="n" style="font-size:17px;color:var(--green)">+${m.reward}P</div><div class="l">성공 시 적립</div></div>
           </div>
-          <div class="md-activity"><span aria-hidden="true">🧑‍🧑‍🧒‍🧒</span><span><strong>${Math.floor(Math.random()*10)+1}</strong>명의 친구가 인형을 뽑고 있어요!</span></div>
+          <div class="md-activity"><span class="md-activity-icon" aria-hidden="true">${icon('personPlus',22)}</span><span class="md-activity-copy">지금 함께 뽑는 중</span><span class="md-activity-count"><strong>${Math.floor(Math.random()*10)+1}</strong><span>명</span></span></div>
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
           <div class="doll-strip">
             ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
