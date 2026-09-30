@@ -51,7 +51,8 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
-    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, skin: 'arcade' }, (saved && saved.admin) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, customMachines: {}, skin: 'arcade' }, (saved && saved.admin) || {});
+    this.state.admin.customMachines = this.state.admin.customMachines || {};
     // 마이그레이션: 이 플래그가 생기기 전에 이미 가입(onboarded)한 사용자는
     // 보너스를 받은 것으로 간주해, 재접속 때 소급 지급/토스트가 뜨지 않게 한다.
     if (saved && saved.onboarded && saved.signupBonus === undefined) {
@@ -87,10 +88,26 @@ const Store = {
       // 바꾼 포즈만 저장돼 있어서 나머지는 원래 그림으로 채운다
       if (art && Object.keys(art).length) DOLLS[id].art = Object.assign(baseArt(id), art);
     }
+    /* 기계도 매번 원본에서 다시 세우고 수정분을 얹는다(인형과 같은 방식).
+       객체는 id 가 같으면 재사용한다 — 플레이 중인 화면이 기계 객체를 들고
+       있어서, 새로 만들어 끼우면 그 참조가 끊긴다. */
+    const kept = new Map(MACHINES.map(m => [m.id, m]));
+    const list = [];
+    const put = src => {
+      const m = kept.get(src.id) || {};
+      for (const k of Object.keys(m)) delete m[k];
+      Object.assign(m, JSON.parse(JSON.stringify(src)));
+      list.push(m);
+    };
+    MACHINE_BASE.forEach(put);
+    for (const id in (a.customMachines || {})) put(a.customMachines[id]);
     for (const id in a.machines) {
-      const m = MACHINES.find(x => x.id === id);
-      if (m) Object.assign(m, a.machines[id]);
+      const m = list.find(x => x.id === id);
+      if (!m) continue;
+      const { deleted, ...rest } = a.machines[id];
+      if (deleted) list.splice(list.indexOf(m), 1); else Object.assign(m, rest);
     }
+    MACHINES.length = 0; MACHINES.push(...list);
     // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
     DOLL_IDS.length = 0;
     DOLL_IDS.push.apply(DOLL_IDS, Object.keys(DOLLS));
@@ -141,6 +158,26 @@ const Store = {
     if (before) this.state.admin.custom[doll.id] = before;
     else delete this.state.admin.custom[doll.id];
     return false;
+  },
+
+  /** 관리자가 추가한 기계. 실패하면 false (보통 localStorage 용량 초과). */
+  addCustomMachine(machine) {
+    const bag = this.state.admin.customMachines = this.state.admin.customMachines || {};
+    const before = bag[machine.id];
+    bag[machine.id] = machine;
+    if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
+    if (before) bag[machine.id] = before; else delete bag[machine.id];
+    return false;
+  },
+
+  /** 기계 삭제 — 관리자가 추가한 건 지우고, 기본 기계는 숨김 표시만 남긴다. */
+  removeMachine(id) {
+    const bag = this.state.admin.customMachines = this.state.admin.customMachines || {};
+    if (bag[id]) delete bag[id];
+    else (this.state.admin.machines[id] = this.state.admin.machines[id] || {}).deleted = true;
+    delete this.state.stock[id];
+    for (const k of Object.keys(this.state.layouts || {})) if (k.startsWith(id + ':')) delete this.state.layouts[k];
+    this.applyAdmin(); this.pushAdmin();
   },
 
   /** 인형 삭제 — 기계 구성에서 빼고, 보관함·인형통에서도 정리된다(prune).

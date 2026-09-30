@@ -500,15 +500,26 @@ const Sheets = {
   },
 
   /* --- 관리자: 기계 편집 -------------------------------------------------- */
+  /* mid 가 없으면 새 기계를 만든다. */
   adminMachine(mid) {
-    const m = MACHINES.find(x => x.id === mid);
+    const custom = !mid;
+    const m = custom
+      ? { id: 'm' + Date.now().toString(36), name: '', short: '', blurb: '',
+          tag: '신규', tagClass: 'badge--new', cost: 2, difficulty: '보통', baseRate: 38,
+          grip: '보통', bg: '#EAF7DE', hero: null, contents: [], pool: [], reward: 120, open: true }
+      : MACHINES.find(x => x.id === mid);
     const picked = new Set(m.pool);
+    const builtin = !custom && MACHINE_BASE.some(b => b.id === mid);
 
     sheet(`
-      <h3>기계 설정</h3>
+      <h3>${custom ? '기계 추가' : '기계 설정'}</h3>
       <label class="field" style="margin-top:16px">
         <span class="lbl">이름</span>
-        <span class="box"><input id="mn" type="text" maxlength="20" value="${esc(m.name)}"></span>
+        <span class="box"><input id="mn" type="text" maxlength="20" value="${esc(m.name)}" placeholder="기계 이름"></span>
+      </label>
+      <label class="field" style="margin-top:12px">
+        <span class="lbl">설명</span>
+        <span class="box"><textarea id="mb" rows="3" maxlength="120" placeholder="기계 상세에 보이는 소개 문구">${esc(m.blurb || '')}</textarea></span>
       </label>
 
       <div class="entry-calc" style="margin-top:14px">
@@ -530,8 +541,9 @@ const Sheets = {
         </button>`).join('')}
       </div>
 
-      <button class="btn btn--primary" style="margin-top:18px" data-act="save">저장</button>
-      <button class="btn md btn--text" style="margin-top:4px" data-act="empty">인형통 비우고 새로 채우기</button>`,
+      <button class="btn btn--primary" style="margin-top:18px" data-act="save">${custom ? '추가하기' : '저장'}</button>
+      ${custom ? '' : `<button class="btn md btn--text" style="margin-top:4px" data-act="empty">인형통 비우고 새로 채우기</button>
+      <button class="btn md btn--text" style="margin-top:2px;color:var(--danger)" data-act="del">이 기계 삭제</button>`}`,
       (node, close) => {
         let open = !!m.open;
         const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
@@ -548,18 +560,29 @@ const Sheets = {
             delete Store.state.stock[mid]; Store.save();
             close(); Screens.admin(); toast('다음 입장 때 새로 채워져요', { tone: 'ok' });
           },
+          del: () => confirmDelete({ name: m.name }, () => {
+            Store.removeMachine(m.id);
+            close(); Screens.admin();
+            toast(builtin ? '기계를 숨겼어요' : '기계를 지웠어요', { mini: true });
+          }),
           save: () => {
             const name = $('#mn', node).value.trim();
             if (!name) return toast('이름을 입력해 주세요', { tone: 'error' });
             if (!picked.size) return toast('인형을 한 종류 이상 고르세요', { tone: 'error' });
             const pool = Array.from(picked);
-            Store.setAdmin('machines', mid, {
+            const patch = {
               name, open,
+              short: name.length > 8 ? name.slice(0, 8) : name,
+              blurb: $('#mb', node).value.trim(),
               cost: num($('#mc', node), 99),
               baseRate: num($('#mr', node), 100),
               pool, contents: pool,
               hero: pool.includes(m.hero) ? m.hero : pool[0],
-            });
+            };
+            if (custom) {
+              if (!Store.addCustomMachine(Object.assign({}, m, patch)))
+                return toast('저장 공간이 부족해요', { tone: 'error' });
+            } else Store.setAdmin('machines', mid, patch);
             delete Store.state.stock[mid];   // 구성이 바뀌었으니 인형통도 다시 채운다
             Store.save();
             close(); Screens.admin(); toast('저장했어요', { tone: 'ok' });

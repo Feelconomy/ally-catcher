@@ -1310,6 +1310,7 @@ const Screens = {
         toast('되살렸어요. 기계 탭에서 다시 넣어 주세요', { tone: 'ok' });
       },
       machine: el => Sheets.adminMachine(el.dataset.id),
+      newMachine: () => Sheets.adminMachine(null),
       skin: el => {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
@@ -1427,6 +1428,11 @@ function adminMachineList() {
         </span>
       </button>`;
     }).join('')}
+    <button class="adm-mcard add" data-act="newMachine">
+      <span class="plus">${icon('plusThick', 22)}</span>
+      <span class="nm">기계 추가</span>
+      <span class="mt">이름 · 설명 · 티켓 · 넣을 인형</span>
+    </button>
   </div>`;
 }
 

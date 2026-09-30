@@ -180,6 +180,10 @@ const MACHINES = [
   },
 ];
 
+/* 원본 기계 목록 사본. 관리자가 값을 고치거나 기계를 새로 추가해도 되돌릴 수
+   있도록, Store.applyAdmin() 은 매번 여기서 다시 세운 뒤 수정분을 얹는다. */
+const MACHINE_BASE = JSON.parse(JSON.stringify(MACHINES));
+
 const HOME_FILTERS = ['전체', '인기', '한정판', '쉬움', '신규'];
 
 /* Missions. `kind` drives what tapping the action button does. */
