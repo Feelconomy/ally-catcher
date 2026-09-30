@@ -1243,7 +1243,10 @@ a:hover { color: var(--green-deep); }
   position: relative; flex: 1; min-height: 0; width: 100%;
   display: flex; flex-direction: column; align-items: center;
   padding: clamp(20px, 6vh, 56px) 28px 0;
-  overflow-y: auto; -webkit-overflow-scrolling: touch;
+  /* overflow-y 만 주면 CSS 규칙상 overflow-x 도 auto 가 된다. 그러면 화면 밖으로
+     빼 둔 장식 원(.blob)이 가로 스크롤을 만들어, 사파리에서 옆으로 밀면 화면이
+     통째로 밀렸다(측정: 내용 480px · 보이는 폭 420px). 가로는 잘라 둔다. */
+  overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
 }
 .result .blob { position: absolute; border-radius: 50%; pointer-events: none; }
 .result .blob.a { top: -146px; left: -60px; width: 280px; height: 280px; background: rgba(255, 212, 0, .28); }
