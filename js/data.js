@@ -55,6 +55,7 @@ const DOLLS = {
     { id: 'kori',       name: '코리',       grade: 'R',  points: 120, bg: '#E7F1FA', rate: 2.4, model3d: 'ToyKori' },
     { id: 'frogdali',   name: '개구리 달리', grade: 'R',  points: 120, bg: '#EAF5E2', rate: 2.4, model3d: 'ToyFrogDali' },
     { id: 'woni',       name: '원이',       grade: 'R',  points: 120, bg: '#FFF6D8', rate: 2.4, model3d: 'ToyWoni' },
+    { id: 'hanbokkori', name: '한복 코리',  grade: 'R',  points: 120, bg: '#E8EEF8', rate: 2.4, model3d: 'ToyHanbokKori' },
   ]),
 };
 
@@ -85,7 +86,7 @@ const TOY_SHAPES = {
   ToyHanbokOlly: '한복올리', ToyHanbokDali: '한복달리', ToyAcorn: '도토리올리',
   ToyAutumn: '단풍올리', ToySummerWoni: '여름원이', ToyKori: '코리',
   ToySki: '눈싸움올리', ToySanta: '산타올리', ToySnorkel: '물놀이올리',
-  ToySummer: '수박올리', ToyFrogDali: '개구리달리', ToyWoni: '원이',
+  ToySummer: '수박올리', ToyFrogDali: '개구리달리', ToyWoni: '원이', ToyHanbokKori: '한복코리',
   ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
