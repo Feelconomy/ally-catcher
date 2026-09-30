@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
-import { clawContacts } from './claw-contact.js?v=168';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -211,6 +210,23 @@ export const Play3D = {
     this.claw = this.assets.Claw;
     this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
     this.fingerAngles = [GRIP_REST,GRIP_REST,GRIP_REST]; this.contactLimits = null;
+    /* 손가락 끝점(로컬 최하단 정점). 각도를 주면 팁이 어디로 가는지 계산해
+       '인형 옆을 지나갈 수 있나 · 얼마나 오므려야 파고드나'를 판단한다.
+       실측: +0.55 → 반경 .367 높이 -.305 · -0.42 → 반경 .044 높이 -.475 */
+    this.fingerTips = this.fingers.map(f => {
+      f.updateWorldMatrix(true, true);
+      const toLocal = f.matrixWorld.clone().invert(); let low = null;
+      f.traverse(o => {
+        if (!o.isMesh) return;
+        o.updateWorldMatrix(true, false);
+        const m = toLocal.clone().multiply(o.matrixWorld), p = o.geometry.attributes.position;
+        for (let i = 0; i < p.count; i++) {
+          const v = new THREE.Vector3().fromBufferAttribute(p, i).applyMatrix4(m);
+          if (!low || v.y < low.y) low = v;
+        }
+      });
+      return low || new THREE.Vector3();
+    });
     /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
        여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
     this.fingerAxes = this.fingers.map(f => {
@@ -241,6 +257,19 @@ export const Play3D = {
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
     this.meadowTimer = setTimeout(() => this.loadMeadow(session), 250);
+  },
+
+  /** 손가락 각도 a 에서 팁의 집게 원점 기준 반경과 높이. */
+  tipAt(a) {
+    const q = new THREE.Quaternion().setFromAxisAngle(this.fingerAxes[0], a);
+    const p = this.fingerTips[0].clone().applyQuaternion(q).add(this.fingers[0].position);
+    return { r: Math.hypot(p.x, p.z), y: p.y };
+  },
+  /** 팁 반경이 r 이 되는 각도 (팁 반경은 각도에 단조 증가). */
+  angleForTipRadius(r) {
+    let lo = GRIP_SHUT, hi = GRIP_OPEN;
+    for (let i = 0; i < 24; i++) { const mid = (lo + hi) / 2; if (this.tipAt(mid).r < r) lo = mid; else hi = mid; }
+    return clamp((lo + hi) / 2, GRIP_SHUT, GRIP_OPEN);
   },
 
   buildPhysics() {
@@ -560,29 +589,43 @@ export const Play3D = {
       target.body.type=CANNON.Body.KINEMATIC;target.body.updateMassProperties();
       target.body.velocity.setZero();target.body.angularVelocity.setZero();
     }
-    const won=!!target&&Math.random()*100<chance;
-    const slipped=!!target&&!won&&Math.random()>.3;
+    let won=!!target&&Math.random()*100<chance;
+    let slipped=!!target&&!won&&Math.random()>.3;
     App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
-    // Keep the original housing above the toy; only the native hinges may rotate.
-    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh,true) : null;
-    let down = targetBounds ? Math.max(.30,targetBounds.max.y+.095) : .46;
-    if(target){
-      const position=this.claw.position.clone(),quaternion=this.claw.quaternion.clone();
-      this.claw.position.set(this.position.x,down,this.position.z);
-      this.claw.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
-      const contacts=clawContacts(this.claw,this.fingers,this.fingerAxes,target.mesh,GRIP_OPEN,GRIP_SHUT);
-      down+=contacts.lift;this.contactLimits=contacts.limits;
-      this.claw.position.copy(position);this.claw.quaternion.copy(quaternion);this.claw.updateMatrixWorld(true);
+    /* 포크레인처럼 퍼올린다. 전에는 인형 머리 위(top+.095)에 떠서 표면이 닿는
+       순간 손가락을 멈췄다 — 그래서 겉면에 붙어 올라오는 것처럼 보였다.
+       이제는 팁이 인형의 제일 굵은 데보다 아래로 내려간 뒤 그 밑에서 모인다.
+       팁이 인형 옆을 지나갈 수 없을 만큼 인형이 굵으면 아예 못 쥔다 —
+       그때는 허공에서 오므리고 빈손으로 올라온다. */
+    const open = this.tipAt(GRIP_OPEN);
+    let down = .46, holdAngle = GRIP_SHUT, graspable = false;
+    this.contactLimits = null;                       // 표면에서 멈추지 않는다
+    if (target) {
+      const box = new THREE.Box3().setFromObject(target.mesh, true);
+      const size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
+      /* 쥘 수 있느냐는 물리 몸통으로 판단한다. 시각 박스는 귀·팔까지 포함해
+         실제로 쥐는 덩어리보다 훨씬 굵어(.34 대 .21), 그걸로 재면 멀쩡한
+         인형까지 '못 쥠'이 된다. 얼마나 파고들지는 둘 중 작은 쪽으로 정한다. */
+      const bodyR = target.body.shapes.reduce((m, sh) => Math.max(m, sh.radius || 0), 0) || .2;
+      const half = Math.min(bodyR, Math.max(size.x, size.z) / 2);
+      graspable = bodyR < open.r - .02;              // 활짝 벌린 팁이 옆을 지나가나
+      if (graspable) {
+        // 팁을 인형 중심보다 조금 아래로 (바닥은 뚫지 않게 막는다)
+        down = Math.max(.34, mid.y - size.y * .12 - open.y);
+        // 솜을 눌러 쥔 만큼 팁이 인형 폭 안으로 파고든 각도까지 오므린다
+        holdAngle = this.angleForTipRadius(Math.max(.05, half - .055));
+      }
     }
+    if (target && !graspable) { won = false; slipped = false; }
     // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
     this.status('움켜쥐는 중');
-    // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
-    await this.grip(GRIP_SHUT,560);if(!alive())return;
+    // 쥘 수 있으면 인형 폭 안쪽까지, 아니면 허공에서 끝까지 오므린다
+    await this.grip(graspable?holdAngle:GRIP_SHUT,560);if(!alive())return;
     await this.pause(160);if(!alive())return;
-    if(target&&(won||slipped)){
+    if(target&&graspable&&(won||slipped)){
       this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
       target.body.collisionResponse=false;target.body.wakeUp();
       /* 인형을 똑바로 세우지 않는다. 누워 있으면 누운 채로, 집게가 닿은 그 지점을
