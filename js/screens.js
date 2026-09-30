@@ -384,7 +384,7 @@ const Screens = {
             <div class="div"></div>
             <div class="st"><div class="n" style="font-size:17px;color:var(--green)">+${m.reward}P</div><div class="l">성공 시 적립</div></div>
           </div>
-          <div class="md-activity"><span aria-hidden="true">🧑‍🧑‍🧒‍🧒</span><span>${Math.floor(Math.random()*10)+1}명의 친구가 인형을 뽑고 있어요!</span></div>
+          <div class="md-activity"><span aria-hidden="true">🧑‍🧑‍🧒‍🧒</span><span><strong>${Math.floor(Math.random()*10)+1}</strong>명의 친구가 인형을 뽑고 있어요!</span></div>
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
           <div class="doll-strip">
             ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
@@ -1321,12 +1321,12 @@ function availablePlayMode(id) {
   return id === 'green3d' ? 'green3d' : 'arcade';
 }
 function modePicker() {
-  return `<h3>모드를 선택해주세요!</h3>
+  return `<button class="mode-dialog-close" data-close aria-label="닫기" title="닫기">${icon('close',20)}</button>
+    <h3>모드를 선택해주세요!</h3>
     <div class="actions side">
       <button class="btn btn--primary" data-act="mode" data-s="arcade">기본</button>
       <button class="btn btn--neutral" data-act="mode" data-s="green3d">3D(베타)</button>
-    </div>
-    <button class="btn sm btn--text" data-close>취소</button>`;
+    </div>`;
 }
 
 /* 플레이 화면 스킨 고르기. 미리보기는 실제 화면의 조각을 축소해 만든 것이라

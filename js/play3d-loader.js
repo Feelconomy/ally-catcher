@@ -30,7 +30,7 @@ async function startGreen3D(machine) {
     </div>`;
     document.getElementById('retry3d').onclick = () => startGreen3D(machine);
     document.getElementById('fallback2d').onclick = () => {
-      Store.state.settings.skin = 'classic'; Store.save(); Play.start(machine);
+      Store.state.settings.skin = 'arcade'; Store.save(); Play.start(machine, 'arcade');
     };
   }
 }
