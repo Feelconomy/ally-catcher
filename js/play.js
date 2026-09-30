@@ -22,13 +22,13 @@ const CLAW_H = Math.round(CLAW_W * 116 / 120);   // rendered claw height, px
      classic — 원래의 어두운 캐비닛. 확률 패널이 유리 안을 차지해 인형통이 얕고
                인형이 9마리다. 가로 레버 + 전체폭 버튼.
      arcade  — 밝은 캐비닛. 확률 패널을 유리 밖으로 빼서 그 자리를 전부 통에
-               내주고 큰 인형 16마리를 무더기로 쌓는다. 아케이드 스틱 + 별도 드롭 버튼.
+               내주고 큰 인형 13마리를 무더기로 쌓는다. 아케이드 스틱 + 별도 드롭 버튼.
 
    어느 쪽을 쓸지는 관리자 페이지에서 고르고, 값은 서버 카탈로그에 실린다.
    아래 수치는 첫 측정 전의 기본값 — Play.layout() 이 실제 높이를 재서
    이 안에서 다시 계산한다. */
 
-/* 그린 모드 더미 — 정면에서 본 인형 무더기. 큰 인형이 네 줄로 쌓이고 앞줄이 뒷줄을
+/* 그린 모드 더미 — 정면에서 본 인형 무더기. 큰 인형이 세 줄로 쌓이고 앞줄이 뒷줄을
    가려서, 뒷줄은 앞 인형 머리 너머로 얼굴만 빼꼼 보인다. 위로 갈수록 좁아져 가운데가
    볼록하다.
 
@@ -39,7 +39,6 @@ const ARCADE_DOLL = 100;      // 몸통을 겹치되 얼굴은 드러내는 기�
 const arcadeRow = (layer, xs, base, bumps) =>
   xs.map((x, i) => ({ x, layer, size: ARCADE_DOLL, bottom: base + bumps[i] }));
 const BED_ARCADE = [
-  ...arcadeRow(0, [0.47, 0.63, 0.79],             128, [2, 6, 0]),        // 꼭대기 — 가운데만
   ...arcadeRow(1, [0.39, 0.55, 0.71, 0.87],        88, [0, 4, 2, 5]),     // 뒷줄
   ...arcadeRow(2, [0.33, 0.47, 0.63, 0.79, 0.90],  44, [3, 0, 5, 1, 4]),  // 가운뎃줄
   ...arcadeRow(3, [0.39, 0.55, 0.71, 0.87],         0, [3, 0, 4, 1]),     // 앞줄
@@ -125,14 +124,14 @@ const Play = {
   onResize: null,
 
   /** Lays out a fresh cabinet for `machine` and renders the screen. */
-  start(machine) {
+  start(machine, mode) {
     this.stop();
     // Any drop still animating from a previous play belongs to an older
     // session and must stop touching the screen once this one begins.
     this.session += 1;
     // 스킨마다 통 크기와 자리 수가 달라, 인형을 놓기 전에 먼저 정한다.
     // 플레이어가 기계 화면에서 고른 모드가 먼저, 없으면 관리자가 정한 기본값.
-    const want = Store.state.settings.skin || Store.state.admin.skin;
+    const want = mode || Store.state.settings.skin || Store.state.admin.skin;
     this.skinId = SKINS[want] ? want : DEFAULT_SKIN;
     this.skin = useSkin(this.skinId);
     this.machine = machine;
@@ -152,6 +151,9 @@ const Play = {
       .sort((a, b) => a - b);
     const order = shuffle(stock.slice());
 
+    const saved=Store.state.layouts?.[machine.id+':'+this.skinId];
+    if(this.skinId==='arcade' && saved?.some(d=>d.layer===0))
+      Store.saveLayout(machine,this.skinId,saved.filter(d=>d.layer!==0));
     this.dolls = Store.machineLayout(machine, this.skinId, stock, () => slots.map((slotIdx, k) => {
       const slot = BED[slotIdx];
       return {

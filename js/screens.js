@@ -384,7 +384,7 @@ const Screens = {
             <div class="div"></div>
             <div class="st"><div class="n" style="font-size:17px;color:var(--green)">+${m.reward}P</div><div class="l">성공 시 적립</div></div>
           </div>
-          ${modePicker()}
+          <div class="md-activity"><span aria-hidden="true">🧑‍🧑‍🧒‍🧒</span><span>${Math.floor(Math.random()*10)+1}명의 친구가 인형을 뽑고 있어요!</span></div>
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
           <div class="doll-strip">
             ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
@@ -445,15 +445,19 @@ const Screens = {
         });
       },
       notify: () => toast('열리면 알려드릴게요', { tone: 'ok' }),
-      mode: el => {
-        Store.state.settings.skin = el.dataset.s;
-        Store.save();
-        $$('.md-mode [data-act="mode"]').forEach(b => b.setAttribute('aria-pressed', String(b === el)));
-        toast(`${modeName(el.dataset.s)} 화면으로 플레이해요`, { mini: true });
-      },
       play: () => {
         if (!Store.canAfford(m.cost)) { Sheets.ticketShort(m); return; }
-        go('loading', m.id);
+        if(document.querySelector('#overlays .scrim'))return;
+        let selected=false;
+        dialog(modePicker(),(node,close)=>bind(node,{
+          mode:el=>{
+            if(selected)return;
+            selected=true;
+            if(!Store.canAfford(m.cost)){close();Sheets.ticketShort(m);return;}
+            Store.state.settings.skin=el.dataset.s;Store.save();
+            close();go('loading',m.id);
+          },
+        }));
       },
     });
   },
@@ -483,10 +487,10 @@ const Screens = {
   /* --- 03 플레이 --------------------------------------------------------- */
   play(id) {
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
-    const skin = Store.state.settings.skin || Store.state.admin.skin || 'arcade';
+    const skin = availablePlayMode(Store.state.settings.skin || Store.state.admin.skin);
     if (skin === 'green3d') { startGreen3D(m); return; }
     window.Play3D?.stop();
-    Play.start(m);
+    Play.start(m, skin);
   },
 
   /* --- 04 뽑기 성공 ------------------------------------------------------ */
@@ -1313,29 +1317,29 @@ const Screens = {
 function modeName(id) {
   return { classic: '기본', arcade: '그린', green3d: '그린 3D' }[id] || '그린';
 }
+function availablePlayMode(id) {
+  return id === 'green3d' ? 'green3d' : 'arcade';
+}
 function modePicker() {
-  const cur = Store.state.settings.skin || Store.state.admin.skin || 'arcade';
-  return `<div class="md-mode">
-    <span class="md-l">플레이 화면</span>
-    <span class="md-seg">
-      <button class="chip sm" data-act="mode" data-s="classic" aria-pressed="${cur === 'classic'}">기본</button>
-      <button class="chip sm" data-act="mode" data-s="arcade" aria-pressed="${cur === 'arcade'}">그린</button>
-      <button class="chip sm" data-act="mode" data-s="green3d" aria-pressed="${cur === 'green3d'}">그린 3D</button>
-    </span>
-  </div>`;
+  return `<h3>모드를 선택해주세요!</h3>
+    <div class="actions side">
+      <button class="btn btn--primary" data-act="mode" data-s="arcade">기본</button>
+      <button class="btn btn--neutral" data-act="mode" data-s="green3d">3D(베타)</button>
+    </div>
+    <button class="btn sm btn--text" data-close>취소</button>`;
 }
 
 /* 플레이 화면 스킨 고르기. 미리보기는 실제 화면의 조각을 축소해 만든 것이라
    이미지 파일이 없고, 스킨을 손보면 미리보기도 같이 바뀐다. */
 function adminSkinPicker() {
-  const cur = Store.state.admin.skin || 'arcade';
+  const cur = availablePlayMode(Store.state.admin.skin);
   const opts = [
     { id: 'classic', name: '기본',     desc: '어두운 캐비닛 · 인형 9마리 · 가로 레버' },
     { id: 'arcade', name: '그린', desc: '민트 이미지 캐비닛 · 2D 인형뽑기' },
     { id: 'green3d', name: '그린 3D', desc: '민트 입체 캐비닛 · 인형 12마리 · 앞뒤·좌우 조작' },
   ];
   return `<div class="skin-pick">
-    ${opts.map(o => `<button class="skin-card ${o.id === 'classic' ? 'classic' : 'arcade'}" data-act="skin" data-s="${o.id}"
+    ${opts.filter(o => o.id !== 'classic').map(o => `<button class="skin-card ${o.id === 'classic' ? 'classic' : 'arcade'}" data-act="skin" data-s="${o.id}"
         aria-pressed="${cur === o.id}">
       <span class="sk-shot">
         <span class="sk-cab"><span class="sk-claw"></span><span class="sk-pile"></span></span>

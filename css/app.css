@@ -407,6 +407,8 @@ a:hover { color: var(--green-deep); }
 .adm-in.num { flex: 0 0 56px; text-align: center; }
 
 /* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
+.md-activity { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 16px; padding: 14px 0; font-size: 13px; font-weight: 700; line-height: 1.5; }
+.md-activity > span:last-child { min-width: 0; overflow-wrap: anywhere; }
 .md-mode {
   margin-top: 14px; padding: 12px 14px; border-radius: var(--r-xl); background: var(--surface);
   box-shadow: var(--shadow-card);
