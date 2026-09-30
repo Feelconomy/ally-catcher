@@ -407,11 +407,21 @@ a:hover { color: var(--green-deep); }
 .adm-in.num { flex: 0 0 56px; text-align: center; }
 
 /* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
-.md-activity { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 16px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); font-size: 13px; font-weight: 700; line-height: 1.5; }
-.md-activity-icon { display: grid; place-items: center; flex: 0 0 36px; height: 36px; border-radius: 50%; background: #eef8f2; color: #168450; }
-.md-activity-copy { flex: 1; min-width: 0; }
-.md-activity-count { display: flex; align-items: baseline; justify-content: center; gap: 3px; flex: 0 0 58px; padding: 5px 8px; border-radius: 8px; background: #e8f7ee; color: #168450; font-size: 12px; }
-.md-activity-count strong { color: var(--green); font-size: 20px; line-height: 1.4; font-variant-numeric: tabular-nums; }
+/* 지금 함께 뽑는 중 — 위 통계 카드와 경쟁하지 않게 흰 카드 대신 옅은 알약으로
+   둔다. 기계에 든 인형 얼굴을 겹쳐 놓아 '사람이 있다'는 느낌을 그림으로 준다. */
+.md-live { display: flex; align-items: center; gap: 10px; margin-top: 12px; padding: 9px 14px 9px 10px;
+  border-radius: 999px; background: linear-gradient(180deg, #f1faf4, #e9f6ee); }
+.md-live-faces { display: flex; flex: 0 0 auto; }
+.md-live-faces i { display: grid; place-items: center; width: 26px; height: 26px; margin-left: -8px;
+  border-radius: 50%; background: #fff; box-shadow: 0 0 0 2px #fff; overflow: hidden; }
+.md-live-faces i:first-child { margin-left: 0; }
+.md-live-faces img { width: 22px; height: 22px; }
+.md-live-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 0 3px rgba(45,190,126,.18); animation: mdLivePulse 1.9s ease-in-out infinite; }
+.md-live-text { font-size: 13px; font-weight: 700; color: var(--ink-60); letter-spacing: -.01em; }
+.md-live-text b { color: var(--green-deep); font-variant-numeric: tabular-nums; }
+@keyframes mdLivePulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(.72); } }
+@media (prefers-reduced-motion: reduce) { .md-live-dot { animation: none; } }
 .mode-dialog-close { position: absolute; top: 8px; right: 8px; display: grid; place-items: center; width: 36px; height: 36px; border: 0; background: transparent; color: var(--ink); cursor: pointer; }
 .mode-dialog-close:hover { background: var(--surface-sunken); border-radius: 8px; }
 .md-mode {

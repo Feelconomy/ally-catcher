@@ -393,7 +393,11 @@ const Screens = {
             <div class="div"></div>
             <div class="st"><div class="n" style="font-size:17px;color:var(--green)">+${m.reward}P</div><div class="l">성공 시 적립</div></div>
           </div>
-          <div class="md-activity"><span class="md-activity-icon" aria-hidden="true">${icon('personPlus',22)}</span><span class="md-activity-copy">지금 함께 뽑는 중</span><span class="md-activity-count"><strong>${Math.floor(Math.random()*10)+1}</strong><span>명</span></span></div>
+          <div class="md-live" role="status">
+            <span class="md-live-faces" aria-hidden="true">${m.contents.slice(0, 3).map(d => `<i>${dollImg(d, 22)}</i>`).join('')}</span>
+            <span class="md-live-dot" aria-hidden="true"></span>
+            <span class="md-live-text">지금 <b>${Math.floor(Math.random() * 10) + 1}명</b>이 함께 뽑는 중</span>
+          </div>
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
           <div class="doll-strip">
             ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
