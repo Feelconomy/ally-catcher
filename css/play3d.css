@@ -4,10 +4,8 @@
 .l3 { gap: 0; background: radial-gradient(120% 70% at 50% 38%, #f4fbf6 0%, #dff1e6 55%, #cfe8da 100%); color: #0e4f2c; }
 .l3-scene { width: min(232px, 62vw); height: auto; overflow: visible; margin-bottom: 26px; }
 .l3-ground { fill: rgba(14, 79, 44, .08); }
-.l3-pile { fill: #0e4f2c; opacity: .22; }
+.l3-pile { opacity: .2; }
 .l3-olly { fill: #0e4f2c; opacity: 0; animation: l3-olly 3.2s cubic-bezier(.45, 0, .55, 1) infinite; }
-.l3-olly .eye { fill: #e6f4ec; }
-.l3-olly .edge { stroke: #e6f4ec; stroke-width: 1.2; }
 .l3-claw { fill: none; stroke: #0e4f2c; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .55; transform-origin: 114px 46px; animation: l3-sway 3.2s ease-in-out infinite; }
 .l3-cab { fill: #00a650; }
 .l3-glass { fill: rgba(236, 248, 241, .58); stroke: rgba(255, 255, 255, .9); stroke-width: 1.5; }

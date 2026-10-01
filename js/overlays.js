@@ -958,7 +958,9 @@ const Dialogs = {
   /* --- 14 가입 티켓 지급 ------------------------------------------------- */
   welcome() {
     Store.state.onboarded = true;
-    const got = Store.claimSignupBonus();   // 중복 방지 플래그로 1회만 지급
+    // 중복 방지 플래그로 1회만 지급. 카카오 신규 가입은 sync 가 이미 줬다(freshSignup).
+    const got = Store.claimSignupBonus() || App.freshSignup || 0;
+    App.freshSignup = 0;
     Store.save();
     dialog(got ? `
       <div class="welcome-art">

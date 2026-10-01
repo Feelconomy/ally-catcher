@@ -209,7 +209,7 @@ const Screens = {
           </div>
           <div class="foot">
             <button class="btn btn--primary" data-act="next">${last ? `무료 티켓 ${SIGNUP_TICKETS}장 받고 시작` : '다음'}</button>
-            <button class="btn sm btn--text" data-act="have">이미 계정이 있어요</button>
+            ${Store.state.account ? '' : '<button class="btn sm btn--text" data-act="have">이미 계정이 있어요</button>'}
           </div>
         </div>
       </div>`;
@@ -218,7 +218,7 @@ const Screens = {
       bind(screenEl(), {
         next: () => { if (last) Dialogs.welcome(); else turn(1); },
         skip: () => Dialogs.welcome(),
-        have: () => { if (Store.state.account) Dialogs.welcome(); else go('login'); },
+        have: () => go('login'),
       });
       // 좌우로 밀어서 넘기기 — 세로 움직임이 더 크면 무시한다.
       let x0 = null, y0 = 0;
@@ -694,7 +694,7 @@ const Screens = {
         </div>`
       : `
         <div class="empty">
-          <div class="empty-crew">${['pig', 'olly', 'dali'].map((id, k) => friendSvg(id, k === 1 ? 72 : 52, 'peek', `animation-delay:${k * .3}s`)).join('')}</div>
+          <div class="empty-crew">${['pig', 'olly', 'dali'].map((id, k) => friendIcon(id, k === 1 ? 72 : 52, 'peek', `animation-delay:${k * .3}s`)).join('')}</div>
           <h3>첫 인형을 뽑아보세요</h3>
           <p>뽑은 인형은 여기에 모이고<br>등급에 따라 포인트가 적립돼요</p>
           <button class="btn md auto btn--primary" style="margin-top:24px" data-tab="home">기계 보러 가기</button>
@@ -776,7 +776,7 @@ const Screens = {
           </div>
           <div class="n">${Store.state.tickets}<small>장</small></div>
           <!-- 미션 하나를 끝낼 때마다 친구가 하나씩 불이 켜진다 -->
-          <div class="crew">${MISSIONS.map((m, k) => friendSvg(FRIEND_IDS[k % FRIEND_IDS.length], 34,
+          <div class="crew">${MISSIONS.map((m, k) => friendIcon(FRIEND_IDS[k % FRIEND_IDS.length], 34,
             Store.missionClaimed(m.id) ? 'on hop' : '', `animation-delay:${k * .14}s`)).join('')}</div>
           <div class="cap">모두 끝내면 보너스 티켓 ${MISSION_BONUS_TICKETS}장을 더 드려요</div>
         </div>`}
@@ -789,7 +789,7 @@ const Screens = {
 
         ${allDone && Store.state.bonusClaimed ? `
           <div class="card pad" style="margin-top:8px;padding:20px;text-align:center">
-            ${friendSvg('woni', 64, 'idle-bob tint')}
+            ${friendIcon('woni', 64, 'idle-bob tint')}
             <div style="margin-top:12px;font-size:15px;font-weight:700">내일 새 미션이 열려요</div>
             <div style="margin-top:6px;font-size:12px;font-weight:600;color:var(--ink-50)">알림을 켜두면 초기화되는 순간 알려드려요</div>
             <button class="btn sm auto btn--accent" style="margin:16px auto 0" data-act="notify">알림 켜기</button>
@@ -852,7 +852,7 @@ const Screens = {
           <div class="v">${fmt(Store.state.points)}<span>P</span></div>
           <div class="nh">NH멤버스로 바꾸면 약 ${fmt(Math.floor(Store.state.points * NH_RATE))}P</div>
         </div>
-        <div class="coins" aria-hidden="true"><i></i><i></i><i></i>${friendSvg('olly', 54, 'hop')}</div>
+        <div class="coins" aria-hidden="true"><i></i><i></i><i></i>${friendIcon('olly', 54, 'hop')}</div>
       </div>
 
       <div class="scroll">

@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=199').catch(() => { warmed = false; });
+    import('./play3d.js?v=200').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -28,19 +28,23 @@ document.addEventListener('animationiteration', e => {
   if (!char.classList || !char.classList.contains('l3-olly')) return;
   const next = pick(FRIEND_IDS.filter(id => id !== char.dataset.id));
   char.dataset.id = next;
-  char.innerHTML = FRIENDS[next].svg;
+  char.innerHTML = friendImage(next);
   const tip = document.getElementById('loading3dTip');
   if (!tip) return;
   tip.classList.add('out');
   setTimeout(() => { tip.textContent = pick(FRIENDS[next].lines); tip.classList.remove('out'); }, 260);
 });
+/* 실제 캐릭터 윤곽 마스크를 한 가지 색으로 칠한다(#l3sil). 발바닥 가운데가 (0,0). */
+const friendImage = (id, h = 40) => `<image href="${friendMask(id)}" x="${-h * .55}" y="${-h}" width="${h * 1.1}" height="${h}" preserveAspectRatio="xMidYMax meet" filter="url(#l3sil)"/>`;
 function green3DLoading() {
   const first = pick(FRIEND_IDS);
   return `<div class="green3d-loading l3" id="loading3d" role="status" aria-live="polite">
     <svg class="l3-scene" viewBox="0 -34 200 214" aria-hidden="true">
+      <defs><filter id="l3sil"><feFlood flood-color="#0e4f2c"/><feComposite in2="SourceAlpha" operator="in"/></filter></defs>
       <ellipse class="l3-ground" cx="104" cy="172" rx="92" ry="6"/>
-      <g class="l3-pile"><circle cx="112" cy="112" r="10"/><circle cx="130" cy="114" r="9"/><circle cx="148" cy="111" r="10"/><circle cx="121" cy="104" r="8"/><circle cx="141" cy="102" r="8"/></g>
-      <g class="l3-olly" data-id="${first}">${FRIENDS[first].svg}</g>
+      <g class="l3-pile">${FRIEND_IDS.filter(id => id !== first).slice(0, 3).map((id, k) =>
+        `<g transform="translate(${[114, 151, 132][k]} ${[118, 118, 112][k]})">${friendImage(id, 24)}</g>`).join('')}</g>
+      <g class="l3-olly" data-id="${first}">${friendImage(first)}</g>
       <g class="l3-claw"><line x1="114" y1="46" x2="114" y2="62"/><path d="M106 70l2-6h12l2 6M108 64l-4 10M120 64l4 10"/></g>
       <path class="l3-cab" fill-rule="evenodd" d="M104 22h56a12 12 0 0 1 12 12v126a8 8 0 0 1-8 8H100a8 8 0 0 1-8-8V34a12 12 0 0 1 12-12ZM100 48v70h64V48Z"/>
       <rect class="l3-glass" x="100" y="48" width="64" height="70"/>
@@ -64,7 +68,7 @@ async function startGreen3D(machine) {
   screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=199');
+    const { Play3D } = await import('./play3d.js?v=200');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);

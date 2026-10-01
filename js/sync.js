@@ -139,7 +139,11 @@ const Sync = (function () {
     // 기존 회원은 applyRow 경로로 빠지므로 절대 재지급되지 않는다.
     if (extra && extra.auth_user_id && Store.claimSignupBonus) {
       const n = Store.claimSignupBonus();
-      if (n && typeof toast === 'function') {
+      // 카카오 신규 가입은 온보딩부터 보여준다. 티켓은 여기서 이미 줬으니(중간에
+      // 앱을 닫아도 남게) 온보딩 끝 축하 팝업이 받은 장수를 보여주도록 넘긴다.
+      if (n) App.freshSignup = n;
+      if (typeof go === 'function' && ['home', 'login', 'splash'].includes(App.route)) go('onboarding');
+      else if (n && typeof toast === 'function') {
         setTimeout(() => toast(`가입 축하! 티켓 ${n}장을 받았어요 🎉`, { tone: 'ok' }), 400);
       }
     }
