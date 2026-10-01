@@ -71,6 +71,12 @@ function friendIcon(id, size = 40, cls = '', style = '') {
   return `<span class="friend ${cls}" aria-hidden="true" style="width:${size}px;height:${size}px;-webkit-mask-image:url(${url});mask-image:url(${url});${style}"></span>`;
 }
 
+/** 아무 인형이나 실제 그림 윤곽 그대로 실루엣(도감의 아직 못 모은 칸 등). */
+function dollSilhouette(id, size = 56, cls = '') {
+  const url = esc(dollArt(id));
+  return `<span class="friend ${cls}" aria-hidden="true" style="width:${size}px;height:${size}px;-webkit-mask-image:url(${url});mask-image:url(${url})"></span>`;
+}
+
 /** 다섯 친구가 차례로 깡충 뛰는 줄. 스플래시·축하·빈 화면에서 쓴다. */
 function friendParade(size = 40, cls = '') {
   return `<div class="parade ${cls}">${FRIEND_IDS.map((id, k) => friendIcon(id, size, 'hop', `animation-delay:${k * .14}s`)).join('')}</div>`;

@@ -55,10 +55,11 @@ const Screens = {
         <div class="brandmark l"><img src="assets/logo.png?v=120" alt="" width="72" height="72"></div>
         <h2>3초면 시작해요</h2>
         <p>카카오 계정으로 간편하게 로그인하고<br>올리캐쳐에 티켓과 인형을 저~장해보세요!</p>
-        <div class="login-hero">${dollImg('olly', 150, '', 'win')}</div>
+        <div class="login-hero"><span class="glow"></span>${dollImg('olly', 150, '', 'win')}</div>
         <div class="actions">
           <button class="btn btn--kakao" data-act="sso" data-p="카카오">${icon('logoKakao', 20)}카카오로 시작하기</button>
-          <button class="btn sm btn--text" style="text-decoration:underline" data-act="peek">둘러보기</button>
+          <button class="btn sm btn--text login-peek" data-act="peek">로그인 없이 둘러보기 ${icon('chevronRight3', 12)}</button>
+          <p class="fine">시작하면 서비스 이용약관과 개인정보 처리방침에 동의하게 돼요.</p>
         </div>
       </div>
     </div>`;
@@ -493,15 +494,18 @@ const Screens = {
 
   /* --- 20 플레이 진입 로딩 ----------------------------------------------- */
   loading(id) {
-    setTheme('dark');
+    setTheme('');
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
     const tip = PLAY_TIPS[Math.floor(Math.random() * PLAY_TIPS.length)];
 
     screenEl().innerHTML = `<div class="screen loading">
-      <div class="spinner-lg"></div>
+      <div class="ld-stage">
+        <svg class="ld-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54"/><circle class="run" cx="60" cy="60" r="54"/></svg>
+        ${dollImg(m.hero, 104, '', 'idle')}
+      </div>
       <div class="t">기계에 연결하는 중</div>
-      <div class="s">티켓 ${m.cost}장이 사용됩니다</div>
-      <div class="tip">TIP · ${esc(tip)}</div>
+      <div class="s">${esc(m.name)} · 티켓 ${m.cost}장</div>
+      <div class="tip"><b>TIP</b>${esc(tip)}</div>
     </div>`;
 
     setTimeout(() => {
@@ -578,6 +582,7 @@ const Screens = {
     const next = Store.odds(m);
     const attempt = App.lastAttempt || {};
     const doll = dollId && DOLLS[dollId];
+    const bonus = Math.min(Store.state.failStreak * FAIL_BONUS, MAX_RATE - m.baseRate);
 
     /* Three different failures, three different screens. A slip shows the doll
        you had in its dropped pose; a miss shows the doll you were going for
@@ -617,14 +622,14 @@ const Screens = {
               <div class="cap">${aimHint(attempt.accuracy || 0)}</div>
             </div>` : ''}`}
 
-        <div class="streak">
+        ${Store.state.failStreak ? `<div class="streak">
           <div class="top">
             <span class="l">연속 실패 보너스</span>
-            <span class="v">+${Math.min(Store.state.failStreak * FAIL_BONUS, MAX_RATE - m.baseRate)}% 확률</span>
+            <span class="v">${bonus ? `+${bonus}% 확률` : '최대치'}</span>
           </div>
           ${meter((next / MAX_RATE) * 100, on)}
-          <div class="cap">다음 판 성공률 ${next}%로 올라갔어요</div>
-        </div>
+          <div class="cap">${bonus ? `다음 판 성공률이 ${next}%로 올라갔어요` : `다음 판 성공률 ${next}% — 지금이 가장 잘 잡혀요`}</div>
+        </div>` : ''}
         <div class="foot">
           <button class="btn btn--accent" data-act="again">티켓 ${m.cost}장으로 한 번 더</button>
           <button class="btn md ${green ? 'btn--translucent' : 'btn--translucent-dark'}" data-act="others">다른 기계 보기</button>
@@ -732,8 +737,8 @@ const Screens = {
         <div class="codex-grid">
           ${DOLL_IDS.map(id => counts[id]
             ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
-            : `<div class="locked">${icon('lock', 20)}</div>`).join('')}
-          ${Array.from({ length: lockedSlots }, () => `<div class="locked">${icon('lock', 20)}</div>`).join('')}
+            : `<div class="locked">${dollSilhouette(id, 50)}<span class="lk">${icon('lock', 10)}</span></div>`).join('')}
+          ${Array.from({ length: lockedSlots }, () => `<div class="locked soon">?</div>`).join('')}
         </div>
         <div style="height:24px"></div>
       </div>
@@ -850,7 +855,7 @@ const Screens = {
         <div style="flex:1">
           <div class="l">보유 포인트</div>
           <div class="v">${fmt(Store.state.points)}<span>P</span></div>
-          <div class="nh">NH멤버스로 바꾸면 약 ${fmt(Math.floor(Store.state.points * NH_RATE))}P</div>
+          <div class="nh">${Store.state.points >= NH_MIN ? `NH멤버스로 바꾸면 약 ${fmt(Math.floor(Store.state.points * NH_RATE))}P` : `${fmt(NH_MIN)}P부터 NH멤버스로 바꿀 수 있어요`}</div>
         </div>
         <div class="coins" aria-hidden="true"><i></i><i></i><i></i>${friendIcon('olly', 54, 'hop')}</div>
       </div>
@@ -976,14 +981,18 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="my-hero">
-        <button class="profile" data-act="editName">
+        <button class="profile" data-act="${acc ? 'editName' : 'login'}">
           <span class="av" style="background:${(DOLLS[safeAvatar(acc && acc.avatar)] || {}).bg || 'var(--yellow)'}">${dollImg(safeAvatar(acc && acc.avatar), 48)}</span>
-          <span style="flex:1;text-align:left">
+          <span class="who">
             <span class="nm" style="display:block">${esc(acc ? acc.nickname : '게스트')}</span>
             <span class="lv">Lv.${Store.level()} ${esc(Store.levelTitle())}</span>
           </span>
-          <span class="edit">프로필 ${icon('chevronRight3', 12)}</span>
+          ${acc ? `<span class="edit">프로필 ${icon('chevronRight3', 12)}</span>` : ''}
         </button>
+        ${acc ? '' : `<button class="guest-cta" data-route="login">
+          <span>로그인하면 뽑은 인형과 티켓이<br>모든 기기에 안전하게 저장돼요</span>
+          <b>${icon('logoKakao', 14)}로그인</b>
+        </button>`}
         <div class="lvbar">
           ${meter(Store.levelProgress().percent)}
           <div class="cap">${Store.levelProgress().left}마리 더 뽑으면 Lv.${Store.level() + 1} · ${esc(Store.levelTitle(Store.level() + 1))}</div>
@@ -1021,6 +1030,7 @@ const Screens = {
 
     bind(screenEl(), {
       editName: () => Sheets.rename(),
+      login: () => go('login'),
       menu: el => {
         const item = MY_MENU.find(x => x.id === el.dataset.id);
         if (!item) return;
@@ -1246,11 +1256,10 @@ const Screens = {
   /* --- 44 서버 점검 ------------------------------------------------------ */
   maintenance() {
     setTheme('');
-    shellEl().style.background = 'var(--ink)';
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="maint">
-        ${dollImg('cat', 128)}
+        ${friendIcon('kori', 120, 'idle-bob')}
         <div class="tag">MAINTENANCE</div>
         <h3>잠시 점검 중이에요</h3>
         <p>더 안정적인 뽑기를 위해 서버를 정비하고 있어요.<br>점검 중 사용한 티켓은 모두 복구됩니다.</p>
@@ -1258,11 +1267,10 @@ const Screens = {
           <div class="ln"><span class="l">점검 시간</span><span class="v">08.08 02:00 ~ 06:00</span></div>
           <div class="ln"><span class="l">남은 시간</span><span class="v hi">약 42분</span></div>
         </div>
-        <button class="btn md auto btn--translucent-dark" style="margin-top:22px" data-act="back">공지 확인하기</button>
+        <button class="btn md auto btn--outline" style="margin-top:22px" data-act="back">공지 확인하기</button>
       </div>
     </div>`;
-    $('.statusbar', screenEl()).style.color = '#fff';
-    bind(screenEl(), { back: () => { shellEl().style.background = ''; go('home'); } });
+    bind(screenEl(), { back: () => go('home') });
   },
 
   /* --- 43 네트워크 오류 -------------------------------------------------- */
@@ -1271,7 +1279,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar(true)}
       <div class="empty">
-        <div class="art" style="border-radius:36px;width:112px;height:112px">${icon('globe', 46)}</div>
+        <div class="empty-crew">${friendIcon('woni', 96, 'peek')}</div>
         <h3>인터넷에 연결할 수 없어요</h3>
         <p>Wi-Fi 또는 데이터 연결을 확인한 뒤<br>다시 시도해 주세요</p>
         <button class="btn md auto btn--primary" style="margin-top:24px" data-act="retry">${icon('refresh', 17)}다시 시도</button>

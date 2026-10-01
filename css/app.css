@@ -346,7 +346,11 @@ a:hover { color: var(--green-deep); }
 .login { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 60px 28px calc(34px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; align-items: center; }
 .login h2 { margin-top: 22px; font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
 .login p { margin-top: 10px; font-size: 14px; font-weight: 600; color: var(--ink-50); text-align: center; line-height: 1.6; }
-.login-hero { flex: 1; min-height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; }
+.login-hero { flex: 1; min-height: 120px; width: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
+.login-hero .glow { position: absolute; width: 220px; height: 220px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 212, 0, .28), rgba(255, 212, 0, 0) 68%); }
+.login-hero img { position: relative; }
+.login .login-peek { display: inline-flex; align-items: center; gap: 2px; color: var(--ink-50); }
+.login .fine { margin-top: 2px; font-size: 11px; font-weight: 500; color: var(--ink-40); }
 .login .mascot { width: 150px; height: 150px; animation: bob 3.4s ease-in-out infinite; }
 .login .actions { width: 100%; display: flex; flex-direction: column; gap: 10px; padding-top: 24px; }
 .btn--kakao { background: #FEE500; color: var(--ink); height: 54px; font-size: 15px; border-radius: var(--r-lg); box-shadow: none; }
@@ -701,15 +705,23 @@ a:hover { color: var(--green-deep); }
 .doll-strip img { width: 56px; height: 56px; }
 .doll-strip .more { font-size: 12px; font-weight: 700; color: var(--ink-40); }
 
-/* Play loading (20) */
-.loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; position: relative; }
-.loading .t { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
-.loading .s { font-size: 13px; font-weight: 600; color: var(--on-dark-45); }
+/* Play loading (20) — 기계 대표 인형이 둥실, 둘레를 진행 고리가 1.4초에 한 바퀴. */
+.loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(120% 70% at 50% 40%, #f4fbf6 0%, #dff1e6 60%, #cfe8da 100%); }
+.ld-stage { position: relative; width: 168px; height: 168px; display: flex; align-items: center; justify-content: center; margin-bottom: 26px; }
+.ld-stage img { animation: bob 2.4s ease-in-out infinite; filter: drop-shadow(0 10px 14px rgba(14, 79, 44, .18)); }
+.ld-ring { position: absolute; inset: 0; transform: rotate(-90deg); }
+.ld-ring circle { fill: rgba(255, 255, 255, .7); stroke: rgba(0, 166, 80, .14); stroke-width: 5; }
+.ld-ring .run { fill: none; stroke: var(--green); stroke-linecap: round; stroke-dasharray: 340; stroke-dashoffset: 340; animation: ld-run 1.4s ease-in-out forwards; }
+@keyframes ld-run { to { stroke-dashoffset: 0; } }
+.loading .t { font-size: 19px; font-weight: 800; color: #0e4f2c; letter-spacing: -.02em; }
+.loading .s { margin-top: 8px; font-size: 13px; font-weight: 600; color: rgba(14, 79, 44, .55); }
 .loading .tip {
-  position: absolute; bottom: calc(44px + var(--safe-b)); left: 24px; right: 24px;
-  padding: 14px 16px; border-radius: var(--r-lg); background: rgba(255, 255, 255, .06);
-  font-size: 12px; font-weight: 600; line-height: 1.6; color: rgba(255, 255, 255, .55); text-align: center;
+  position: absolute; bottom: calc(40px + var(--safe-b)); left: 24px; right: 24px;
+  padding: 14px 16px; border-radius: var(--r-lg); background: rgba(255, 255, 255, .72);
+  font-size: 12px; font-weight: 600; line-height: 1.6; color: rgba(14, 79, 44, .7); text-align: center;
 }
+.loading .tip b { margin-right: 6px; padding: 2px 7px; border-radius: 6px; background: var(--success-bg); color: var(--success-ink); font-size: 10px; letter-spacing: .06em; }
+@media (prefers-reduced-motion: reduce) { .ld-stage img { animation: none; } .ld-ring .run { animation-duration: .01s; } }
 
 /* Play (03) — 인형뽑기 화면. 스킨이 둘이라 규칙을 전부 .screen.<스킨> 아래로
    가둬 뒀다. 같은 이름(.stick · .odds · .controls)을 서로 다르게 쓰기 때문에,
@@ -1400,7 +1412,9 @@ a:hover { color: var(--green-deep); }
 /* Codex (29) */
 .codex-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
 .codex-grid > * { height: 78px; border-radius: 14px; background: var(--surface); box-shadow: 0 2px 6px rgba(23, 23, 23, .06); display: flex; align-items: center; justify-content: center; }
-.codex-grid > .locked { background: rgba(112, 115, 124, .07); box-shadow: none; color: rgba(23, 23, 23, .22); }
+.codex-grid > .locked { position: relative; background: rgba(112, 115, 124, .07); box-shadow: none; color: rgba(23, 23, 23, .12); }
+.codex-grid > .locked .lk { position: absolute; right: 6px; bottom: 6px; width: 18px; height: 18px; border-radius: 50%; background: var(--surface); color: var(--ink-40); display: flex; align-items: center; justify-content: center; }
+.codex-grid > .locked.soon { font-size: 20px; font-weight: 800; color: rgba(23, 23, 23, .16); }
 .codex-grid > .unlocked:active { transform: scale(.95); }
 .codex-grid img { width: 56px; height: 56px; }
 
@@ -1489,9 +1503,13 @@ a:hover { color: var(--green-deep); }
 .profile { display: flex; align-items: center; gap: 14px; width: 100%; text-align: left; }
 .profile .av { width: 60px; height: 60px; border-radius: 20px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
 .profile .av img { width: 48px; height: 48px; }
-.profile .nm { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.profile .who { flex: 1; min-width: 0; text-align: left; }
+.profile .nm { font-size: 19px; font-weight: 800; letter-spacing: -.02em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.guest-cta { margin-top: 14px; width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; background: #FEF6C8; text-align: left; }
+.guest-cta span { flex: 1; font-size: 12px; font-weight: 600; line-height: 1.5; color: var(--yellow-ink); }
+.guest-cta b { display: flex; align-items: center; gap: 4px; padding: 8px 12px; border-radius: 10px; background: #FEE500; font-size: 12px; font-weight: 700; color: var(--ink); flex-shrink: 0; }
 .profile .lv { margin-top: 5px; display: inline-flex; padding: 4px 10px; border-radius: var(--r-chip); background: var(--success-bg); font-size: 11px; font-weight: 700; color: var(--success-ink); }
-.profile .edit { display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--ink-40); }
+.profile .edit { display: flex; align-items: center; gap: 2px; font-size: 12px; font-weight: 600; color: var(--ink-40); white-space: nowrap; flex-shrink: 0; }
 .my-hero .lvbar { margin-top: 16px; }
 .my-hero .lvbar .cap { margin-top: 8px; font-size: 12px; font-weight: 600; color: var(--ink-50); }
 .my-hero .statgrid { margin-top: 16px; padding-top: 14px; box-shadow: inset 0 1px 0 var(--line-soft); }
@@ -1548,17 +1566,17 @@ a:hover { color: var(--green-deep); }
 .receipt .txid { margin-top: 12px; padding: 11px; border-radius: var(--r-md); background: var(--surface-sunken); font-size: 11px; font-weight: 600; color: var(--ink-45); text-align: center; }
 
 /* Maintenance (44) */
-.maint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 40px; text-align: center; }
-.maint img { width: 128px; height: 128px; opacity: .8; }
-.maint .tag { margin-top: 24px; padding: 5px 12px; border-radius: var(--r-chip); background: rgba(255, 212, 0, .16); font-size: 11px; font-weight: 700; color: var(--yellow); letter-spacing: .08em; }
-.maint h3 { margin-top: 16px; font-size: 22px; font-weight: 700; color: #fff; letter-spacing: -.02em; }
-.maint p { margin-top: 12px; font-size: 13px; font-weight: 600; line-height: 1.7; color: var(--on-dark-60); }
-.maint .box { margin-top: 24px; width: 100%; padding: 18px; border-radius: var(--r-xl); background: rgba(255, 255, 255, .07); }
+.maint { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 0 32px; text-align: center; }
+.maint .friend { color: #d3e6da; }
+.maint .tag { margin-top: 22px; padding: 5px 12px; border-radius: var(--r-chip); background: var(--yellow-soft); font-size: 11px; font-weight: 700; color: var(--yellow-ink); letter-spacing: .08em; }
+.maint h3 { margin-top: 14px; font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.maint p { margin-top: 10px; font-size: 13px; font-weight: 600; line-height: 1.7; color: var(--ink-50); }
+.maint .box { margin-top: 22px; width: 100%; padding: 16px 18px; border-radius: 18px; background: var(--surface); box-shadow: var(--shadow-card), inset 0 0 0 1px var(--line-soft); }
 .maint .box .ln { display: flex; align-items: center; justify-content: space-between; }
 .maint .box .ln + .ln { margin-top: 12px; }
-.maint .box .l { font-size: 12px; font-weight: 600; color: rgba(255, 255, 255, .5); }
-.maint .box .v { font-size: 13px; font-weight: 700; color: #fff; }
-.maint .box .v.hi { color: var(--yellow); }
+.maint .box .l { font-size: 12px; font-weight: 600; color: var(--ink-45); }
+.maint .box .v { font-size: 13px; font-weight: 700; }
+.maint .box .v.hi { color: var(--green); }
 
 /* ==========================================================================
    Overlays — scrim, sheet, dialog, toast, coach mark
