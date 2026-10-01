@@ -621,7 +621,26 @@ export const Play3D = {
     if(!await this.settle(target))return;
     await this.pause(360);if(!alive())return;           // 자리 잡은 모습을 한 박자 보여준다
     const p=target.body.position;
-    this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<.75,target.id,target);
+    /* 큰 인형은 배출구 벽에 걸쳐 멈추기도 한다. 배출구 위에 걸렸으면 성공으로
+       치되, 걸친 채 끝내지 않고 구멍으로 쏙 빨려 내려가는 모습으로 마무리한다. */
+    const inChute=Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<1;
+    if(inChute){this.status('쏙!');haptic(30);if(!await this.sinkIntoChute(target))return;}
+    this.finish(inChute,target.id,target);
+  },
+  async sinkIntoChute(toy) {
+    const b=toy.body;
+    b.type=CANNON.Body.KINEMATIC;b.collisionResponse=false;b.updateMassProperties();
+    b.velocity.setZero();b.angularVelocity.setZero();
+    const from=b.position.clone(),base=toy.mesh.scale.clone(),t0=performance.now(),ms=560;
+    for(;;){
+      const t=clamp((performance.now()-t0)/ms,0,1),fall=t*t;
+      // 입구 가운데로 모이면서 아래로 떨어지고, 구멍 속으로 작아지며 사라진다
+      b.position.set(from.x+(CHUTE.x-from.x)*t,from.y+(.02-from.y)*fall,from.z+(CHUTE.z-from.z)*t);
+      toy.mesh.scale.copy(base).multiplyScalar(1-.9*fall);
+      if(t===1){toy.mesh.visible=false;break;}
+      if(!await this.pause(16))return false;
+    }
+    return this.pause(260);
   },
 
   finish(won,id=null,toy=null) {

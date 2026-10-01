@@ -99,6 +99,9 @@ function useSkin(id) {
 }
 useSkin(DEFAULT_SKIN);
 
+/* 판 위 인형은 늘 화면 안이라 지연 로딩이 필요 없다. 오히려 집을 때마다 더미를
+   다시 그리는데, 비동기 디코딩이면 그 한 프레임 동안 그림이 비어 인형들이 다 깜빡였다. */
+const stageDoll = (...a) => dollImg(...a).replace(' loading="lazy" decoding="async"', '');
 const CHUTE_X = 0.155;       // claw position over the chute mouth
 const START_X = 0.60;        // claw starts over the middle of the pile
 const STICK_TILT = 24;       // 레버가 끝까지 기울었을 때의 각도(도)
@@ -494,8 +497,10 @@ const Play = {
       if (Math.abs(this.velocity) > 0.0005) this.move(this.velocity * dt);
       const claw = $('#claw', root);
       if (claw && !this.busy) claw.style.setProperty('--sway', (-this.velocity * 13).toFixed(2) + 'deg');
+      // 뒤 집게발 맞추기는 강제 레이아웃을 부른다 — 집게가 움직일 때만 한다.
       const rear = $('#rearClaw', root), rig = $('#rig', root);
-      if (rear && claw && rig) {
+      if (this.busy || Math.abs(this.velocity) > 0.0005) this.rearFrames = 60;
+      if (rear && claw && rig && this.rearFrames-- > 0) {
         rear.style.left = rig.offsetLeft + 'px';
         rear.style.top = (rig.offsetTop + claw.offsetTop) + 'px';
         rear.style.width = rig.offsetWidth + 'px';
@@ -527,6 +532,7 @@ const Play = {
     const mount = document.getElementById('railMount');
     if (!rig) return;
     rig.style.left = (this.x * 100) + '%';
+    this.rearFrames = 60;
     if (mount) mount.style.left = `calc(${this.x * 100}% + ${(this.x - 0.5) * (this.skinId === 'arcade' ? 48 : 32)}px)`;
     this.paintAim();
     this.paintKnob();
@@ -556,7 +562,7 @@ const Play = {
     if (!box) return;
     const d = i >= 0 && this.dolls[i] ? DOLLS[this.dolls[i].dollId] : null;
     box.classList.toggle('on', !!d);
-    $('.th', box).innerHTML = d ? dollImg(d.id, 30) : '';
+    $('.th', box).innerHTML = d ? stageDoll(d.id, 30) : '';
     $('#targetName', box).textContent = d ? d.name : '조준 대기';
   },
 
@@ -615,7 +621,7 @@ const Play = {
       return `
       <div class="doll ${d.taken ? 'taken' : ''}" data-i="${i}"
         style="left:calc(${d.x * 100}% - ${size / 2}px);bottom:${Math.round(d.bottom * k)}px;z-index:${2 + d.layer * 2}">
-        ${dollImg(d.dollId, size, `transform:rotate(${d.rot}deg)`)}
+        ${stageDoll(d.dollId, size, `transform:rotate(${d.rot}deg)`)}
       </div>`;
     }).join('');
     this.paintAim();
@@ -750,7 +756,7 @@ const Play = {
       this.paintPit();
       carried = near.d;
       document.getElementById('held').innerHTML =
-        dollImg(carried.dollId, Math.round(carried.size * (this.dollScale || 1)), '', 'grabbed');
+        stageDoll(carried.dollId, Math.round(carried.size * (this.dollScale || 1)), '', 'grabbed');
     }
 
     // Lift.
@@ -809,7 +815,7 @@ const Play = {
     const heldRect = heldImage.getBoundingClientRect();
     document.getElementById('held').innerHTML = '';
     const chute = document.getElementById('chute');
-    chute.insertAdjacentHTML('beforeend', dollImg(carried.dollId, heldSize,
+    chute.insertAdjacentHTML('beforeend', stageDoll(carried.dollId, heldSize,
       `max-width:none;left:50%;margin-left:${-heldSize / 2}px`, 'drop'));
     const prize = chute.lastElementChild;
     const landing = prize.getBoundingClientRect();
