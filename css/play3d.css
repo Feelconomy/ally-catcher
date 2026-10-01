@@ -1,11 +1,50 @@
 .green3d-loading { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; padding: 24px; background: #d8eee1; }
 .green3d > .green3d-loading { position: absolute; inset: 0; z-index: 5; }
-.green3d-loading img { object-fit: contain; }
-.green3d-loading strong { font-size: 18px; }
-.green3d-loading span:last-child { font-size: 13px; color: #416854; }
-.green3d-spinner { width: 28px; height: 28px; border: 3px solid #a4cebd; border-top-color: #08764d; border-radius: 50%; animation: green3d-spin 1s linear infinite; }
-@keyframes green3d-spin { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) { .green3d-spinner { animation: none; } }
+/* 3D 준비 화면 — 올리 실루엣이 깡충깡충 뛰어 인형통으로 쏙 들어간다. */
+.l3 { gap: 0; background: radial-gradient(120% 70% at 50% 38%, #f4fbf6 0%, #dff1e6 55%, #cfe8da 100%); color: #0e4f2c; }
+.l3-scene { width: min(232px, 62vw); height: auto; overflow: visible; margin-bottom: 26px; }
+.l3-ground { fill: rgba(14, 79, 44, .08); }
+.l3-pile { fill: #0e4f2c; opacity: .22; }
+.l3-olly { fill: #0e4f2c; opacity: 0; animation: l3-olly 3.2s cubic-bezier(.45, 0, .55, 1) infinite; }
+.l3-eye { fill: #e6f4ec; }
+.l3-claw { fill: none; stroke: #0e4f2c; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; opacity: .55; transform-origin: 114px 46px; animation: l3-sway 3.2s ease-in-out infinite; }
+.l3-cab { fill: #00a650; }
+.l3-glass { fill: rgba(236, 248, 241, .58); stroke: rgba(255, 255, 255, .9); stroke-width: 1.5; }
+.l3-shine { fill: rgba(255, 255, 255, .7); }
+.l3-bulb { fill: #ffd400; animation: l3-blink 1.2s steps(1) infinite; }
+.l3-bulb:nth-of-type(2) { animation-delay: .4s; } .l3-bulb:nth-of-type(3) { animation-delay: .8s; }
+.l3-chute { fill: #00762f; }
+.l3-btn { fill: #ffd400; }
+.l3-tip { display: flex; align-items: baseline; justify-content: center; min-height: 24px; font-size: 17px; font-weight: 700; letter-spacing: -.02em; text-align: center; }
+#loading3dTip { transition: opacity .26s ease, transform .26s ease; }
+#loading3dTip.out { opacity: 0; transform: translateY(5px); }
+.l3-tip i { width: 4px; height: 4px; margin-left: 3px; border-radius: 50%; background: currentColor; animation: l3-dot 1.2s ease-in-out infinite; }
+.l3-tip i:nth-of-type(2) { animation-delay: .15s; } .l3-tip i:nth-of-type(3) { animation-delay: .3s; }
+.l3-bar { width: 148px; height: 4px; margin-top: 18px; border-radius: 2px; background: rgba(14, 79, 44, .12); overflow: hidden; }
+.l3-bar i { display: block; width: 8%; height: 100%; border-radius: inherit; background: #00a650; transition: width .4s ease; }
+.l3-sub { margin-top: 10px; font-size: 12px; font-weight: 600; color: rgba(14, 79, 44, .55); font-variant-numeric: tabular-nums; }
+@keyframes l3-olly {
+  0% { transform: translate(18px, 170px); opacity: 0; }
+  6% { opacity: 1; }
+  14% { transform: translate(30px, 150px) scale(.95, 1.06); }
+  22% { transform: translate(42px, 170px) scale(1.1, .9); }
+  30% { transform: translate(54px, 150px) scale(.95, 1.06); }
+  38% { transform: translate(66px, 170px) scale(1.16, .82); }
+  45% { transform: translate(80px, 40px) scale(.9, 1.1); }
+  52% { transform: translate(104px, 4px) rotate(14deg); }
+  62% { transform: translate(138px, 60px) rotate(4deg); }
+  70% { transform: translate(140px, 102px) scale(1.18, .84); }
+  76% { transform: translate(140px, 102px) scale(1); opacity: 1; }
+  92% { transform: translate(140px, 102px); opacity: 1; }
+  100% { transform: translate(140px, 102px); opacity: 0; }
+}
+@keyframes l3-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes l3-blink { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@keyframes l3-dot { 0%, 60%, 100% { opacity: .25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+@media (prefers-reduced-motion: reduce) {
+  .l3-olly { animation: none; opacity: 1; transform: translate(140px, 102px); }
+  .l3-claw, .l3-bulb, .l3-tip i { animation: none; }
+}
 .green3d { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: #cce5d8; }
 .green3d-stage { position: relative; flex: 1; min-height: 230px; overflow: hidden; background: #a9def4; }
 .green3d-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }

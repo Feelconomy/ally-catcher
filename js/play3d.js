@@ -157,6 +157,7 @@ export const Play3D = {
       if (this.active && session === this.session) {
         const label = document.getElementById('loading3dText');
         if (label) label.textContent = `인형과 기계 준비 중 · ${++completed}/${files.length}`;
+        document.getElementById('loading3dBar')?.style.setProperty('width', `${10 + 80 * completed / files.length}%`);
       }
       return pack;
     }));
@@ -233,7 +234,9 @@ export const Play3D = {
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
     for (const toy of this.toys) { toy.mesh.position.copy(toy.body.position); toy.mesh.quaternion.copy(toy.body.quaternion); }
-    document.getElementById('loading3dText').textContent = '조명과 화면 준비 중';
+    const label = document.getElementById('loading3dText');
+    if (label) label.textContent = '조명과 화면 준비 중';
+    document.getElementById('loading3dBar')?.style.setProperty('width', '96%');
     await this.renderer.compileAsync(this.scene, this.camera);
     if (!this.active || session !== this.session) return;
     this.renderer.render(this.scene, this.camera);

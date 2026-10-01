@@ -335,51 +335,78 @@ a:hover { color: var(--green-deep); }
 .btn--naver { background: #03C75A; color: #fff; height: 54px; font-size: 15px; border-radius: var(--r-lg); box-shadow: none; }
 .btn--apple { background: var(--ink); color: #fff; height: 54px; font-size: 15px; border-radius: var(--r-lg); }
 
-/* Onboarding (01) */
-.onb { position: relative; flex: 1; padding: 34px 28px 0; display: flex; flex-direction: column; }
-.onb .blob { position: absolute; border-radius: 50%; pointer-events: none; }
-.onb .blob.a { top: -114px; right: -70px; width: 260px; height: 260px; background: rgba(255, 255, 255, .35); }
-.onb .blob.b { bottom: 210px; left: -80px; width: 200px; height: 200px; background: rgba(0, 166, 80, .14); }
-.onb .kicker { font-size: 13px; font-weight: 700; color: var(--green); letter-spacing: .04em; position: relative; }
-.onb h2 { margin-top: 12px; font-size: 38px; line-height: 1.22; font-weight: 700; letter-spacing: -.03em; position: relative; }
-.onb p { margin-top: 14px; font-size: 15px; line-height: 1.6; color: var(--ink-60); max-width: 300px; position: relative; white-space: pre-line; }
-.onb .tray {
-  margin: 30px auto 0; width: 276px; height: 264px; border-radius: 30px; position: relative;
-  background: rgba(255, 255, 255, .62); box-shadow: inset 0 0 0 1px rgba(23, 23, 23, .08);
-  display: grid; grid-template-columns: 1fr 1fr; place-items: center; padding: 10px;
-}
-.onb .tray img { width: 96px; height: 96px; }
-.onb .tray.single { display: flex; align-items: center; justify-content: center; }
-/* 인형뽑기 기계 그림은 자체 틀이 있어 받침판을 뺀다. 예전 올리 그림은 아래가
-   잘려 있어 흐리게 지웠지만, 기계 그림은 다리까지 온전해서 그대로 보여준다. */
-.onb .tray.bare { background: none; box-shadow: none; padding: 0; height: auto; width: 100%; margin-top: 28px; }
-.onb .tray.bare img {
-  width: auto; height: 300px; margin: 0 auto;
-  filter: drop-shadow(0 10px 18px rgba(138, 106, 0, .22));
-}
+/* Onboarding (01) — 위 진행 막대, 가운데 그림 무대, 아래 문구와 버튼. 슬라이드마다
+   그림 무대 높이가 같아서 문구·버튼 위치가 흔들리지 않는다. */
+.onb-screen { background: radial-gradient(130% 60% at 50% 30%, #fff8d6 0%, #fffbef 55%, #f6f3ea 100%); }
+.onb { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 4px 24px calc(28px + env(safe-area-inset-bottom, 0px)); touch-action: pan-y; }
+.onb img { -webkit-user-drag: none; user-select: none; }
+.onb-top { display: flex; align-items: center; gap: 16px; height: 40px; flex-shrink: 0; }
+.onb-steps { flex: 1; display: flex; gap: 6px; }
+.onb-steps i { flex: 1; height: 4px; border-radius: 2px; background: rgba(23, 23, 23, .1); transition: background .3s ease; }
+.onb-steps i.on { background: var(--ink); }
+.onb-skip { font-size: 14px; font-weight: 600; color: var(--ink-50); padding: 8px 2px; }
+.onb-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+.onb-hero { height: 100%; max-height: 330px; width: auto; max-width: 100%; object-fit: contain; filter: drop-shadow(0 14px 22px rgba(138, 106, 0, .2)); }
+.onb-copy { flex-shrink: 0; text-align: center; padding: 8px 0 26px; }
+.onb-copy .kicker { display: inline-block; padding: 6px 12px; border-radius: var(--r-chip); background: var(--success-bg); color: var(--success-ink); font-size: 12px; font-weight: 700; letter-spacing: .02em; }
+.onb-copy h2 { margin-top: 14px; font-size: 30px; line-height: 1.25; font-weight: 700; letter-spacing: -.03em; }
+.onb-copy p { margin: 12px auto 0; max-width: 310px; word-break: keep-all; font-size: 15px; line-height: 1.6; color: var(--ink-60); white-space: pre-line; }
+.onb .foot { flex-shrink: 0; display: flex; flex-direction: column; gap: 4px; }
+.onb .foot .btn--text { color: var(--ink-50); }
+/* 넘길 때 그림과 문구가 넘긴 방향에서 살짝 밀려 들어온다. */
+.onb.fwd .onb-stage > *, .onb.fwd .onb-copy { animation: onb-in-r .42s cubic-bezier(.2, .8, .2, 1) both; }
+.onb.back .onb-stage > *, .onb.back .onb-copy { animation: onb-in-l .42s cubic-bezier(.2, .8, .2, 1) both; }
+.onb.fwd .onb-copy, .onb.back .onb-copy { animation-delay: .05s; }
+@keyframes onb-in-r { from { opacity: 0; transform: translateX(28px); } }
+@keyframes onb-in-l { from { opacity: 0; transform: translateX(-28px); } }
 
-.onb-art { display: flex; align-items: center; justify-content: center; gap: 8px; position: relative; }
-.onb-art.tickets { color: var(--yellow-pressed); }
-.onb-art.tickets span { display: flex; animation: bob 2.8s ease-in-out infinite; }
-.onb-art.tickets b {
-  position: absolute; bottom: -6px; right: 8px;
-  padding: 5px 12px; border-radius: var(--r-chip);
-  background: var(--green); color: #fff; font-size: 15px; font-weight: 700;
+/* 티켓 — 큰 티켓 한 장 위에 '어디서 모으는지' 칩 두 개. */
+.onb-tix { position: relative; width: 250px; height: 230px; }
+.onb-tix .tk {
+  position: absolute; left: 50%; top: 50%; width: 190px; height: 118px; margin: -59px 0 0 -95px; border-radius: 18px;
+  -webkit-mask: radial-gradient(circle 13px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 13px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
+          mask: radial-gradient(circle 13px at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 13px at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat;
 }
-.onb-art.swap { gap: 14px; }
-.onb-art.swap .from, .onb-art.swap .to {
-  width: 92px; height: 92px; border-radius: 26px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
+.onb-tix .tk.back { background: #ffe680; transform: rotate(-10deg) translate(-10px, -14px); }
+.onb-tix .tk.front {
+  background: linear-gradient(135deg, #ffdf3d, #ffc400); transform: rotate(4deg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: var(--yellow-ink);
+  box-shadow: 0 16px 28px rgba(138, 106, 0, .22); animation: bob 3.4s ease-in-out infinite;
 }
-.onb-art.swap .from { background: #fff; }
-.onb-art.swap .to { background: var(--yellow-soft); }
-.onb-art.swap .to b { font-size: 21px; font-weight: 700; color: var(--yellow-ink); }
-.onb-art.swap .to i { font-size: 10px; font-weight: 700; font-style: normal; color: var(--yellow-ink); }
-.onb-art.swap .arw { color: var(--ink-30); display: flex; }
-/* 슬라이드마다 위 콘텐츠 높이가 달라도 하단 표시가 흔들리지 않도록 고정 위치로 둔다. */
-.onb .foot { position: absolute; left: 28px; right: 28px; bottom: calc(44px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
-/* 건너뛰기 버튼은 탭 영역(46px)이 커서 위 간격이 커 보인다 — dots↔버튼 간격과 맞도록 살짝 당김. */
-.onb .foot [data-act="skip"] { margin-top: -8px; }
+.onb-tix .tk.front .ic { display: flex; opacity: .85; }
+.onb-tix .tk.front small { font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+.onb-tix .tk.front b { font-size: 30px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.onb-tix .chip {
+  position: absolute; display: flex; align-items: center; gap: 5px; padding: 8px 12px; border-radius: var(--r-chip);
+  background: #fff; font-size: 12px; font-weight: 700; color: var(--ink-2); white-space: nowrap; box-shadow: 0 6px 16px rgba(23, 23, 23, .08);
+}
+.onb-tix .chip svg { color: var(--green); }
+.onb-tix .chip.c1 { top: 10px; left: -6px; }
+.onb-tix .chip.c2 { bottom: 12px; right: -8px; }
+
+/* 교환 — 중복 인형 카드가 포인트 카드로, 아래에 포인트 쓰는 곳. */
+.onb-swap { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+.onb-swap .row { display: flex; align-items: center; gap: 12px; }
+.onb-swap .card {
+  width: 112px; height: 132px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 10px 24px rgba(23, 23, 23, .08);
+}
+.onb-swap .card small { font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.onb-swap .doll { background: #fff; color: var(--ink-50); }
+.onb-swap .pt { background: var(--green); color: rgba(255, 255, 255, .8); animation: bob 3.4s ease-in-out infinite; }
+.onb-swap .pt b { font-size: 30px; font-weight: 800; color: #fff; letter-spacing: -.02em; }
+.onb-swap .arw { width: 32px; height: 32px; border-radius: 50%; background: #fff; color: var(--ink-40); display: flex; align-items: center; justify-content: center; }
+.onb-swap .uses { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.onb-swap .uses span { display: flex; align-items: center; gap: 5px; padding: 8px 12px; border-radius: var(--r-chip); background: rgba(255, 255, 255, .8); font-size: 12px; font-weight: 700; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--line); }
+.onb-swap .uses svg { color: var(--yellow-pressed); }
+@media (prefers-reduced-motion: reduce) {
+  .onb .onb-stage > *, .onb .onb-copy, .onb-tix .tk.front, .onb-swap .pt { animation: none !important; }
+}
+@media (max-height: 700px) {
+  .onb-copy h2 { font-size: 26px; }
+  .onb-copy { padding-bottom: 18px; }
+  .onb-tix, .onb-swap { transform: scale(.88); }
+}
 .dots { display: flex; gap: 6px; justify-content: center; margin-bottom: 6px; }
 .dots > i { width: 6px; height: 6px; border-radius: 3px; background: rgba(23, 23, 23, .24); transition: width .2s ease; }
 .dots > i.on { width: 22px; background: var(--ink); }

@@ -165,55 +165,71 @@ const Screens = {
 
   /* --- 01 온보딩 --------------------------------------------------------- */
   onboarding() {
-    setTheme('yellow');
+    setTheme('');
     const slides = ONBOARDING;
-    let i = 0;
+    let i = 0, dir = 0;
 
     /** Each slide illustrates its own promise rather than repeating the tray. */
     const artFor = s => {
       if (s.art[0] === 'machine') {
-        return '<img class="onb-art-hero" src="assets/onboarding-machine.webp" alt="인형이 가득 찬 분홍 인형뽑기 기계" width="1024" height="1536">';
+        return '<img class="onb-hero" src="assets/onboarding-machine.webp" alt="인형이 가득 찬 분홍 인형뽑기 기계" width="1024" height="1536">';
       }
       if (s.art[0] === 'ticket') {
-        return `<div class="onb-art tickets">
-          ${[0, 1, 2].map(k => `<span style="animation-delay:${k * .18}s">${icon('ticketFill', k === 1 ? 68 : 52)}</span>`).join('')}
-          <b>+${SIGNUP_TICKETS}</b>
+        return `<div class="onb-tix">
+          <div class="tk back"></div>
+          <div class="tk front"><span class="ic">${icon('ticketFill', 26)}</span><small>FREE TICKET</small><b>× ${SIGNUP_TICKETS}</b></div>
+          <span class="chip c1">${icon('calendar', 14)}출석 체크 +1</span>
+          <span class="chip c2">${icon('circleCheck', 14)}데일리 미션 +2</span>
         </div>`;
       }
       if (s.art[0] === 'exchange') {
-        return `<div class="onb-art swap">
-          <span class="from">${dollImg('tiger', 72)}</span>
-          <span class="arw">${icon('arrowRight', 22)}</span>
-          <span class="to"><b>400</b><i>POINT</i></span>
+        return `<div class="onb-swap">
+          <div class="row">
+            <span class="card doll">${dollImg('tiger', 76)}<small>중복 인형</small></span>
+            <span class="arw">${icon('arrowRight', 18)}</span>
+            <span class="card pt"><b>+400</b><small>POINT</small></span>
+          </div>
+          <div class="uses"><span>${icon('star', 13)}추첨 응모</span><span>${icon('refresh', 13)}NH멤버스 포인트 전환</span></div>
         </div>`;
       }
-      return s.art.map((d, k) =>
-        dollImg(d, 96, `animation:bob ${3.2 + k * 0.2}s ease-in-out infinite ${k * 0.25}s`)).join('');
+      return s.art.map(d => dollImg(d, 96)).join('');
     };
 
     const paint = () => {
-      const s = slides[i];
-      screenEl().innerHTML = `<div class="screen">
+      const s = slides[i], last = i === slides.length - 1;
+      screenEl().innerHTML = `<div class="screen onb-screen">
         ${statusbar()}
-        <div class="onb">
-          <div class="blob a"></div><div class="blob b"></div>
-          <div class="kicker">${s.k}</div>
-          <h2>${s.h}</h2>
-          <p>${esc(s.p)}</p>
-          <div class="tray ${s.art.length === 1 ? 'single' : ''} ${s.art[0] === 'machine' ? 'bare' : ''}">${artFor(s)}</div>
+        <div class="onb ${dir > 0 ? 'fwd' : dir < 0 ? 'back' : ''}">
+          <div class="onb-top">
+            <div class="onb-steps" role="progressbar" aria-valuemin="1" aria-valuemax="${slides.length}" aria-valuenow="${i + 1}">${slides.map((_, k) => `<i class="${k <= i ? 'on' : ''}"></i>`).join('')}</div>
+            ${last ? '' : '<button class="onb-skip" data-act="skip">건너뛰기</button>'}
+          </div>
+          <div class="onb-stage">${artFor(s)}</div>
+          <div class="onb-copy">
+            <span class="kicker">${s.k}</span>
+            <h2>${s.h}</h2>
+            <p>${esc(s.p)}</p>
+          </div>
           <div class="foot">
-            <div class="dots">${slides.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('')}</div>
-            <button class="btn btn--primary" data-act="next">
-              ${i === slides.length - 1 ? `무료 티켓 ${SIGNUP_TICKETS}장 받고 시작` : '다음'}
-            </button>
-            <button class="btn sm btn--text" data-act="skip">${i === slides.length - 1 ? '이미 계정이 있어요' : '건너뛰기'}</button>
+            <button class="btn btn--primary" data-act="next">${last ? `무료 티켓 ${SIGNUP_TICKETS}장 받고 시작` : '다음'}</button>
+            <button class="btn sm btn--text" data-act="skip">이미 계정이 있어요</button>
           </div>
         </div>
       </div>`;
 
+      const turn = step => { const n = i + step; if (n < 0 || n >= slides.length) return; dir = step; i = n; paint(); };
       bind(screenEl(), {
-        next: () => { if (i === slides.length - 1) Dialogs.welcome(); else { i++; paint(); } },
+        next: () => { if (last) Dialogs.welcome(); else turn(1); },
         skip: () => Dialogs.welcome(),
+      });
+      // 좌우로 밀어서 넘기기 — 세로 움직임이 더 크면 무시한다.
+      let x0 = null, y0 = 0;
+      const onb = $('.onb', screenEl());
+      onb.addEventListener('pointerdown', e => { x0 = e.clientX; y0 = e.clientY; });
+      onb.addEventListener('pointerup', e => {
+        if (x0 === null) return;
+        const dx = e.clientX - x0, dy = e.clientY - y0; x0 = null;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) turn(dx < 0 ? 1 : -1);
       });
     };
     paint();
