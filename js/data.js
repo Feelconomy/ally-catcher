@@ -38,7 +38,7 @@ const DOLLS = {
   ...poseDolls([
     { id: 'tiger',   name: '호랑이모자 올리', grade: 'SR', points: 400, bg: '#FFF3D2', rate: 1.8 },
     { id: 'hanbok',  name: '한복 원이',      grade: 'R',  points: 120, bg: '#EAF2F7', rate: 2.4 },
-    { id: 'spring',  name: '벚꽃 원이',      grade: 'R',  points: 120, bg: '#FDEDF2', rate: 2.4 },
+    { id: 'spring',  name: '벚꽃 원이',      grade: 'R',  points: 120, bg: '#FDEDF2', rate: 2.4, model3d: 'ToySpring' },
     { id: 'snorkel', name: '물놀이 원이',    grade: 'R',  points: 120, bg: '#E6F3FB', rate: 2.6, model3d: 'ToySnorkel' },
     { id: 'summer',  name: '수박 원이',      grade: 'R',  points: 120, bg: '#FFF0EC', rate: 2.6, model3d: 'ToySummer' },
     { id: 'autumn',  name: '단풍 원이',      grade: 'R',  points: 120, bg: '#FBEFE2', rate: 2.4, model3d: 'ToyAutumn' },
@@ -86,7 +86,7 @@ const TOY_SHAPES = {
   ToyHanbokOlly: '한복올리', ToyHanbokDali: '한복달리', ToyAcorn: '도토리올리',
   ToyAutumn: '단풍올리', ToySummerWoni: '여름원이', ToyKori: '코리',
   ToySki: '눈싸움올리', ToySanta: '산타올리', ToySnorkel: '물놀이올리',
-  ToySummer: '수박올리', ToyFrogDali: '개구리달리', ToyWoni: '원이', ToyHanbokKori: '한복코리',
+  ToySummer: '수박올리', ToyFrogDali: '개구리달리', ToyWoni: '원이', ToyHanbokKori: '한복코리', ToySpring: '벚꽃올리',
   ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
