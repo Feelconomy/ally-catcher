@@ -343,7 +343,7 @@ const Screens = {
           ? `<div style="font-size:14px;font-weight:700;margin-bottom:6px">검색 결과 ${hits.length}</div>
              ${hits.map(m => resultRow(m, term)).join('')}`
           : `<div class="empty" style="padding-top:56px">
-               ${dollImg('dog', 112, 'opacity:.35;filter:grayscale(1)')}
+               <div class="empty-crew">${friendIcon('dali', 96, 'peek')}</div>
                <h3>'${esc(term)}' 결과가 없어요</h3>
                <p>다른 키워드로 찾아보거나<br>인기 기계를 둘러보세요</p>
                <button class="btn sm auto btn--primary" style="margin-top:22px" data-act="popular">인기 기계 보기</button>
@@ -528,7 +528,10 @@ const Screens = {
   /* --- 04 뽑기 성공 ------------------------------------------------------ */
   win(dollId) {
     setTheme('green');
-    const d = DOLLS[dollId] || DOLLS.bear;
+    /* 숨긴 인형·옛 링크로 들어오면 DOLLS[id] 가 없다. 예전엔 DOLLS.bear 로
+       떨어졌는데 그 인형이 카탈로그에서 빠지면서 화면이 통째로 깨졌다. */
+    const d = DOLLS[dollId] || DOLLS[DOLL_IDS[0]];
+    if (!d) { go('home'); return; }
     const gradeLabel = { N: '노멀 등급', R: '레어 등급', SR: 'SR 등급' }[d.grade];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center">

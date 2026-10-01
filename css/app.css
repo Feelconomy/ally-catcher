@@ -70,6 +70,13 @@ a:hover { color: var(--green-deep); }
 .iconbtn.ghost { background: rgba(255, 255, 255, .1); box-shadow: none; color: #fff; }
 .iconbtn.plain { background: none; box-shadow: none; }
 .iconbtn:active { transform: scale(.94); }
+/* 보이는 크기는 그대로 두고 손가락이 닿는 범위만 넓힌다 (아이콘 버튼 32px·글자
+   버튼 17px 은 손가락으로 누르기엔 작다). 칩은 가로 스크롤 줄에 잘려서 이 방법이
+   안 통해 아래에서 키 자체를 키웠다. */
+.iconbtn, .toggle, .section-head .more, .searchbar .clear, .onb-skip, .account-actions button { position: relative; }
+.iconbtn::after, .toggle::after { content: ''; position: absolute; inset: -5px; }
+.section-head .more::after, .onb-skip::after, .account-actions button::after { content: ''; position: absolute; inset: -10px -8px; }
+.searchbar .clear::after { content: ''; position: absolute; inset: -11px; }
 
 /* Brand lockup */
 /* 로고. 그림에 배경색이 박혀 있어 모서리만 둥글게 깎아 앱 아이콘처럼 쓴다. */
@@ -142,14 +149,15 @@ a:hover { color: var(--green-deep); }
 .chiprow { display: flex; gap: 8px; overflow-x: auto; padding-inline: 20px; padding-bottom: 14px; flex-shrink: 0; }
 .chiprow::-webkit-scrollbar { height: 0; }
 .chip {
-  padding: 9px 15px; border-radius: var(--r-chip);
+  min-height: 38px; padding: 0 16px; border-radius: var(--r-chip);
   background: var(--surface); box-shadow: var(--hairline);
   color: var(--ink-2); font-size: 13px; font-weight: 600;
   white-space: nowrap; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .chip[aria-pressed="true"] { background: var(--green); color: #fff; font-weight: 700; box-shadow: none; }
 .chip.dark[aria-pressed="true"] { background: var(--ink); }
-.chip.sm { padding: 8px 14px; font-size: 12px; }
+.chip.sm { min-height: 36px; padding: 0 14px; font-size: 12px; }
 .chip:disabled { background: rgba(112, 115, 124, .08); color: var(--ink-30); box-shadow: none; }
 
 .badge { padding: 4px 9px; border-radius: 7px; font-size: 10px; font-weight: 700; white-space: nowrap; }
@@ -1447,7 +1455,7 @@ a:hover { color: var(--green-deep); }
 .mission .m { margin-top: 4px; display: flex; align-items: center; gap: 6px; }
 .mission .m .rw { font-size: 11px; font-weight: 700; color: var(--green); }
 .mission .m .pg { font-size: 11px; font-weight: 600; color: rgba(23, 23, 23, .42); }
-.mission .act { height: 34px; padding: 0 14px; border-radius: 11px; font-size: 12px; font-weight: 700; flex-shrink: 0; box-shadow: none; }
+.mission .act { height: 36px; padding: 0 14px; border-radius: 11px; font-size: 12px; font-weight: 700; flex-shrink: 0; box-shadow: none; }
 .mission .act.btn--neutral { color: var(--ink-3); }
 
 /* Small inline pill used inside banners and field rows. */
