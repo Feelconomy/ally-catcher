@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=200').catch(() => { warmed = false; });
+    import('./play3d.js?v=201').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -26,7 +26,8 @@ const pick = list => list[Math.floor(Math.random() * list.length)];
 document.addEventListener('animationiteration', e => {
   const char = e.target;
   if (!char.classList || !char.classList.contains('l3-olly')) return;
-  const next = pick(FRIEND_IDS.filter(id => id !== char.dataset.id));
+  // 관리자 미리보기에서 한 친구로 고정하면(data-fixed) 문구만 그 친구 것끼리 돈다
+  const next = char.dataset.fixed ? char.dataset.id : pick(FRIEND_IDS.filter(id => id !== char.dataset.id));
   char.dataset.id = next;
   char.innerHTML = friendImage(next);
   const tip = document.getElementById('loading3dTip');
@@ -36,15 +37,16 @@ document.addEventListener('animationiteration', e => {
 });
 /* 실제 캐릭터 윤곽 마스크를 한 가지 색으로 칠한다(#l3sil). 발바닥 가운데가 (0,0). */
 const friendImage = (id, h = 40) => `<image href="${friendMask(id)}" x="${-h * .55}" y="${-h}" width="${h * 1.1}" height="${h}" preserveAspectRatio="xMidYMax meet" filter="url(#l3sil)"/>`;
-function green3DLoading() {
-  const first = pick(FRIEND_IDS);
+/** fixed: 한 친구만 계속 나오게(관리자 미리보기). 없으면 들어갈 때마다 바뀐다. */
+function green3DLoading(fixed) {
+  const first = FRIENDS[fixed] ? fixed : pick(FRIEND_IDS);
   return `<div class="green3d-loading l3" id="loading3d" role="status" aria-live="polite">
     <svg class="l3-scene" viewBox="0 -34 200 214" aria-hidden="true">
       <defs><filter id="l3sil"><feFlood flood-color="#0e4f2c"/><feComposite in2="SourceAlpha" operator="in"/></filter></defs>
       <ellipse class="l3-ground" cx="104" cy="172" rx="92" ry="6"/>
       <g class="l3-pile">${FRIEND_IDS.filter(id => id !== first).slice(0, 3).map((id, k) =>
         `<g transform="translate(${[114, 151, 132][k]} ${[118, 118, 112][k]})">${friendImage(id, 24)}</g>`).join('')}</g>
-      <g class="l3-olly" data-id="${first}">${friendImage(first)}</g>
+      <g class="l3-olly" data-id="${first}"${FRIENDS[fixed] ? ' data-fixed="1"' : ''}>${friendImage(first)}</g>
       <g class="l3-claw"><line x1="114" y1="46" x2="114" y2="62"/><path d="M106 70l2-6h12l2 6M108 64l-4 10M120 64l4 10"/></g>
       <path class="l3-cab" fill-rule="evenodd" d="M104 22h56a12 12 0 0 1 12 12v126a8 8 0 0 1-8 8H100a8 8 0 0 1-8-8V34a12 12 0 0 1 12-12ZM100 48v70h64V48Z"/>
       <rect class="l3-glass" x="100" y="48" width="64" height="70"/>
@@ -58,6 +60,22 @@ function green3DLoading() {
     <span class="l3-sub" id="loading3dText">3D 화면을 불러오고 있어요</span>
   </div>`;
 }
+/* 3D 를 못 받았을 때. kind: offline(인터넷 끊김) · server(그 밖의 실패) · local(file://) */
+const GREEN3D_ERRORS = {
+  offline: ['인터넷이 끊겼어요', '연결되면 다시 시도해 주세요.\n기본 모드는 인터넷 없이도 바로 할 수 있어요.'],
+  server: ['인형통을 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.\n그동안 기본 모드로 놀 수 있어요.'],
+  local: ['로컬 서버가 필요해요', '3D 모드는 파일로 열면 동작하지 않아요.\n로컬 서버로 열어 주세요.'],
+};
+function green3DError(kind) {
+  const [title, body] = GREEN3D_ERRORS[kind] || GREEN3D_ERRORS.server;
+  return `<div class="green3d-loading l3 l3-err" role="alert">
+    ${friendIcon('olly', 92, 'peek')}
+    <strong>${title}</strong>
+    <p>${esc(body)}</p>
+    <button class="btn btn--primary" id="retry3d">다시 시도</button>
+    <button class="btn btn--text" id="fallback2d">기본 모드로 계속</button>
+  </div>`;
+}
 async function startGreen3D(machine) {
   const request = ++green3DRequest;
   Play.stop();
@@ -68,7 +86,7 @@ async function startGreen3D(machine) {
   screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=200');
+    const { Play3D } = await import('./play3d.js?v=201');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);
@@ -76,13 +94,7 @@ async function startGreen3D(machine) {
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D?.stop();
     console.error('3D cabinet:', error);
-    screenEl().innerHTML = `<div class="green3d-loading">
-      <p>${location.protocol === 'file:' ? '3D 모드는 로컬 서버에서 열어주세요.'
-        : navigator.onLine ? '3D 인형통을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.'
-        : '인터넷 연결이 끊겨서 3D 인형통을 못 받았어요.'}</p>
-      <button class="btn btn--primary" id="retry3d">다시 시도</button>
-      <button class="btn btn--neutral" id="fallback2d">기본 모드로 계속</button>
-    </div>`;
+    screenEl().innerHTML = green3DError(location.protocol === 'file:' ? 'local' : navigator.onLine ? 'server' : 'offline');
     document.getElementById('retry3d').onclick = () => startGreen3D(machine);
     document.getElementById('fallback2d').onclick = () => {
       Store.state.settings.skin = 'arcade'; Store.save(); Play.start(machine, 'arcade');

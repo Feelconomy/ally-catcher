@@ -1306,10 +1306,11 @@ const Screens = {
         <button class="chip" aria-pressed="${tab === 'dolls'}" data-act="tab" data-t="dolls">인형 ${DOLL_IDS.length}</button>
         <button class="chip" aria-pressed="${tab === 'machines'}" data-act="tab" data-t="machines">기계 ${MACHINES.length}</button>
         <button class="chip" aria-pressed="${tab === 'screen'}" data-act="tab" data-t="screen">화면</button>
+        <button class="chip" aria-pressed="${tab === 'loading'}" data-act="tab" data-t="loading">3D 로딩</button>
       </div>
       <div class="scroll pad">
-        ${tab === 'machines' ? adminMachineList() : tab === 'screen' ? adminSkinPicker() : adminDollGrid()}
-        <button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>
+        ${tab === 'machines' ? adminMachineList() : tab === 'screen' ? adminSkinPicker() : tab === 'loading' ? adminLoadingPreview() : adminDollGrid()}
+        ${tab === 'loading' ? '' : '<button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>'}
         <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
           ${window.Sync && Sync.enabled
             ? '서버에 저장돼 모든 기기에 함께 반영돼요.'
@@ -1332,6 +1333,8 @@ const Screens = {
       newMachine: () => Sheets.adminMachine(null),
       moveUp: el => reorder(el.dataset.id, -1),
       moveDown: el => reorder(el.dataset.id, 1),
+      lf: el => { App.adminLoad = { ...App.adminLoad, friend: el.dataset.v }; Screens.admin(); },
+      ls: el => { App.adminLoad = { ...App.adminLoad, stage: el.dataset.v }; Screens.admin(); },
       skin: el => {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
@@ -1346,6 +1349,37 @@ const Screens = {
     });
   },
 };
+
+/* 관리자 '3D 로딩' 탭: 캐릭터 × 상황별로 3D 준비 화면을 실제 그대로 띄워 본다.
+   게임은 시작하지 않는다 — 같은 화면 함수(green3DLoading · green3DError)만 쓴다. */
+const LOADING_STAGES = [
+  ['start', '처음 받는 중', 8, '3D 화면을 불러오고 있어요'],
+  ['models', '인형·기계 받는 중', 52, '인형과 기계 준비 중 · 7/14'],
+  ['light', '조명 준비', 96, '조명과 화면 준비 중'],
+  ['offline', '실패 · 인터넷 끊김'],
+  ['server', '실패 · 서버 오류'],
+  ['local', '실패 · 파일로 열었을 때'],
+];
+function adminLoadingPreview() {
+  const { friend = 'auto', stage = 'start' } = App.adminLoad || {};
+  const st = LOADING_STAGES.find(x => x[0] === stage) || LOADING_STAGES[0];
+  const chip = (act, v, label, on) => `<button class="chip sm" data-act="${act}" data-v="${v}" aria-pressed="${on}">${label}</button>`;
+  let preview;
+  if (st[2] === undefined) preview = green3DError(stage);
+  else preview = green3DLoading(friend === 'auto' ? null : friend)
+    .replace('<i id="loading3dBar"></i>', `<i id="loading3dBar" style="width:${st[2]}%"></i>`)
+    .replace('3D 화면을 불러오고 있어요</span>', `${st[3]}</span>`);
+  const lines = friend === 'auto' ? FRIEND_IDS.flatMap(id => FRIENDS[id].lines) : FRIENDS[friend].lines;
+  return `<div class="adm-load">
+    <div class="adm-lbl">캐릭터</div>
+    <div class="adm-chips">${chip('lf', 'auto', '돌아가며', friend === 'auto')}${FRIEND_IDS.map(id => chip('lf', id, FRIENDS[id].name, friend === id)).join('')}</div>
+    <div class="adm-lbl">상황</div>
+    <div class="adm-chips">${LOADING_STAGES.map(([v, label]) => chip('ls', v, label, stage === v)).join('')}</div>
+    <div class="adm-phone">${preview}</div>
+    ${st[2] === undefined ? '' : `<div class="adm-lbl">나오는 문구 (${lines.length})</div>
+    <ul class="adm-lines">${lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>`}
+  </div>`;
+}
 
 /* 기계 상세의 '플레이 화면' 고르기. 사용자가 고른 값은 이 기기에 남고,
    고른 적이 없으면 관리자 기본값을 따른다. */

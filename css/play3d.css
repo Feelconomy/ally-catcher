@@ -22,6 +22,12 @@
 .l3-bar { width: 148px; height: 4px; margin-top: 18px; border-radius: 2px; background: rgba(14, 79, 44, .12); overflow: hidden; }
 .l3-bar i { display: block; width: 8%; height: 100%; border-radius: inherit; background: #00a650; transition: width .4s ease; }
 .l3-sub { margin-top: 10px; font-size: 12px; font-weight: 600; color: rgba(14, 79, 44, .55); font-variant-numeric: tabular-nums; }
+.l3-err { padding: 32px 28px; text-align: center; }
+.l3-err .friend { color: rgba(14, 79, 44, .18); margin-bottom: 18px; }
+.l3-err strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
+.l3-err p { margin: 8px 0 26px; font-size: 14px; line-height: 1.6; color: rgba(14, 79, 44, .65); white-space: pre-line; }
+.l3-err .btn { width: 100%; max-width: 300px; }
+.l3-err .btn + .btn { margin-top: 6px; }
 @keyframes l3-olly {
   0% { transform: translate(18px, 170px); opacity: 0; }
   6% { opacity: 1; }
