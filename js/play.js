@@ -296,6 +296,7 @@ const Play = {
       <div class="timerrow">
         <span class="l">남은 시간</span>
         <span class="t" id="clock">${mmss(this.left)}</span>
+        <button class="restock" data-act="restock" type="button" aria-label="인형 재배치">${icon('refresh', 13)}<span>재배치</span></button>
       </div>
       <div class="meter onDark"><i id="timeBar" style="width:100%"></i></div>
       <div class="stick" id="stick">
@@ -305,7 +306,6 @@ const Play = {
         <button class="dpad right" data-dir="right" aria-label="오른쪽">${icon('chevronRight3', 20)}</button>
       </div>
       <button class="btn lg btn--accent drop-btn" id="dropBtn" data-act="drop">집게 내리기</button>
-      <button class="restock-btn" data-act="restock" type="button">인형 재배치</button>
     </div>`;
   },
 
@@ -342,15 +342,14 @@ const Play = {
           <span class="cap">뽑기 시작!</span>
         </div>
       </div>
-      <div class="restock-row">
-        <button class="restock-btn" data-act="restock" type="button">인형 재배치</button>
-      </div>
-      <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다. -->
+      <!-- 조준한 인형과 이번 판 확률. 아무것도 안 겹쳤을 땐 조작 안내가 뜬다.
+           재배치는 3D 와 같은 자리(정보줄 오른쪽 끝)에 둔다 — 드롭과 겨루지 않는 보조 동작. -->
       <div class="tipbar odds" id="target">
         <span class="th"></span>
         <b class="tip">TIP</b>
         <span class="n" id="targetName">레버로 위치를 맞추고 드롭 버튼을 눌러보세요!</span>
         <b class="pc" id="oddsNum">0%</b>
+        <button class="restock" data-act="restock" type="button" aria-label="인형 재배치">${icon('refresh', 14)}<span>재배치</span></button>
       </div>
     </div>`;
   },

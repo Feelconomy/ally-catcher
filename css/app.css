@@ -1676,18 +1676,32 @@ a:hover { color: var(--green-deep); }
 .shape-pick { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .shape-pick .chip { flex: 0 0 auto; }
 
-/* 2D 인형 재배치 — 3D 의 재배치 버튼과 같은 역할. 드롭 버튼과 경쟁하지 않게
-   조작대 아래 가운데에 작은 알약으로 둔다. */
-.restock-row { margin-top: 10px; text-align: center; }
-.restock-btn { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px;
-  padding: 7px 15px; border: 0; border-radius: 999px; font-size: 12px; font-weight: 700;
-  letter-spacing: -.01em; cursor: pointer; background: rgba(255,255,255,.16); color: rgba(255,255,255,.9); }
-.restock-btn::before { content: '↻'; font-size: 13px; line-height: 1; }
-.restock-btn:hover { background: rgba(255,255,255,.26); color: #fff; }
-.restock-btn:active { transform: scale(.96); }
-.screen.arcade .restock-btn { background: #ffffffcc; color: var(--green-deep); box-shadow: var(--shadow-card); }
-.screen.arcade .restock-btn:hover { background: #fff; }
-.controls > .restock-btn { display: block; margin-left: auto; margin-right: auto; }
+/* 2D 인형 재배치 — 3D 와 같은 자리, 조준 정보줄 오른쪽 끝. 따로 한 줄을 차지하던
+   알약은 조작판과 정보줄 사이에 떠서 어디에 속한 버튼인지 애매했다. 확률 숫자 옆에
+   얇은 선으로 나눈 작은 버튼으로 둔다 — 눈에는 띄되 드롭과 겨루지 않는다. */
+.restock {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px;
+  height: 30px; padding: 0 10px 0 8px; border: 0; border-radius: 9px; cursor: pointer;
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: -.01em; white-space: nowrap;
+}
+.restock svg { flex-shrink: 0; }
+.restock:active { transform: scale(.96); }
+.screen.arcade .tipbar .restock {
+  position: relative; margin-left: 6px;
+  background: #fff; color: var(--arc-ink);
+  box-shadow: 0 1px 2px rgba(14, 79, 44, .12), inset 0 0 0 1px rgba(14, 79, 44, .08);
+}
+.screen.arcade .tipbar .restock:hover { background: #f4fbf6; }
+/* 확률이 보일 땐 숫자와 버튼 사이를 얇은 선으로 가른다 */
+.screen.arcade .tipbar.on .restock { margin-left: 12px; }
+.screen.arcade .tipbar.on .restock::before {
+  content: ''; position: absolute; left: -7px; top: 6px; bottom: 6px; width: 1px;
+  background: rgba(14, 79, 44, .14);
+}
+.screen.classic .timerrow .restock {
+  margin-left: auto; height: 26px; background: rgba(255, 255, 255, .14); color: rgba(255, 255, 255, .9);
+}
+.screen.classic .timerrow .restock:hover { background: rgba(255, 255, 255, .24); color: #fff; }
 
 /* 관리자 기계 목록의 '기계 추가' 카드 — 인형 추가 카드와 같은 모양 */
 .adm-mcard.add { display: grid; place-items: center; gap: 4px; min-height: 104px;
