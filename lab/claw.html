@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>집게 물리 실험실</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #11161b; color: #e8eef2; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; overflow: hidden; }
+  #view { position: fixed; inset: 0; }
+  #hud {
+    position: fixed; top: 10px; left: 10px; width: 310px; max-height: calc(100vh - 20px);
+    overflow: auto; padding: 12px 14px; border-radius: 12px;
+    background: rgba(8, 12, 16, .82); border: 1px solid rgba(255, 255, 255, .12);
+    white-space: pre-wrap; font-size: 11.5px; line-height: 1.55;
+  }
+  #hud b { color: #7ee3a0; }
+  #hud .warn { color: #ff8c8c; }
+  #bar { position: fixed; left: 10px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; width: 310px; }
+  button { font: inherit; padding: 7px 11px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
+           background: #1d2630; color: #e8eef2; cursor: pointer; }
+  button:hover { background: #26323e; }
+  button.on { background: #1f6f45; border-color: #2f9a62; }
+  #tests { position: fixed; right: 10px; top: 10px; width: 300px; max-height: calc(100vh - 20px); overflow: auto;
+           padding: 12px 14px; border-radius: 12px; background: rgba(8,12,16,.82); border: 1px solid rgba(255,255,255,.12); font-size: 11.5px; }
+  #tests .pass { color: #7ee3a0; } #tests .fail { color: #ff8c8c; } #tests .run { color: #ffd166; }
+  h4 { margin: 0 0 8px; font-size: 12px; letter-spacing: .04em; color: #9fb3c4; }
+</style>
+</head>
+<body>
+<div id="view"></div>
+<div id="hud">불러오는 중…</div>
+<div id="tests"><h4>TESTS</h4><div id="testlog">대기 중</div></div>
+<div id="bar">
+  <button id="btnDrop">DROP</button>
+  <button id="btnReset">리셋</button>
+  <button id="btnDebug" class="on">콜라이더</button>
+  <button id="btnSlow">0.25x</button>
+  <button id="btnTests">테스트 실행</button>
+</div>
+<script type="importmap">
+{"imports":{"three":"../vendor/three.module.js"}}
+</script>
+<script type="module" src="../js/claw/lab.js"></script>
+</body>
+</html>
