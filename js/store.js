@@ -465,7 +465,7 @@ const Store = {
     return true;
   },
 
-  allEntries() { return this.state.entries.concat(SEED_ENTRIES); },
+  allEntries() { return this.state.entries.slice(); },
 
   pendingEntries() { return this.allEntries().filter(e => e.status === 'wait').length; },
 

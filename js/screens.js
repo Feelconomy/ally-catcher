@@ -253,7 +253,7 @@ const Screens = {
       <div class="home-head">
         <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=120" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
-        <button class="iconbtn plain" data-route="search" aria-label="검색">${icon('search', 22)}</button>
+        <button class="iconbtn" data-route="search" aria-label="검색">${icon('search', 18)}</button>
         ${walletChip()}
       </div>
       <div class="chiprow">
@@ -541,7 +541,7 @@ const Screens = {
         <div class="blob a"></div><div class="blob b"></div>
         <div class="kicker">GOT IT!</div>
         <h2>인형을 뽑았어요</h2>
-        <div class="prize">${dollImg(d.id, 172, '', 'win')}</div>
+        <div class="prize">${'<i class="cf"></i>'.repeat(12)}${dollImg(d.id, 172, '', 'win')}</div>
         <div class="nm">${esc(d.name)}</div>
         <div class="tags">
           <span style="background:rgba(255,255,255,.2);color:#fff">${gradeLabel}</span>
@@ -689,10 +689,10 @@ const Screens = {
         <div class="scroll pad">
           <div class="prize-grid">
             ${shown.map(id => `
-              <button class="pcard" data-act="doll" data-id="${id}">
+              <button class="pcard" data-act="doll" data-id="${id}" data-grade="${DOLLS[id].grade}">
                 <span class="box" style="display:flex;background:${DOLLS[id].bg || 'var(--surface)'}">
                   ${dollImg(id, 74)}
-                  <span class="badge ${GRADE_CLASS[DOLLS[id].grade]}">${DOLLS[id].grade}</span>
+                  ${DOLLS[id].grade === 'N' ? '' : `<span class="badge ${GRADE_CLASS[DOLLS[id].grade]}">${DOLLS[id].grade}</span>`}
                   ${counts[id] > 1 ? `<span class="dupe">×${counts[id]}</span>` : ''}
                 </span>
                 <span class="nm" style="display:block">${esc(DOLLS[id].name)}</span>
@@ -1088,10 +1088,13 @@ const Screens = {
           </div>
         </div>
 
-        <div class="account-actions">
-          <button data-act="logout">로그아웃</button>
-          <button data-act="withdraw">회원 탈퇴</button>
+        <div class="settings-group">
+          <div class="card list">
+            <button class="row" style="width:100%" data-act="logout"><span class="label" style="text-align:left">로그아웃</span><span class="chev">${icon('chevronRight3', 18)}</span></button>
+            <button class="row danger" style="width:100%" data-act="withdraw"><span class="label" style="text-align:left">회원 탈퇴</span><span class="chev">${icon('chevronRight3', 18)}</span></button>
+          </div>
         </div>
+        <div style="height:20px"></div>
       </div>
     </div>`;
 

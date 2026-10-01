@@ -210,13 +210,6 @@ const RAFFLES = [
 ];
 
 /* Seeded entry history so 응모 내역 has the three states the design shows. */
-const SEED_ENTRIES = [
-  { id: 'e1', raffle: 'cafe', name: '카페 모바일 기프티콘', icon: 'coffee', bg: '#E5FBEC', color: '#00863F',
-    meta: '2026.08.01 응모 · 100P', status: 'win', claimDays: 5 },
-  { id: 'e2', raffle: 'movie', name: '영화 예매권', icon: 'ticket', bg: '#F0F1F3', color: '#8A8D94',
-    meta: '2026.07.20 응모 · 200P', status: 'lost' },
-];
-
 const MY_MENU = [
   { id: 'exchange', label: '포인트 교환소',        icon: 'ticketFill', route: 'exchange' },
   { id: 'entries',  label: '추첨 응모 내역',        icon: 'inbox',      route: 'entries' },
