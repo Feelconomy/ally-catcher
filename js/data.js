@@ -268,8 +268,3 @@ const LEVEL_TITLES = [
 const NICK_SUGGESTIONS = ['올리캐쳐77', '집게마스터', '인형수집가'];
 const RECENT_SEEDS = ['곰돌이', '한정판', '펭귄'];
 
-const PLAY_TIPS = [
-  '머리와 팔 사이를 노리면 성공률이 올라가요',
-  '집게 힘이 약하면 쌓인 인형 가장자리를 노려보세요',
-  '연속 실패하면 다음 판 확률이 올라가요',
-];

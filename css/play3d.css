@@ -1,5 +1,8 @@
 .green3d-loading { flex: 1; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 18px; padding: 24px; background: #d8eee1; }
 .green3d > .green3d-loading { position: absolute; inset: 0; z-index: 5; }
+/* 기계 연결 화면에서 이어 쓰는 준비 화면은 인형통 옆(형제)에 남아 위를 덮는다 */
+#screen:has(> .l3-over) { position: relative; }
+#screen > .l3-over { position: absolute; inset: 0; z-index: 5; }
 /* 3D 준비 화면 — 올리 실루엣이 깡충깡충 뛰어 인형통으로 쏙 들어간다. */
 .l3 { gap: 0; background: radial-gradient(120% 70% at 50% 38%, #f4fbf6 0%, #dff1e6 55%, #cfe8da 100%); color: #0e4f2c; }
 .l3-scene { width: min(232px, 62vw); height: auto; overflow: visible; margin-bottom: 26px; }

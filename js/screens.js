@@ -493,20 +493,19 @@ const Screens = {
   },
 
   /* --- 20 플레이 진입 로딩 ----------------------------------------------- */
+  /* 기계 연결 중 — 3D 인형통 준비 화면을 그대로 쓴다. 3D 로 들어가면 이 화면이
+     3D 를 다 받을 때까지 이어진다(startGreen3D 가 새로 그리지 않고 그대로 둔다). */
   loading(id) {
-    setTheme('');
+    setTheme('arcade');
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
-    const tip = PLAY_TIPS[Math.floor(Math.random() * PLAY_TIPS.length)];
-
-    screenEl().innerHTML = `<div class="screen loading">
-      <div class="ld-stage">
-        <svg class="ld-ring" viewBox="0 0 120 120" aria-hidden="true"><circle cx="60" cy="60" r="54"/><circle class="run" cx="60" cy="60" r="54"/></svg>
-        ${dollImg(m.hero, 104, '', 'idle')}
-      </div>
-      <div class="t">기계에 연결하는 중</div>
-      <div class="s">${esc(m.name)} · 티켓 ${m.cost}장</div>
-      <div class="tip"><b>TIP</b>${esc(tip)}</div>
-    </div>`;
+    const is3D = availablePlayMode(Store.state.settings.skin || Store.state.admin.skin) === 'green3d';
+    screenEl().innerHTML = green3DLoading();
+    $('#loading3dText').textContent = `${m.name} · 티켓 ${m.cost}장`;
+    // 2D 는 1.4초 동안 막대를 채운다. 3D 는 이어서 실제 받는 만큼 채운다.
+    if (!is3D) requestAnimationFrame(() => {
+      const bar = $('#loading3dBar');
+      if (bar) { bar.style.transition = 'width 1.3s ease-in-out'; bar.style.width = '100%'; }
+    });
 
     setTimeout(() => {
       if (App.route !== 'loading') return;
@@ -514,7 +513,7 @@ const Screens = {
       if (Math.random() < 0.06) { Dialogs.disconnected(m); return; }
       Store.addTickets(-m.cost);
       go('play', m.id);
-    }, 1400);
+    }, is3D ? 300 : 1400);
   },
 
   /* --- 03 플레이 --------------------------------------------------------- */

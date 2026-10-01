@@ -68,7 +68,10 @@ export const Play3D = {
     this.swing = new THREE.Vector2(); this.swingVel = new THREE.Vector2(); this.yaw = 0;
     this.clawPos = this.position.clone(); this.prevPos = this.position.clone();
     this.gripT = 0;
-    screenEl().innerHTML = `<section class="green3d">
+    /* 준비 화면이 이미 떠 있으면 떼지 않고(애니메이션이 처음부터 다시 돌지 않게)
+       그 뒤에 인형통을 깔고, 준비 화면은 위에 덮어 둔다. */
+    const keep = document.getElementById('loading3d');
+    const html = `<section class="green3d">
       <div class="green3d-stage" id="stage3d">
         <div class="green3d-top"><button class="iconbtn" id="exit3d" aria-label="나가기">${icon('chevronLeft3',20)}</button><span class="green3d-wallet" role="status" aria-label="보유 티켓 ${Store.state.tickets}장">${icon('ticketFill',16)}<span id="walletN3d">${Store.state.tickets}</span></span></div>
         <div class="green3d-views" aria-label="카메라 시점"><button data-view="front" aria-pressed="false">정면</button><button data-view="angle" aria-pressed="true">입체</button><button data-view="top" aria-pressed="false">위</button></div>
@@ -78,8 +81,13 @@ export const Play3D = {
         <div class="green3d-readout"><span class="green3d-label">남은 시간</span><strong class="green3d-clock" id="clock3d">00:20</strong><div class="green3d-meter"><i id="time3d" style="width:100%"></i></div></div>
         <button class="green3d-drop" id="drop3d" disabled aria-label="집게 내리기">${icon('caretDown',24)}<span>드롭</span></button>
       </div><div class="green3d-target"><img id="targetImg3d" alt="" hidden><span id="target3d">준비 중</span><b id="odds3d"></b><button class="green3d-reset" id="reset3d" type="button">재배치</button></div></div>
-      ${green3DLoading()}
+      ${keep ? '' : green3DLoading()}
     </section>`;
+    if (keep) {
+      for (const n of [...screenEl().children]) if (n !== keep) n.remove();
+      keep.insertAdjacentHTML('beforebegin', html);
+      keep.classList.add('l3-over');
+    } else screenEl().innerHTML = html;
     this.root = document.getElementById('stage3d');
     document.getElementById('exit3d').onclick = () => this.exit();
     document.getElementById('reset3d').onclick = () => this.rearrange();
