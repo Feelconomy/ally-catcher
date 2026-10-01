@@ -6,15 +6,13 @@ const Screens = {
   /* --- 09 스플래시 ------------------------------------------------------- */
   splash() {
     setTheme('green');
-    // The loading moment carries the onboarding pitch instead of a bare logo.
     screenEl().innerHTML = `<div class="screen splash">
-      <div class="mark"><img src="assets/logo.png?v=120" alt="" width="88" height="88"></div>
-      <div class="name">올리캐쳐</div>
-      <img class="splash-art" src="assets/ollie.png" alt="" width="480" height="720">
-      <div class="pitch">
-        <div class="k" id="splashK">${esc(ONBOARDING[0].k)}</div>
-        <div class="p" id="splashP">${esc(ONBOARDING[0].p)}</div>
+      <div class="splash-brand">
+        <div class="mark"><img src="assets/logo.png?v=120" alt="" width="88" height="88"></div>
+        <div class="name">올리캐쳐</div>
+        <div class="tag" id="splashK">${esc(ONBOARDING[0].k)}</div>
       </div>
+      ${friendParade(44, 'on-green')}
       <div class="bar">${meter(8, 'onGreen')}</div>
       <div class="ver">v1.0.0</div>
     </div>`;
@@ -31,16 +29,12 @@ const Screens = {
     let i = 0;
     const rotate = setInterval(() => {
       const k = document.getElementById('splashK');
-      const p = document.getElementById('splashP');
-      if (!k || !p) { clearInterval(rotate); return; }
+      if (!k) { clearInterval(rotate); return; }
       i = (i + 1) % ONBOARDING.length;
-      const pitch = $('.splash .pitch');
-      pitch.classList.remove('in');
-      // Restart the fade by forcing a reflow between class swaps.
-      void pitch.offsetWidth;
+      k.classList.remove('in');
+      void k.offsetWidth;          // 클래스를 뗐다 붙여 페이드를 다시 돌린다
       k.textContent = ONBOARDING[i].k;
-      p.textContent = ONBOARDING[i].p;
-      pitch.classList.add('in');
+      k.classList.add('in');
     }, 1500);
 
     App.splashTimers = [load, rotate];
@@ -82,6 +76,9 @@ const Screens = {
          튕겼다. 기본 티켓도 가입과 똑같이 준다(기기당 1회). */
       peek: () => {
         Store.state.guest = true;
+        Store.save();
+        // 처음이면 온보딩부터 — 끝에서 기본 티켓을 준다(welcome).
+        if (!Store.state.onboarded) { go('onboarding'); return; }
         const got = Store.claimSignupBonus();
         Store.save();
         go('home');
@@ -212,7 +209,7 @@ const Screens = {
           </div>
           <div class="foot">
             <button class="btn btn--primary" data-act="next">${last ? `무료 티켓 ${SIGNUP_TICKETS}장 받고 시작` : '다음'}</button>
-            <button class="btn sm btn--text" data-act="skip">이미 계정이 있어요</button>
+            <button class="btn sm btn--text" data-act="have">이미 계정이 있어요</button>
           </div>
         </div>
       </div>`;
@@ -221,6 +218,7 @@ const Screens = {
       bind(screenEl(), {
         next: () => { if (last) Dialogs.welcome(); else turn(1); },
         skip: () => Dialogs.welcome(),
+        have: () => { if (Store.state.account) Dialogs.welcome(); else go('login'); },
       });
       // 좌우로 밀어서 넘기기 — 세로 움직임이 더 크면 무시한다.
       let x0 = null, y0 = 0;
@@ -267,6 +265,8 @@ const Screens = {
             <span class="copy">
               <span class="eyebrow">DAILY MISSION</span>
               <span class="title">${left ? `오늘 미션 ${left}개 남음<br>티켓 ${Store.claimableTickets()}장 더 받기` : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요'}</span>
+              <span class="prog"><i style="width:${(MISSIONS.length - left) / MISSIONS.length * 100}%"></i></span>
+              <span class="cta">미션 하러 가기 ${icon('chevronRight3', 12)}</span>
             </span>
             <img class="mascot" src="assets/wonhee.png" alt="" width="360" height="540">
           </span>
@@ -664,13 +664,14 @@ const Screens = {
       </div>
 
       ${total ? `
-        <div class="pointcard">
-          <div style="flex:1">
-            <div class="l">모은 포인트</div>
-            <div class="v">${fmt(Store.state.points)}P</div>
-          </div>
-          <button class="go" data-route="exchange">교환소 가기</button>
-        </div>
+        <button class="pointcard" data-route="exchange">
+          <span class="coin">P</span>
+          <span style="flex:1;text-align:left">
+            <span class="l" style="display:block">모은 포인트</span>
+            <span class="v" style="display:block">${fmt(Store.state.points)}P</span>
+          </span>
+          <span class="go">교환소 ${icon('chevronRight3', 12)}</span>
+        </button>
         <div class="chiprow">
           <button class="chip sm" data-act="f" data-v="all"  aria-pressed="${filter === 'all'}">전체 ${total}</button>
           <button class="chip sm" data-act="f" data-v="rare" aria-pressed="${filter === 'rare'}">레어 ${rare}</button>
@@ -681,7 +682,7 @@ const Screens = {
           <div class="prize-grid">
             ${shown.map(id => `
               <button class="pcard" data-act="doll" data-id="${id}">
-                <span class="box" style="display:flex">
+                <span class="box" style="display:flex;background:${DOLLS[id].bg || 'var(--surface)'}">
                   ${dollImg(id, 74)}
                   <span class="badge ${GRADE_CLASS[DOLLS[id].grade]}">${DOLLS[id].grade}</span>
                   ${counts[id] > 1 ? `<span class="dupe">×${counts[id]}</span>` : ''}
@@ -693,7 +694,7 @@ const Screens = {
         </div>`
       : `
         <div class="empty">
-          <div class="art">${dollImg('olly', 88, 'opacity:.22')}</div>
+          <div class="empty-crew">${['pig', 'olly', 'dali'].map((id, k) => friendSvg(id, k === 1 ? 72 : 52, 'peek', `animation-delay:${k * .3}s`)).join('')}</div>
           <h3>첫 인형을 뽑아보세요</h3>
           <p>뽑은 인형은 여기에 모이고<br>등급에 따라 포인트가 적립돼요</p>
           <button class="btn md auto btn--primary" style="margin-top:24px" data-tab="home">기계 보러 가기</button>
@@ -762,16 +763,22 @@ const Screens = {
 
       ${allDone ? `
         <div class="ticketcard done">
+          ${friendParade(34, 'on-green')}
           <div class="eyebrow">ALL CLEAR</div>
           <div class="n">오늘 미션 전부 완료!</div>
           <div class="cap">${Store.state.bonusClaimed ? `보너스 티켓 ${MISSION_BONUS_TICKETS}장까지 받았어요 · ` : ''}총 ${Store.state.tickets}장 보유</div>
         </div>`
       : `
         <div class="ticketcard">
-          <div class="top"><span class="tk">${icon('ticketFill', 24)}</span><span class="l">보유 티켓</span></div>
-          <div class="n">${Store.state.tickets}장</div>
-          ${meter((doneCount / MISSIONS.length) * 100, 'onGreen')}
-          <div class="cap">오늘 미션 ${doneCount}/${MISSIONS.length} 완료 · 모두 끝내면 보너스 티켓 ${MISSION_BONUS_TICKETS}장</div>
+          <div class="top">
+            <span class="tk">${icon('ticketFill', 22)}</span><span class="l">보유 티켓</span>
+            <span class="cnt">${doneCount}/${MISSIONS.length} 완료</span>
+          </div>
+          <div class="n">${Store.state.tickets}<small>장</small></div>
+          <!-- 미션 하나를 끝낼 때마다 친구가 하나씩 불이 켜진다 -->
+          <div class="crew">${MISSIONS.map((m, k) => friendSvg(FRIEND_IDS[k % FRIEND_IDS.length], 34,
+            Store.missionClaimed(m.id) ? 'on hop' : '', `animation-delay:${k * .14}s`)).join('')}</div>
+          <div class="cap">모두 끝내면 보너스 티켓 ${MISSION_BONUS_TICKETS}장을 더 드려요</div>
         </div>`}
 
       <div class="scroll pad" style="display:flex;flex-direction:column;gap:9px">
@@ -782,7 +789,7 @@ const Screens = {
 
         ${allDone && Store.state.bonusClaimed ? `
           <div class="card pad" style="margin-top:8px;padding:20px;text-align:center">
-            ${dollImg('duck', 76, 'margin:0 auto')}
+            ${friendSvg('woni', 64, 'idle-bob tint')}
             <div style="margin-top:12px;font-size:15px;font-weight:700">내일 새 미션이 열려요</div>
             <div style="margin-top:6px;font-size:12px;font-weight:600;color:var(--ink-50)">알림을 켜두면 초기화되는 순간 알려드려요</div>
             <button class="btn sm auto btn--accent" style="margin:16px auto 0" data-act="notify">알림 켜기</button>
@@ -843,14 +850,15 @@ const Screens = {
         <div style="flex:1">
           <div class="l">보유 포인트</div>
           <div class="v">${fmt(Store.state.points)}<span>P</span></div>
+          <div class="nh">NH멤버스로 바꾸면 약 ${fmt(Math.floor(Store.state.points * NH_RATE))}P</div>
         </div>
-        ${dollImg('olly', 62)}
+        <div class="coins" aria-hidden="true"><i></i><i></i><i></i>${friendSvg('olly', 54, 'hop')}</div>
       </div>
 
       <div class="scroll">
-        <div class="pad" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:12px">
-          <span style="font-size:15px;font-weight:700;letter-spacing:-.01em">이번 주 추첨 응모</span>
-          <span class="sub">D-3 마감</span>
+        <div class="pad section-head">
+          <h3>이번 주 추첨 응모</h3>
+          <span class="dday">D-3 마감</span>
         </div>
         <div class="pad raffle-row" style="padding-bottom:16px">
           ${RAFFLES.map(r => `
@@ -865,7 +873,7 @@ const Screens = {
             </button>`).join('')}
         </div>
 
-        <div class="pad" style="padding-bottom:12px;font-size:15px;font-weight:700;letter-spacing:-.01em">포인트 전환</div>
+        <div class="pad section-head"><h3>포인트 전환</h3></div>
         <div class="nh-card">
           <button class="top" style="width:100%;text-align:left" data-act="nh">
             <span class="nh-logo nh-logo--sm">NH</span>
@@ -967,31 +975,26 @@ const Screens = {
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
-      <button class="profile" data-act="editName">
-        <span class="av">${dollImg(safeAvatar(acc && acc.avatar), 48)}</span>
-        <span style="flex:1;text-align:left">
-          <span class="nm" style="display:block">${esc(acc ? acc.nickname : '게스트')}</span>
-          <span class="lv">${esc(Store.levelTitle())} Lv.${Store.level()}</span>
-        </span>
-        <span style="color:var(--ink-30);display:flex">${icon('chevronRight3', 20)}</span>
-      </button>
-
-      <div class="card level-card">
-        <div class="top">
-          <span class="lv">Lv.${Store.level()}</span>
-          <span class="title">${esc(Store.levelTitle())}</span>
-          <span class="count">인형 ${Store.state.wins}마리</span>
+      <div class="my-hero">
+        <button class="profile" data-act="editName">
+          <span class="av" style="background:${(DOLLS[safeAvatar(acc && acc.avatar)] || {}).bg || 'var(--yellow)'}">${dollImg(safeAvatar(acc && acc.avatar), 48)}</span>
+          <span style="flex:1;text-align:left">
+            <span class="nm" style="display:block">${esc(acc ? acc.nickname : '게스트')}</span>
+            <span class="lv">Lv.${Store.level()} ${esc(Store.levelTitle())}</span>
+          </span>
+          <span class="edit">프로필 ${icon('chevronRight3', 12)}</span>
+        </button>
+        <div class="lvbar">
+          ${meter(Store.levelProgress().percent)}
+          <div class="cap">${Store.levelProgress().left}마리 더 뽑으면 Lv.${Store.level() + 1} · ${esc(Store.levelTitle(Store.level() + 1))}</div>
         </div>
-        ${meter(Store.levelProgress().percent)}
-        <div class="cap">${Store.levelProgress().left}마리 더 뽑으면 Lv.${Store.level() + 1} · ${esc(Store.levelTitle(Store.level() + 1))}</div>
-      </div>
-
-      <div class="card statgrid" style="margin:0 20px 18px;padding:18px">
-        <div class="st"><div class="n">${fmt(Store.state.plays)}</div><div class="l">누적 플레이</div></div>
-        <div class="div"></div>
-        <div class="st"><div class="n" style="color:var(--green)">${fmt(Store.state.wins)}</div><div class="l">누적 성공</div></div>
-        <div class="div"></div>
-        <div class="st"><div class="n">${fmt(Store.state.points)}</div><div class="l">포인트</div></div>
+        <div class="statgrid">
+          <div class="st"><div class="n">${fmt(Store.state.plays)}</div><div class="l">누적 플레이</div></div>
+          <div class="div"></div>
+          <div class="st"><div class="n" style="color:var(--green)">${fmt(Store.state.wins)}</div><div class="l">뽑은 인형</div></div>
+          <div class="div"></div>
+          <div class="st"><div class="n">${fmt(Store.state.points)}</div><div class="l">포인트</div></div>
+        </div>
       </div>
 
       <div class="scroll pad">

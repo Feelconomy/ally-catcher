@@ -958,17 +958,32 @@ const Dialogs = {
   /* --- 14 가입 티켓 지급 ------------------------------------------------- */
   welcome() {
     Store.state.onboarded = true;
-    Store.claimSignupBonus();   // 중복 방지 플래그로 1회만 지급
+    const got = Store.claimSignupBonus();   // 중복 방지 플래그로 1회만 지급
     Store.save();
-    dialog(`
-      <div class="eyebrow">WELCOME</div>
-      <h3 style="margin-top:10px;font-size:23px">티켓 ${SIGNUP_TICKETS}장 도착!</h3>
-      <div style="margin:20px auto 0;width:180px;height:110px;border-radius:20px;background:var(--yellow-soft);display:flex;align-items:center;justify-content:center;gap:6px;color:var(--yellow-pressed)">
-        ${icon('ticketFill', 40)}${icon('ticketFill', 54)}${icon('ticketFill', 40)}
+    dialog(got ? `
+      <div class="welcome-art">
+        ${'<i></i>'.repeat(8)}
+        <div class="wl-ticket"><span class="ic">${icon('ticketFill', 22)}</span><small>FREE TICKET</small><b>× <span id="wlN">0</span></b></div>
       </div>
+      <div class="eyebrow">WELCOME</div>
+      <h3 style="margin-top:8px;font-size:23px">티켓 ${got}장 도착!</h3>
       <p>첫 판은 티켓 1장으로 도전할 수 있어요.<br>데일리 미션으로 매일 더 모아보세요.</p>
-      <button class="btn md btn--accent" style="margin-top:22px" data-act="go">바로 뽑으러 가기</button>`,
-      (node, close) => bind(node, { go: () => { close(); go('home'); } }),
+      <button class="btn md btn--primary" style="margin-top:22px" data-act="go">바로 뽑으러 가기</button>`
+    : `
+      ${friendParade(40, 'tint')}
+      <h3 style="margin-top:14px;font-size:21px">다시 만나 반가워요!</h3>
+      <p>친구들이 인형통에서 기다리고 있어요.</p>
+      <button class="btn md btn--primary" style="margin-top:22px" data-act="go">뽑으러 가기</button>`,
+      (node, close) => {
+        bind(node, { go: () => { close(); go('home'); } });
+        // 0 에서 받은 장수까지 숫자가 올라간다
+        const n = $('#wlN', node), t0 = performance.now();
+        if (n) (function count(t) {
+          const k = Math.min(1, (t - t0) / 700);
+          n.textContent = Math.round(got * (1 - Math.pow(1 - k, 3)));
+          if (k < 1) requestAnimationFrame(count);
+        })(t0);
+      },
       { wide: true, persistent: true, scrim: 'deep' });
   },
 

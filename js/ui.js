@@ -51,6 +51,34 @@ function safeAvatar(id) {
   return ok.includes(DEFAULT_AVATAR) ? DEFAULT_AVATAR : (ok[0] || DEFAULT_AVATAR);
 }
 
+/* 간소화한 캐릭터 실루엣. 로딩·빈 화면·축하처럼 '보여줄 것'이 있는 순간에
+   그림 대신 쓴다. 모두 발바닥 가운데가 (0,0), 키는 약 40. 눈(.eye)은 뚫려 보이고,
+   겹치면 묻히는 귀·코(.edge)에는 같은 색으로 얇은 테를 둘러 떼어 보이게 한다.
+   lines 는 3D 로딩 화면에서 그 친구가 들어갈 때 함께 나오는 문구. */
+const FRIENDS = {
+  olly: { name: '올리', lines: ['올리가 인형통에 들어가는 중이에요', '올리가 집게를 반짝반짝 닦고 있어요'],
+    svg: '<ellipse cx="-6" cy="-3.5" rx="6" ry="3.8"/><ellipse cx="6" cy="-3.5" rx="6" ry="3.8"/><path d="M-11-5C-15-15-14-29-6-34C-2-36 2-36 6-34C14-29 15-15 11-5Z"/><ellipse cx="0" cy="-35.5" rx="3.6" ry="3.2"/><ellipse cx="-14" cy="-21" rx="3.4" ry="6.2" transform="rotate(-28 -14 -21)"/><ellipse cx="14" cy="-21" rx="3.4" ry="6.2" transform="rotate(28 14 -21)"/><circle class="eye" cx="-4.6" cy="-24" r="2.1"/><circle class="eye" cx="4.6" cy="-24" r="2.1"/>' },
+  pig: { name: '단지', lines: ['단지가 꽃핀을 고쳐 꽂고 들어가요', '단지가 폭신한 자리를 고르는 중이에요'],
+    svg: '<ellipse cx="-7" cy="-3.8" rx="6.5" ry="4"/><ellipse cx="7" cy="-3.8" rx="6.5" ry="4"/><ellipse cx="-8" cy="-32" rx="4.6" ry="8" transform="rotate(-14 -8 -32)"/><ellipse cx="8" cy="-32" rx="4.6" ry="8" transform="rotate(14 8 -32)"/><circle cx="0" cy="-18" r="15.5"/><circle cx="12" cy="-31" r="3.6"/><ellipse cx="-15" cy="-11" rx="3.4" ry="5" transform="rotate(-22 -15 -11)"/><ellipse cx="15" cy="-11" rx="3.4" ry="5" transform="rotate(22 15 -11)"/><circle class="eye" cx="-5.6" cy="-21" r="2"/><circle class="eye" cx="5.6" cy="-21" r="2"/><ellipse class="eye" cx="0" cy="-15" rx="4" ry="2.6"/>' },
+  woni: { name: '원이', lines: ['원이가 뒤뚱뒤뚱 입장하는 중이에요', '원이가 새싹에 물을 주고 있어요'],
+    svg: '<ellipse cx="-8" cy="-2.8" rx="7" ry="3.2"/><ellipse cx="8" cy="-2.8" rx="7" ry="3.2"/><path d="M-15-4C-18-17-15-31 0-33C15-31 18-17 15-4Z"/><ellipse cx="0" cy="-36" rx="2.4" ry="4"/><ellipse cx="-3.6" cy="-34.6" rx="2.2" ry="3.4" transform="rotate(-38 -3.6 -34.6)"/><ellipse cx="3.6" cy="-34.6" rx="2.2" ry="3.4" transform="rotate(38 3.6 -34.6)"/><ellipse cx="-16" cy="-14" rx="3.4" ry="6" transform="rotate(-14 -16 -14)"/><ellipse cx="16" cy="-14" rx="3.4" ry="6" transform="rotate(14 16 -14)"/><circle class="eye" cx="-5" cy="-22" r="2.2"/><circle class="eye" cx="5" cy="-22" r="2.2"/><ellipse class="eye" cx="0" cy="-16" rx="5" ry="2.4"/>' },
+  kori: { name: '코리', lines: ['코리가 서류가방을 내려놓는 중이에요', '코리가 코로 조명을 켜고 있어요'],
+    svg: '<ellipse cx="-5.5" cy="-3.5" rx="4.6" ry="4"/><ellipse cx="5.5" cy="-3.5" rx="4.6" ry="4"/><path d="M-11-5C-12-12-11-18-7-21L7-21C11-18 12-12 11-5Z"/><ellipse cx="-12.5" cy="-29" rx="7" ry="8.5"/><ellipse cx="12.5" cy="-29" rx="7" ry="8.5"/><circle class="edge" cx="0" cy="-27" r="10"/><path class="edge" d="M2-24C10-24 16-29 18-37L22-35.5C19-25 11-19.5 2-20Z"/><rect x="11" y="-10" width="7" height="5.5" rx="1.2"/><circle class="eye" cx="-3.8" cy="-29" r="1.9"/><circle class="eye" cx="3.8" cy="-29" r="1.9"/>' },
+  dali: { name: '달리', lines: ['달리가 꼬리 흔들며 들어가는 중이에요', '달리가 행운을 킁킁 찾고 있어요'],
+    svg: '<ellipse cx="-7" cy="-3.5" rx="6.5" ry="4"/><ellipse cx="7" cy="-3.5" rx="6.5" ry="4"/><path d="M-13-5C-16-16-14-31 0-33C14-31 16-16 13-5Z"/><ellipse cx="-14" cy="-11" rx="3.4" ry="5" transform="rotate(-22 -14 -11)"/><ellipse cx="14" cy="-11" rx="3.4" ry="5" transform="rotate(22 14 -11)"/><ellipse class="edge" cx="-14.5" cy="-24" rx="5" ry="9" transform="rotate(24 -14.5 -24)"/><ellipse class="edge" cx="14.5" cy="-24" rx="5" ry="9" transform="rotate(-24 14.5 -24)"/><circle class="eye" cx="-5" cy="-23" r="2.1"/><circle class="eye" cx="5" cy="-23" r="2.1"/><ellipse class="eye" cx="0" cy="-17.5" rx="2.6" ry="1.8"/>' },
+};
+const FRIEND_IDS = Object.keys(FRIENDS);
+
+/** 실루엣 하나를 담은 작은 svg. cls 로 색·애니메이션을 준다. */
+function friendSvg(id, size = 40, cls = '', style = '') {
+  return `<svg class="friend ${cls}" viewBox="-22 -42 44 44" width="${size}" height="${size}" style="${style}" aria-hidden="true">${(FRIENDS[id] || FRIENDS.olly).svg}</svg>`;
+}
+
+/** 다섯 친구가 차례로 깡충 뛰는 줄. 스플래시·축하·빈 화면에서 쓴다. */
+function friendParade(size = 40, cls = '') {
+  return `<div class="parade ${cls}">${FRIEND_IDS.map((id, k) => friendSvg(id, size, 'hop', `animation-delay:${k * .14}s`)).join('')}</div>`;
+}
+
 /** Sets the shell background tone the screen wants (cream / dark / green / yellow). */
 const THEME_BG = { dark: '#141414', green: '#00A650', yellow: '#FFD400', arcade: '#EDF7F0' };
 

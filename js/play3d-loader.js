@@ -14,36 +14,33 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=198').catch(() => { warmed = false; });
+    import('./play3d.js?v=199').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
 }
-/* 3D 를 받는 동안 보여줄 짧은 이야기: 올리 실루엣이 깡충깡충 뛰어와 인형통 위로
-   쏙 들어가고, 아래 문구가 무작위로 바뀐다. 타이머는 화면이 사라지면 스스로 멈춘다. */
-const LOADING_TIPS = [
-  '올리가 인형통에 들어가는 중이에요',
-  '인형들이 줄 서서 입장하고 있어요',
-  '집게를 반짝반짝 닦고 있어요',
-  '폭신한 인형을 차곡차곡 쌓는 중이에요',
-  '오늘의 행운을 살짝 뿌리는 중이에요',
-];
-let tipTimer = 0;
-function cycleLoadingTip() {
-  const el = document.getElementById('loading3dTip');
-  if (!el) { clearInterval(tipTimer); tipTimer = 0; return; }
-  const rest = LOADING_TIPS.filter(t => t !== el.textContent);
-  el.classList.add('out');
-  setTimeout(() => { el.textContent = rest[Math.floor(Math.random() * rest.length)]; el.classList.remove('out'); }, 260);
-}
+/* 3D 를 받는 동안 보여줄 짧은 이야기: 친구 실루엣이 깡충깡충 뛰어와 인형통 위로
+   쏙 들어간다. 한 번 들어갈 때마다 다른 친구로 바뀌고, 문구도 그 친구 것으로
+   바뀐다(애니메이션이 한 바퀴 끝나 실루엣이 투명할 때 갈아 끼운다). */
+const pick = list => list[Math.floor(Math.random() * list.length)];
+document.addEventListener('animationiteration', e => {
+  const char = e.target;
+  if (!char.classList || !char.classList.contains('l3-olly')) return;
+  const next = pick(FRIEND_IDS.filter(id => id !== char.dataset.id));
+  char.dataset.id = next;
+  char.innerHTML = FRIENDS[next].svg;
+  const tip = document.getElementById('loading3dTip');
+  if (!tip) return;
+  tip.classList.add('out');
+  setTimeout(() => { tip.textContent = pick(FRIENDS[next].lines); tip.classList.remove('out'); }, 260);
+});
 function green3DLoading() {
-  if (!tipTimer) tipTimer = setInterval(cycleLoadingTip, 2600);
-  const olly = '<ellipse cx="-6" cy="-3.5" rx="6" ry="3.8"/><ellipse cx="6" cy="-3.5" rx="6" ry="3.8"/><path d="M-11-5C-15-15-14-29-6-34C-2-36 2-36 6-34C14-29 15-15 11-5Z"/><ellipse cx="0" cy="-35.5" rx="3.6" ry="3.2"/><ellipse cx="-14" cy="-21" rx="3.4" ry="6.2" transform="rotate(-28 -14 -21)"/><ellipse cx="14" cy="-21" rx="3.4" ry="6.2" transform="rotate(28 14 -21)"/><circle class="l3-eye" cx="-4.6" cy="-24" r="2.1"/><circle class="l3-eye" cx="4.6" cy="-24" r="2.1"/>';
+  const first = pick(FRIEND_IDS);
   return `<div class="green3d-loading l3" id="loading3d" role="status" aria-live="polite">
     <svg class="l3-scene" viewBox="0 -34 200 214" aria-hidden="true">
       <ellipse class="l3-ground" cx="104" cy="172" rx="92" ry="6"/>
       <g class="l3-pile"><circle cx="112" cy="112" r="10"/><circle cx="130" cy="114" r="9"/><circle cx="148" cy="111" r="10"/><circle cx="121" cy="104" r="8"/><circle cx="141" cy="102" r="8"/></g>
-      <g class="l3-olly">${olly}</g>
+      <g class="l3-olly" data-id="${first}">${FRIENDS[first].svg}</g>
       <g class="l3-claw"><line x1="114" y1="46" x2="114" y2="62"/><path d="M106 70l2-6h12l2 6M108 64l-4 10M120 64l4 10"/></g>
       <path class="l3-cab" fill-rule="evenodd" d="M104 22h56a12 12 0 0 1 12 12v126a8 8 0 0 1-8 8H100a8 8 0 0 1-8-8V34a12 12 0 0 1 12-12ZM100 48v70h64V48Z"/>
       <rect class="l3-glass" x="100" y="48" width="64" height="70"/>
@@ -52,7 +49,7 @@ function green3DLoading() {
       <rect class="l3-chute" x="104" y="134" width="22" height="22" rx="5"/>
       <circle class="l3-btn" cx="150" cy="142" r="6"/>
     </svg>
-    <p class="l3-tip"><span id="loading3dTip">${LOADING_TIPS[Math.floor(Math.random() * LOADING_TIPS.length)]}</span><i></i><i></i><i></i></p>
+    <p class="l3-tip"><span id="loading3dTip">${pick(FRIENDS[first].lines)}</span><i></i><i></i><i></i></p>
     <div class="l3-bar"><i id="loading3dBar"></i></div>
     <span class="l3-sub" id="loading3dText">3D 화면을 불러오고 있어요</span>
   </div>`;
@@ -67,7 +64,7 @@ async function startGreen3D(machine) {
   screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=198');
+    const { Play3D } = await import('./play3d.js?v=199');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);
