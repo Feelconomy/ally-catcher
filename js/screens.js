@@ -1311,6 +1311,8 @@ const Screens = {
       },
       machine: el => Sheets.adminMachine(el.dataset.id),
       newMachine: () => Sheets.adminMachine(null),
+      moveUp: el => reorder(el.dataset.id, -1),
+      moveDown: el => reorder(el.dataset.id, 1),
       skin: el => {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
@@ -1406,12 +1408,27 @@ function adminDollGrid() {
 }
 
 /* 기계 카드 — 넣어둔 인형까지 한눈에. */
+/* 기계 순서 바꾸기. 다시 그려도 보던 자리가 튀지 않게 스크롤을 지킨다. */
+function reorder(id, dir) {
+  const box = $('.scroll', screenEl()), top = box ? box.scrollTop : 0;
+  if (!Store.moveMachine(id, dir)) return;
+  Screens.admin();
+  const again = $('.scroll', screenEl()); if (again) again.scrollTop = top;
+  haptic(10);
+}
+
 function adminMachineList() {
   return `<div class="adm-machines">
-    ${MACHINES.map(m => {
+    ${MACHINES.map((m, i) => {
       const ids = Array.from(new Set(m.pool));
       const left = Store.state.stock[m.id];
-      return `<button class="adm-mcard ${m.open ? '' : 'down'}" data-act="machine" data-id="${m.id}">
+      return `<div class="adm-mrow">
+      <span class="adm-order" role="group" aria-label="${esc(m.name)} 순서">
+        <button class="ob" data-act="moveUp" data-id="${m.id}" aria-label="위로" ${i === 0 ? 'disabled' : ''}>${icon('caretUp', 14)}</button>
+        <b class="on">${i + 1}</b>
+        <button class="ob" data-act="moveDown" data-id="${m.id}" aria-label="아래로" ${i === MACHINES.length - 1 ? 'disabled' : ''}>${icon('caretDown', 14)}</button>
+      </span>
+      <button class="adm-mcard ${m.open ? '' : 'down'}" data-act="machine" data-id="${m.id}">
         <span class="top">
           <span class="hero" style="background:${m.bg}">${dollImg(m.hero, 46)}</span>
           <span class="txt">
@@ -1426,7 +1443,8 @@ function adminMachineList() {
           ${ids.length > 8 ? `<span class="more">+${ids.length - 8}</span>` : ''}
           ${ids.length ? '' : '<span class="more">비어 있음</span>'}
         </span>
-      </button>`;
+      </button>
+      </div>`;
     }).join('')}
     <button class="adm-mcard add" data-act="newMachine">
       <span class="plus">${icon('plusThick', 22)}</span>

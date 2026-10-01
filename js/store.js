@@ -107,6 +107,12 @@ const Store = {
       const { deleted, ...rest } = a.machines[id];
       if (deleted) list.splice(list.indexOf(m), 1); else Object.assign(m, rest);
     }
+    // 관리자가 정한 순서 (목록에 없는 새 기계는 뒤에 그대로)
+    const order = a.machineOrder || [];
+    if (order.length) {
+      const at = id => { const i = order.indexOf(id); return i < 0 ? 1e9 : i; };
+      list.sort((x, y) => at(x.id) - at(y.id));
+    }
     MACHINES.length = 0; MACHINES.push(...list);
     // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
     DOLL_IDS.length = 0;
@@ -168,6 +174,16 @@ const Store = {
     if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
     if (before) bag[machine.id] = before; else delete bag[machine.id];
     return false;
+  },
+
+  /** 기계 순서를 한 칸 올리거나(-1) 내린다(+1). 홈 목록도 이 순서를 따른다. */
+  moveMachine(id, dir) {
+    const ids = MACHINES.map(m => m.id), i = ids.indexOf(id), j = i + dir;
+    if (i < 0 || j < 0 || j >= ids.length) return false;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    this.state.admin.machineOrder = ids;
+    this.applyAdmin(); this.pushAdmin();
+    return true;
   },
 
   /** 기계 삭제 — 관리자가 추가한 건 지우고, 기본 기계는 숨김 표시만 남긴다. */
