@@ -416,10 +416,10 @@ const Screens = {
             <span class="md-live-text">지금 <b>${Math.floor(Math.random() * 10) + 1}명</b>이 함께 뽑는 중</span>
           </div>
           <div style="margin-top:18px;font-size:14px;font-weight:700">들어 있는 인형</div>
-          <div class="doll-strip">
-            ${m.contents.slice(0, 3).map(d => `<div>${dollImg(d, 56)}</div>`).join('')}
-            ${m.contents.length > 3 ? `<div class="more">+${m.contents.length - 3}</div>` : ''}
-          </div>` : `
+          <button class="doll-strip" data-act="contents" aria-label="들어 있는 인형 ${m.contents.length}종 모두 보기">
+            ${m.contents.slice(0, 3).map(d => `<span>${dollImg(d, 56)}</span>`).join('')}
+            <span class="more">${m.contents.length > 3 ? `+${m.contents.length - 3}` : icon('chevronRight3', 14)}</span>
+          </button>` : `
           <h2 class="h2" style="color:var(--ink-45)">${esc(m.name)}</h2>
           <div style="margin-top:16px;padding:16px;border-radius:var(--r-xl);background:var(--yellow-soft);display:flex;gap:11px">
             <span style="color:var(--yellow-ink);display:flex;flex-shrink:0">${icon('triangleExclamation', 20)}</span>
@@ -459,6 +459,7 @@ const Screens = {
     }
 
     bind(screenEl(), {
+      contents: () => Sheets.machineDolls(m.id),
       back: () => go('home'),
       bookmark: el => {
         const on = Store.toggleBookmark(m.id);

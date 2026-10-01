@@ -708,10 +708,24 @@ a:hover { color: var(--green-deep); }
 .detail-foot { flex-shrink: 0; padding: 14px 20px calc(32px + var(--safe-b)); background: var(--cream); box-shadow: 0 -1px 0 rgba(112, 115, 124, .12); display: flex; align-items: center; gap: 12px; }
 .detail-foot .bookmark { width: 44px; height: 52px; border-radius: 14px; background: var(--surface); box-shadow: var(--hairline); display: flex; align-items: center; justify-content: center; color: var(--ink-40); flex-shrink: 0; }
 .detail-foot .bookmark[aria-pressed="true"] { color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); }
-.doll-strip { margin-top: 11px; display: flex; gap: 10px; }
+.doll-strip { margin-top: 11px; display: flex; gap: 10px; width: 100%; }
 .doll-strip > * { flex: 1; height: 78px; border-radius: 14px; background: var(--surface); box-shadow: 0 2px 6px rgba(23, 23, 23, .06); display: flex; align-items: center; justify-content: center; }
 .doll-strip img { width: 56px; height: 56px; }
-.doll-strip .more { font-size: 12px; font-weight: 700; color: var(--ink-40); }
+.doll-strip .more { font-size: 13px; font-weight: 700; color: var(--ink-40); background: var(--surface-muted); box-shadow: none; }
+.doll-strip:active { transform: scale(.99); }
+
+/* 기계에 들어 있는 인형 전체 목록 (시트) */
+.mdoll-list { margin-top: 16px; display: flex; flex-direction: column; max-height: 52vh; overflow-y: auto; padding-right: 4px; scrollbar-width: thin; }
+.mdoll { display: flex; align-items: center; gap: 10px; padding: 10px 2px; width: 100%; text-align: left; }
+.mdoll + .mdoll { box-shadow: inset 0 1px 0 var(--line-soft); }
+.mdoll:active { opacity: .6; }
+.mdoll .th { width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.mdoll .body { flex: 1; min-width: 0; }
+.mdoll .t { display: block; font-size: 14px; font-weight: 700; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mdoll .s { margin-top: 5px; display: flex; align-items: center; gap: 6px; }
+.mdoll .s i { font-size: 12px; font-weight: 700; font-style: normal; color: var(--green); }
+.mdoll .own { font-size: 11px; font-weight: 700; color: var(--ink-30); flex-shrink: 0; }
+.mdoll .own.has { color: var(--ink-45); }
 
 /* Play loading (20) — 기계 대표 인형이 둥실, 둘레를 진행 고리가 1.4초에 한 바퀴. */
 .loading { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; background: radial-gradient(120% 70% at 50% 40%, #f4fbf6 0%, #dff1e6 60%, #cfe8da 100%); }

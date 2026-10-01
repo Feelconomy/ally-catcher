@@ -106,6 +106,34 @@ const Sheets = {
   },
 
   /* --- 27 인형 상세 ------------------------------------------------------ */
+  /* 기계에 들어 있는 인형 전체. 상세 화면의 인형 줄(+n 포함)을 누르면 열린다 —
+     전에는 앞 3마리만 보이고 나머지를 볼 길이 없었다. */
+  machineDolls(machineId) {
+    const m = MACHINES.find(x => x.id === machineId) || MACHINES[0];
+    const counts = Store.prizeCounts();
+    const list = m.contents.filter(id => DOLLS[id]);
+
+    sheet(`
+      <h3 style="margin:0">들어 있는 인형 ${list.length}종</h3>
+      <div style="margin-top:4px;font-size:13px;font-weight:600;color:var(--ink-50)">${esc(m.name)}</div>
+      <div class="mdoll-list">
+        ${list.map(id => {
+          const d = DOLLS[id], n = counts[id] || 0;
+          return `<button class="mdoll" data-act="doll" data-id="${id}">
+            <span class="th" style="background:${d.bg}">${dollImg(id, 46)}</span>
+            <span class="body">
+              <span class="t">${esc(d.name)}</span>
+              <span class="s">${gradeBadge(d.grade)}<i>${fmt(d.points)}P</i></span>
+            </span>
+            <span class="own ${n ? 'has' : ''}">${n ? `보유 ${n}` : '미보유'}</span>
+          </button>`;
+        }).join('')}
+      </div>`,
+      (node, close) => bind(node, {
+        doll: el => { const id = el.dataset.id; close(); Sheets.dollDetail(id); },
+      }));
+  },
+
   dollDetail(dollId) {
     const d = DOLLS[dollId];
     const count = Store.prizeCounts()[dollId] || 0;
