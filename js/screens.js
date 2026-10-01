@@ -591,11 +591,14 @@ const Screens = {
        you had in its dropped pose; a miss shows the doll you were going for
        with how close the aim was, so there is something to learn from; running
        out of time shows neither. */
-    const kind = !doll ? 'timeout' : (attempt.kind === 'slip' ? 'slip' : 'miss');
+    const kind = attempt.kind === 'timeout' ? 'timeout'
+      : attempt.kind === 'empty' ? 'empty'
+      : doll ? (attempt.kind === 'slip' ? 'slip' : 'miss') : 'empty';
     const copy = {
-      slip:    { k: 'SO CLOSE',  h: '집게에서 놓쳤어요' },
-      miss:    { k: 'JUST MISSED', h: '집게가 빗나갔어요' },
-      timeout: { k: 'TIME UP',   h: '시간이 다 됐어요' },
+      slip:    { k: 'SO CLOSE',    h: '집게에서 놓쳤어요',   s: '' },
+      miss:    { k: 'JUST MISSED', h: '집게가 빗나갔어요',   s: '' },
+      empty:   { k: 'EMPTY',       h: '빈손으로 올라왔어요', s: '집게 아래에 인형이 없었어요' },
+      timeout: { k: 'TIME UP',     h: '시간이 다 됐어요',    s: '시간이 끝나 집게가 저절로 내려갔어요' },
     }[kind];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center;background:${green ? 'var(--green)' : 'var(--dark-soft)'}">
@@ -605,11 +608,11 @@ const Screens = {
         <div class="kicker">${copy.k}</div>
         <h2>${copy.h}</h2>
 
-        ${kind === 'timeout' ? `
+        ${!doll || kind === 'timeout' || kind === 'empty' ? `
           <div class="prize empty-claw">
             ${icon('circleExclamation', 64)}
           </div>
-          <div class="slip-name dim">집게를 내리지 못했어요</div>`
+          <div class="slip-name dim">${esc(copy.s)}</div>`
         : `
           <div class="prize ${kind === 'slip' ? 'slipped' : 'aimed'}">
             ${dollImg(doll.id, 150, '', kind === 'slip' ? 'drop' : 'idle')}
@@ -804,6 +807,12 @@ const Screens = {
           </div>` : ''}
 
         <div class="note" style="margin-top:2px">티켓은 현금으로 구매할 수 없어요. 미션과 출석으로만 모을 수 있습니다.</div>
+        <!-- 테스트용 충전. 미션을 다 비우지 않고도 뽑기를 돌려볼 수 있게 둔다. -->
+        <button class="test-refill" data-act="testTickets">
+          <span class="tag">테스트용</span>
+          <span class="t">무료 티켓 ${TEST_TICKETS}장 받기</span>
+          <span class="go">충전</span>
+        </button>
         <div style="height:16px"></div>
       </div>
       ${tabbar('mission')}
@@ -812,6 +821,12 @@ const Screens = {
     bind(screenEl(), {
       back: () => go('home'),
       notify: () => Dialogs.permission(true),
+      testTickets: () => {
+        Store.addTickets(TEST_TICKETS);
+        Screens.mission();
+        toast(`테스트 티켓 ${TEST_TICKETS}장을 넣었어요`, { tone: 'ok', mini: true });
+        haptic(20);
+      },
       bonus: () => {
         const n = Store.claimMissionBonus();
         if (n) Dialogs.reward(n, '오늘의 미션을 전부 완료했어요');

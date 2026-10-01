@@ -210,6 +210,8 @@ const RAFFLES = [
 ];
 
 /* Seeded entry history so 응모 내역 has the three states the design shows. */
+const TEST_TICKETS = 10;      // 미션 화면의 테스트용 충전 버튼이 주는 장수
+
 const MY_MENU = [
   { id: 'exchange', label: '포인트 교환소',        icon: 'ticketFill', route: 'exchange' },
   { id: 'entries',  label: '추첨 응모 내역',        icon: 'inbox',      route: 'entries' },

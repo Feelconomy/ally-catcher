@@ -59,7 +59,7 @@ export const Play3D = {
     this.stop();
     const session = this.session;
     this.active = true; this.machine = machine; this.phase = 'loading';
-    this.time = PLAY_SECONDS; this.input = new THREE.Vector2(); this.velocity = new THREE.Vector2();
+    this.time = PLAY_SECONDS; this.timedOut = false; this.input = new THREE.Vector2(); this.velocity = new THREE.Vector2();
     this.position = new THREE.Vector3(.25, REST_Y, 0); this.held = null; this.lastTarget = null;
     /* 집게는 줄에 매달려 있으니 캐리지를 따라 뻣뻣하게 붙어 다니지 않는다.
        캐리지 가속도로 밀린 만큼 뒤로 처졌다가 좌우로 흔들리는 진자를 둔다.
@@ -431,7 +431,7 @@ export const Play3D = {
       this.position.x=clamp(nx,-1.02,1.02); this.position.z=clamp(nz,-.66,.67);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
       if(nz!==this.position.z)this.velocity.y*=-.3;
-      if(this.time<=0)this.drop();
+      if(this.time<=0){this.timedOut=true;this.drop();}   // 시간이 끝나 저절로 내려간 판
       const near=this.nearest();
       const id=near&&near.distance<.32?near.toy.id:null;
       if(id!==this.lastTarget){
@@ -574,7 +574,8 @@ export const Play3D = {
     }
     const won=!!target&&Math.random()*100<chance;
     const slipped=!!target&&!won&&Math.random()>.3;
-    App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,kind:'miss'};
+    App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,
+      kind:this.timedOut?'timeout':target?'miss':'empty'};
     // Keep the original housing above the toy; only the native hinges may rotate.
     const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh,true) : null;
     let down = targetBounds ? Math.max(.30,targetBounds.max.y+.095) : .46;

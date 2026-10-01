@@ -139,7 +139,7 @@ const Play = {
     this.skin = useSkin(this.skinId);
     this.machine = machine;
     this.x = START_X;
-    this.busy = false; this.over = false; this.dropped = false;
+    this.busy = false; this.over = false; this.dropped = false; this.timedOut = false;
     this.left = PLAY_SECONDS;
     this.coaching = false;
     this.stickActive = false;
@@ -687,6 +687,7 @@ const Play = {
       if (bar) bar.style.width = (this.left / PLAY_SECONDS * 100) + '%';
       if (this.left <= 0) {
         clearInterval(this.timer);
+        this.timedOut = true;      // 시간이 끝나 저절로 내려간 판
         this.drop();
       }
     }, 100);
@@ -720,10 +721,13 @@ const Play = {
     const won = inRange && Math.random() * 100 < chance;
 
     // How well the claw was lined up, for the fail screen's feedback.
+    /* kind 는 실패 화면의 문구를 고른다. 겨냥한 인형이 없으면 '빈손'이고,
+       시간이 끝나 저절로 내려간 판은 '시간 초과'다 — 전에는 둘 다 인형 id 가
+       없다는 이유로 '시간이 다 됐어요' 로 나왔다. */
     App.lastAttempt = {
       dollId: near ? near.d.dollId : null,
       accuracy: near ? Math.max(0, Math.round((1 - near.dist / GRAB_RADIUS) * 100)) : 0,
-      kind: 'miss',
+      kind: this.timedOut ? 'timeout' : inRange ? 'miss' : 'empty',
     };
 
     // A miss is not always a clean miss — a real claw often closes on the doll
