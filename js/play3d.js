@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=223';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=223';
-import { GrabAnalyzer } from './claw/analyzer.js?v=223';
-import { ClawController, STATE } from './claw/controller.js?v=223';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=224';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=224';
+import { GrabAnalyzer } from './claw/analyzer.js?v=224';
+import { ClawController, STATE } from './claw/controller.js?v=224';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -510,9 +510,10 @@ export const Play3D = {
     if(this.phase==='aim') {
       this.time=Math.max(0,this.time-dt);
       // 레버를 밀면 곧바로 최고 속도가 되지 않고 천천히 실렸다가 천천히 멎는다
-      // 조작이 굼떠서 최고 속도와 반응을 함께 올렸다 (1.18 → 3.4, 감쇠 6.5 → 14)
-      const target=this.input.clone().multiplyScalar(3.4);
-      this.velocity.lerp(target,1-Math.exp(-dt*14));
+      /* 좌우 조작은 원래 속도 그대로 둔다 — 빠르게 했더니 조준이 어려웠다.
+         내리고 올리는 속도만 빨라져 있다(아래 ClawController 설정). */
+      const target=this.input.clone().multiplyScalar(1.18);
+      this.velocity.lerp(target,1-Math.exp(-dt*6.5));
       const nx=this.position.x+this.velocity.x*dt, nz=this.position.z+this.velocity.y*dt;
       this.position.x=clamp(nx,-RANGE.x,RANGE.x); this.position.z=clamp(nz,RANGE.zMin,RANGE.zMax);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
