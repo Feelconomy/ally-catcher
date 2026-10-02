@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=217';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=217';
-import { GrabAnalyzer } from './claw/analyzer.js?v=217';
-import { ClawController, STATE } from './claw/controller.js?v=217';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=220';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=220';
+import { GrabAnalyzer } from './claw/analyzer.js?v=220';
+import { ClawController, STATE } from './claw/controller.js?v=220';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -261,7 +261,9 @@ export const Play3D = {
     /* 굴리지 않는다. TOY_SLOTS 가 이미 서로 닿는 정확한 높이라 자리를 잡을 필요가
        없고, 조금만 굴려도(40스텝) 더미가 평평해진다. 바로 재워 모양을 유지하고,
        집게가 건드리면 그때 깨어나 제대로 무너진다. */
-    if (!this.restoredLayout) this.pw.stepTimes(240);   // 더미가 자리를 잡게 한 뒤 시작
+    /* 놓인 자리에 그대로 재운다. 물리를 굴려 더미를 만들면 설계한 배치가
+       무너져 매번 흐트러진 모양이 된다. 집게가 건드리면 그때 깨어난다. */
+    if (!this.restoredLayout) for (const toy of this.toys) toy.body.sleep();
     this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
@@ -273,6 +275,14 @@ export const Play3D = {
     const label = document.getElementById('loading3dText');
     if (label) label.textContent = '조명과 화면 준비 중';
     document.getElementById('loading3dBar')?.style.setProperty('width', '96%');
+    /* 배경(초원)까지 받고 나서 화면을 연다. 전에는 기계만 먼저 띄우고 배경을
+       뒤에서 끼웠는데, 노는 도중에 배경이 뚝 나타나 어수선했다. 준비 화면이
+       있으니 거기서 기다리는 편이 낫다. */
+    const bgLabel = document.getElementById('loading3dText');
+    if (bgLabel) bgLabel.textContent = '배경 준비 중';
+    await this.loadMeadow(session);
+    if (!this.active || session !== this.session) return;
+    document.getElementById('loading3dBar')?.style.setProperty('width', '100%');
     await this.renderer.compileAsync(this.scene, this.camera);
     if (!this.active || session !== this.session) return;
     this.renderer.render(this.scene, this.camera);
@@ -280,11 +290,17 @@ export const Play3D = {
     this.phase = 'aim'; this.status('뽑을 준비 완료'); document.getElementById('drop3d').disabled = false;
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
-    this.meadowTimer = setTimeout(() => this.loadMeadow(session), 250);
   },
 
   buildPhysics() {
-    const pw = new PhysicsWorld({ x: 0, y: -9.81, z: 0 });
+    /* 게임은 실험실보다 1.7배 크고 인형이 26마리라, 촘촘한 설정이면 폰에서
+       버겁다. 성글게 줘도 관통은 1mm 로 발끝(19mm)에 비해 무시할 수준이다. */
+    const pw = new PhysicsWorld({ x: 0, y: -9.81, z: 0 }, {
+      /* maxSteps 는 한 프레임에 따라잡을 수 있는 물리 스텝 수다. 180/12 = 15 이므로
+         15fps 까지는 실시간을 유지하고, 그 아래로 떨어지면 느려 보인다(멈추진 않는다). */
+      dt: 1 / 180, maxSteps: 12,
+      solverIterations: 16, frictionIterations: 4, contactFrequency: 150,
+    });
     this.pw = pw;
     const R = pw.R;
     const wall = (x, y, z, w, h, d) => {
@@ -392,6 +408,7 @@ export const Play3D = {
         body.setTranslation({ x: saved.position[0], y: saved.position[1], z: saved.position[2] }, false);
         const [qx, qy, qz, qw] = saved.quaternion;
         body.setRotation({ x: qx, y: qy, z: qz, w: qw }, false);
+        body.sleep();
       }
       this.scene.add(mesh);
       const toy = { id, mesh, body, colliders: [] };
@@ -638,6 +655,7 @@ export const Play3D = {
     Store.refillMachine(this.machine, TOY_COUNT);   // 재고를 채우고 저장된 배치를 지운다
     this.stockToys();
     this.analyzer.toys = this.toys;
+    for (const toy of this.toys) toy.body.sleep();   // 깔아 둔 모양 그대로 멈춘다
     this.saveToyLayout();
     this.status('다시 채웠어요');
     haptic(20);
@@ -647,6 +665,7 @@ export const Play3D = {
     let pack;
     try { pack = await loadModel('higgsfield-meadow-detailed.glb'); }
     catch { return; }                                   // 배경이 없어도 게임은 돌아간다
+    if (!this.active || session !== this.session) { this.disposeObject(pack.scene); return; }
     if (!this.active || session !== this.session) { this.disposeObject(pack.scene); return; }
     const meadow = pack.scene; meadow.name = 'Meadow';
     const sceneExtras = [];
