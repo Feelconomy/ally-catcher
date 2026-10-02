@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=216').catch(() => { warmed = false; });
+    import('./play3d.js?v=217').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -63,20 +63,25 @@ function green3DLoading(fixed) {
 /* 3D 를 못 받았을 때. kind: offline(인터넷 끊김) · server(그 밖의 실패) · local(file://) */
 const GREEN3D_ERRORS = {
   offline: ['인터넷이 끊겼어요', '연결되면 다시 시도해 주세요.\n기본 모드는 인터넷 없이도 바로 할 수 있어요.'],
-  server: ['인형통을 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.\n그동안 기본 모드로 놀 수 있어요.'],
+  server: ['인형통을 준비하지 못했어요', '잠시 뒤 다시 시도해 주세요.\n그동안 기본 모드로 놀 수 있어요.'],
   local: ['로컬 서버가 필요해요', '3D 모드는 파일로 열면 동작하지 않아요.\n로컬 서버로 열어 주세요.'],
 };
+/* 실패 화면. 원인(detail)은 평소엔 접어 둔다 — 사용자에게는 영어 오류문이
+   필요 없고, 막혔을 때만 펼쳐서 알려줄 수 있으면 된다. */
 function green3DError(kind, detail) {
   const [title, body] = GREEN3D_ERRORS[kind] || GREEN3D_ERRORS.server;
   return `<div class="green3d-loading l3 l3-err" role="alert">
-    ${friendIcon('olly', 92, 'peek')}
+    <div class="l3-err-art">${friendIcon('olly', 64, 'peek')}</div>
     <strong>${title}</strong>
     <p>${esc(body)}</p>
-    ${detail ? `<code class="l3-why">${esc(detail)}</code>` : ''}
-    <button class="btn btn--primary" id="retry3d">다시 시도</button>
-    <button class="btn btn--text" id="fallback2d">기본 모드로 계속</button>
+    <div class="l3-err-acts">
+      <button class="btn btn--primary" id="retry3d">다시 시도</button>
+      <button class="btn btn--neutral" id="fallback2d">기본 모드로 계속</button>
+    </div>
+    ${detail ? `<details class="l3-why"><summary>자세한 정보</summary><code>${esc(detail)}</code></details>` : ''}
   </div>`;
 }
+
 async function startGreen3D(machine) {
   const request = ++green3DRequest;
   Play.stop();
@@ -88,7 +93,7 @@ async function startGreen3D(machine) {
   if (!document.getElementById('loading3d')) screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=216');
+    const { Play3D } = await import('./play3d.js?v=217');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);

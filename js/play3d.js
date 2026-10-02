@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=216';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=216';
-import { GrabAnalyzer } from './claw/analyzer.js?v=216';
-import { ClawController, STATE } from './claw/controller.js?v=216';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=217';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=217';
+import { GrabAnalyzer } from './claw/analyzer.js?v=217';
+import { ClawController, STATE } from './claw/controller.js?v=217';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),

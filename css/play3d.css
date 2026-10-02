@@ -25,15 +25,33 @@
 .l3-bar { width: 148px; height: 4px; margin-top: 18px; border-radius: 2px; background: rgba(14, 79, 44, .12); overflow: hidden; }
 .l3-bar i { display: block; width: 8%; height: 100%; border-radius: inherit; background: #00a650; transition: width .4s ease; }
 .l3-sub { margin-top: 10px; font-size: 12px; font-weight: 600; color: rgba(14, 79, 44, .55); font-variant-numeric: tabular-nums; }
-.l3-err { padding: 32px 28px; text-align: center; }
-.l3-err .friend { color: rgba(14, 79, 44, .18); margin-bottom: 18px; }
-.l3-err strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
-.l3-err p { margin: 8px 0 26px; font-size: 14px; line-height: 1.6; color: rgba(14, 79, 44, .65); white-space: pre-line; }
-.l3-err .l3-why { display: block; max-width: 300px; margin: -12px auto 18px; padding: 8px 10px;
-  border-radius: 8px; background: rgba(14, 79, 44, .07); color: rgba(14, 79, 44, .7);
-  font-size: 11px; line-height: 1.5; word-break: break-all; }
-.l3-err .btn { width: 100%; max-width: 300px; }
-.l3-err .btn + .btn { margin-top: 6px; }
+.l3-err { padding: 28px 24px calc(24px + var(--safe-b, 0px)); text-align: center; justify-content: center; }
+.l3-err-art {
+  width: 108px; height: 108px; margin-bottom: 20px; border-radius: 50%;
+  background: rgba(14, 79, 44, .06);
+  display: flex; align-items: center; justify-content: center;
+}
+.l3-err-art .friend { color: rgba(14, 79, 44, .28); }
+.l3-err strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; color: #0e4f2c; }
+.l3-err p { margin: 10px 0 0; font-size: 14px; line-height: 1.65; color: rgba(14, 79, 44, .62); white-space: pre-line; }
+.l3-err-acts { width: 100%; max-width: 300px; margin-top: 26px; display: flex; flex-direction: column; gap: 8px; }
+.l3-err-acts .btn { width: 100%; }
+.l3-err-acts .btn--neutral { background: rgba(14, 79, 44, .07); color: #0e4f2c; box-shadow: none; }
+/* 원인은 접어 둔다. 막혔을 때만 펼쳐 본다. */
+.l3-why { width: 100%; max-width: 300px; margin-top: 18px; text-align: left; }
+.l3-why summary {
+  list-style: none; cursor: pointer; font-size: 12px; font-weight: 600;
+  color: rgba(14, 79, 44, .45); text-align: center; padding: 6px;
+}
+.l3-why summary::-webkit-details-marker { display: none; }
+.l3-why summary::after { content: ' ⌄'; }
+.l3-why[open] summary::after { content: ' ⌃'; }
+.l3-why code {
+  display: block; margin-top: 6px; padding: 10px 12px; border-radius: 10px;
+  background: rgba(14, 79, 44, .06); color: rgba(14, 79, 44, .7);
+  font-size: 11px; line-height: 1.55; word-break: break-all;
+}
+
 @keyframes l3-olly {
   0% { transform: translate(18px, 170px); opacity: 0; }
   6% { opacity: 1; }
