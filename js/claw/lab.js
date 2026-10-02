@@ -1,11 +1,11 @@
 /* 집게 물리 실험실 — 게임과 분리해서 Phase 1~9 를 눈으로 확인하는 곳.
    요구 22·23: 콜라이더/접촉점/법선/힘을 그리고, 관통이 생기면 경고를 띄운다. */
 import * as THREE from 'three';
-import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js?v=39435';
-import { Toy } from './toy.js?v=39435';
-import { ClawAssembly, CLAW } from './claw.js?v=39435';
-import { GrabAnalyzer, GRIP } from './analyzer.js?v=39435';
-import { ClawController, STATE } from './controller.js?v=39435';
+import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js?v=39822';
+import { Toy } from './toy.js?v=39822';
+import { ClawAssembly, CLAW } from './claw.js?v=39822';
+import { GrabAnalyzer, GRIP } from './analyzer.js?v=39822';
+import { ClawController, STATE } from './controller.js?v=39822';
 
 const hud = document.getElementById('hud');
 const testlog = document.getElementById('testlog');
@@ -89,9 +89,11 @@ function spawnToys() {
      얹힌 채 멈춰서(발끝 0.31m) 인형 옆으로 내려갈 틈이 없었다. */
   /* 한 겹으로 벌려 둔다. 2층으로 쌓으면 더미 꼭대기가 집게 발끝보다 높아
      집게가 그 위에 얹힌 채 멈춘다. */
+  /* 한 겹으로 벌려 둔다. 배출구(-0.38, 0.26) 자리는 비워 둔다 — 거기에
+     인형이 서 있으면 센서가 늘 그 인형을 '배출됨'으로 잡는다. */
   const spots = [
     [-0.34, 0.004, -0.22], [0, 0.004, -0.22], [0.34, 0.004, -0.22],
-    [-0.34, 0.004,  0.22], [0, 0.004,  0.22], [0.34, 0.004,  0.22],
+    [0, 0.004, 0.22], [0.34, 0.004, 0.22],
   ];
   spots.forEach((p, i) => {
     toys.push(new Toy(pw, scene, {
@@ -167,6 +169,9 @@ function checkChute() {
 
 // ---------------------------------------------------------------- 루프
 let slow = false, last = performance.now(), warnCooldown = 0;
+/* 조이스틱: 기울인 만큼 캐리지가 계속 움직인다 (화면 기준 위=뒤쪽 -Z). */
+const stickInput = { x: 0, z: 0 };
+const CARRIAGE_SPEED = 0.55;      // m/s, 최대로 기울였을 때
 // 배출 기록은 '다음 판을 시작할 때' 지운다. RETURN 에서 지웠더니 방금 떨어뜨린 걸 지워버렸다.
 controller.onState = (s) => { if (s === STATE.DESCENDING) caught = null; };
 
@@ -184,6 +189,14 @@ function frame(now) {
       analyzer.reportPenetrations(controller.state);
     }
   }
+
+  // 조이스틱으로 캐리지 이동 (집는 중에는 조작을 막는다)
+  if (controller.state === STATE.IDLE && (stickInput.x || stickInput.z)) {
+    claw.moveCarriage(claw.origin.x + stickInput.x * CARRIAGE_SPEED * dt,
+                      claw.origin.z + stickInput.z * CARRIAGE_SPEED * dt);
+  }
+  const dropBtn = document.getElementById('btnDrop');
+  if (dropBtn) dropBtn.disabled = controller.state !== STATE.IDLE;
 
   claw.sync();
   for (const t of toys) t.sync();
@@ -235,6 +248,47 @@ document.getElementById('btnDrop').onclick = () => controller.drop();
 document.getElementById('btnReset').onclick = () => { spawnToys(); analyzer.toys = toys; caught = null; controller.set(STATE.IDLE); claw.open(true); claw.setWinch(0.12); claw.moveCarriage(0, 0); };
 document.getElementById('btnDebug').onclick = (e) => { showDebug = !showDebug; e.target.classList.toggle('on', showDebug); };
 document.getElementById('btnSlow').onclick = (e) => { slow = !slow; e.target.classList.toggle('on', slow); };
+/* ---- 조이스틱 ---- */
+const stickEl = document.getElementById('stick');
+const knobEl = document.getElementById('knob');
+if (stickEl) {
+  let active = null;
+  const R = 35;                       // 손잡이가 움직일 수 있는 반경(px)
+  const setKnob = (dx, dy) => { knobEl.style.transform = `translate(${dx}px, ${dy}px)`; };
+  const update = (ev) => {
+    const r = stickEl.getBoundingClientRect();
+    let dx = ev.clientX - (r.left + r.width / 2);
+    let dy = ev.clientY - (r.top + r.height / 2);
+    const len = Math.hypot(dx, dy);
+    if (len > R) { dx = dx / len * R; dy = dy / len * R; }
+    setKnob(dx, dy);
+    stickInput.x = dx / R;
+    stickInput.z = dy / R;            // 화면 아래로 당기면 +Z (앞쪽)
+  };
+  const release = () => { active = null; stickInput.x = stickInput.z = 0; setKnob(0, 0); stickEl.style.cursor = 'grab'; };
+  stickEl.addEventListener('pointerdown', (e) => { active = e.pointerId; stickEl.setPointerCapture(e.pointerId); stickEl.style.cursor = 'grabbing'; update(e); });
+  stickEl.addEventListener('pointermove', (e) => { if (active === e.pointerId) update(e); });
+  stickEl.addEventListener('pointerup', release);
+  stickEl.addEventListener('pointercancel', release);
+  stickEl.addEventListener('lostpointercapture', release);
+}
+
+/* ---- 집게 힘 슬라이더 (실시간) ---- */
+const gripRange = document.getElementById('gripRange');
+const gripVal = document.getElementById('gripVal');
+if (gripRange) {
+  const apply = () => {
+    CLAW.gripStiffness = parseFloat(gripRange.value);
+    gripVal.textContent = CLAW.gripStiffness.toFixed(1);
+    // 이미 쥐고 있는 중이면 즉시 반영
+    if (controller.state === STATE.CLOSING || controller.state === STATE.GRIP_SETTLE
+        || controller.state === STATE.LIFTING || controller.state === STATE.TRANSPORT) claw.close();
+  };
+  gripRange.value = String(CLAW.gripStiffness);
+  apply();
+  gripRange.addEventListener('input', apply);
+}
+
 addEventListener('keydown', (e) => {
   const step = 0.02;
   if (e.key === 'ArrowLeft') claw.moveCarriage(claw.origin.x - step, claw.origin.z);
@@ -258,7 +312,7 @@ function runDrop(x, z, maxSteps = 3600) {
   let maxPen = 0, worst = null, liftPeak = 0, liftId = null;
   const seen = new Set();
   for (let i = 0; i < maxSteps; i++) {
-    pw.stepTimes(1); analyzer.update();
+    pw.stepTimes(1); analyzer.update(); checkChute();
     for (const c of analyzer.contacts) if (c.depth > maxPen) {
       maxPen = c.depth;
       worst = { f: 'ABC'[c.finger], seg: c.seg, toy: c.toy.id, part: c.part, mm: +(c.depth * 1000).toFixed(1), state: controller.state };
@@ -314,7 +368,7 @@ document.getElementById('btnTests').onclick = () => runTests();
 
 /* toys 는 리셋 때마다 새 배열로 바뀐다. 참조로 들고 있으면 이미 지운 body 를
    건드려 wasm 이 죽으므로 getter 로 항상 현재 것을 준다. */
-window.LAB = { pw, claw, analyzer, controller, scene, spawnToys, resetPile, runDrop, runTests, STATE, GRIP, CLAW,
+window.LAB = { pw, claw, analyzer, controller, scene, spawnToys, resetPile, runDrop, runTests, checkChute, chuteCol, STATE, GRIP, CLAW,
   get toys() { return toys; },
   get caught() { return caught; }, set caught(v) { caught = v; },
   settle(steps = 120) { pw.stepTimes(steps); analyzer.update(); },

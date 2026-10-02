@@ -18,6 +18,23 @@
   #hud b { color: #7ee3a0; }
   #hud .warn { color: #ff8c8c; }
   #bar { position: fixed; left: 10px; bottom: 10px; display: flex; gap: 6px; flex-wrap: wrap; width: 310px; }
+#pad { position: fixed; right: 14px; bottom: 14px; display: flex; flex-direction: column; align-items: flex-end; gap: 10px;
+       background: rgba(8,12,16,.82); border: 1px solid rgba(255,255,255,.12); border-radius: 14px; padding: 12px 14px; }
+#grip { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; width: 100%; }
+#grip b { color: #7ee3a0; }
+#grip input { width: 100%; }
+#stickWrap { display: flex; align-items: center; gap: 12px; }
+#stick { width: 112px; height: 112px; border-radius: 50%; background: #1b232c; border: 1px solid rgba(255,255,255,.16);
+         position: relative; touch-action: none; cursor: grab; }
+#stick::before, #stick::after { content: ''; position: absolute; background: rgba(255,255,255,.10); }
+#stick::before { left: 50%; top: 8px; bottom: 8px; width: 1px; }
+#stick::after { top: 50%; left: 8px; right: 8px; height: 1px; }
+#knob { position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%;
+        background: linear-gradient(180deg,#4fd38a,#1f8f5a); box-shadow: 0 3px 8px rgba(0,0,0,.45); pointer-events: none; }
+#btnDrop { height: 72px; width: 72px; border-radius: 50%; font-size: 13px; font-weight: 700;
+           background: #1f6f45; border-color: #2f9a62; }
+#btnDrop:active { transform: scale(.95); }
+#btnDrop:disabled { opacity: .45; }
   button { font: inherit; padding: 7px 11px; border-radius: 9px; border: 1px solid rgba(255,255,255,.18);
            background: #1d2630; color: #e8eef2; cursor: pointer; }
   button:hover { background: #26323e; }
@@ -33,15 +50,24 @@
 <div id="hud">불러오는 중…</div>
 <div id="tests"><h4>TESTS</h4><div id="testlog">대기 중</div></div>
 <div id="bar">
-  <button id="btnDrop">DROP</button>
   <button id="btnReset">리셋</button>
   <button id="btnDebug" class="on">콜라이더</button>
   <button id="btnSlow">0.25x</button>
   <button id="btnTests">테스트 실행</button>
 </div>
+<div id="pad">
+  <div id="grip">
+    <label>집게 힘 <b id="gripVal">6.0</b></label>
+    <input id="gripRange" type="range" min="0.5" max="12" step="0.1" value="6">
+  </div>
+  <div id="stickWrap">
+    <div id="stick"><div id="knob"></div></div>
+    <button id="btnDrop">DROP</button>
+  </div>
+</div>
 <script type="importmap">
 {"imports":{"three":"../vendor/three.module.js"}}
 </script>
-<script type="module" src="../js/claw/lab.js?v=39435"></script>
+<script type="module" src="../js/claw/lab.js?v=39822"></script>
 </body>
 </html>
