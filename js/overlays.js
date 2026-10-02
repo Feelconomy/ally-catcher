@@ -557,6 +557,9 @@ const Sheets = {
         <div class="ln"><span class="l">기본 확률 (%)</span>
           <input class="adm-in num" id="mr" type="tel" inputmode="numeric" value="${m.baseRate}" aria-label="기본 확률"></div>
         <div class="hr"></div>
+        <div class="ln"><span class="l">집게 힘</span>
+          <input class="adm-in num" id="mg" type="tel" inputmode="decimal" value="${m.grip ?? ''}" placeholder="6" aria-label="집게 힘"></div>
+        <div class="hr"></div>
         <div class="ln"><span class="l">운영중</span>
           <button class="toggle" role="switch" aria-checked="${!!m.open}" data-act="open" aria-label="운영중"><i></i></button></div>
       </div>
@@ -575,6 +578,10 @@ const Sheets = {
       (node, close) => {
         let open = !!m.open;
         const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
+        const gripValue = (el) => {
+          const v = parseFloat(el.value);
+          return Number.isFinite(v) && v > 0 ? Math.min(20, v) : null;
+        };
 
         bind(node, {
           open: el => { open = !open; el.setAttribute('aria-checked', String(open)); },
@@ -604,6 +611,9 @@ const Sheets = {
               blurb: $('#mb', node).value.trim(),
               cost: num($('#mc', node), 99),
               baseRate: num($('#mr', node), 100),
+              /* 집게 힘 — 3D 에서 발이 인형을 쥐는 토크. 비워 두면 기본값.
+                 낮추면 잘 미끄러지고 높이면 잘 잡힌다 (측정: 1.2→0/5, 6→3/5). */
+              grip: gripValue($('#mg', node)),
               pool, contents: pool,
               hero: pool.includes(m.hero) ? m.hero : pool[0],
             };

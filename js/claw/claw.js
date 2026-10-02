@@ -51,15 +51,27 @@ export class ClawAssembly {
    * @param {THREE.Scene} scene
    * @param {{x:number,y:number,z:number}} origin  캐리지(윈치 상단) 위치
    */
-  constructor(pw, scene, origin, { cableLength = 0.46 } = {}) {
+  constructor(pw, scene, origin, { cableLength = 0.46, scale = 1, color = 0xf2c232, grip = CLAW.gripStiffness } = {}) {
     const R = pw.R;
     this.pw = pw;
     this.origin = { ...origin };
     this.cableLength = cableLength;
+    /* 실험실(인형 0.3m)과 게임(인형 0.64) 처럼 세계 크기가 다르므로 치수를 통째로
+       늘리고 줄인다. 힘(강성)은 지렛대 길이에 비례해 같이 키워야 체감이 같다. */
+    this.scale = scale;
+    /* 힘을 어떻게 키울지: 관절 토크는 '무게 x 지렛대' 라 크기의 4제곱으로 커진다
+       (무게는 부피 = k^3, 지렛대 = k). 전에 k 배만 키웠더니 1.7배 세계에서
+       발이 제 무게도 못 이겨 아예 안 벌어졌다. 줄(직선 모터)은 힘/거리 라 k^2. */
+    this.torqueScale = scale ** 4;
+    this.forceScale = scale ** 2;
+    this.grip = grip * this.torqueScale;
+    this.dims = {
+      hingeR: CLAW.hingeR * scale, bodyR: CLAW.bodyR * scale, bodyH: CLAW.bodyH * scale,
+    };
     this.group = new THREE.Group();
     scene.add(this.group);
 
-    const metal = new THREE.MeshStandardMaterial({ color: 0xf2c232, roughness: 0.32, metalness: 0.75 });
+    const metal = new THREE.MeshStandardMaterial({ color, roughness: 0.32, metalness: 0.75 });
     this.metal = metal;
 
     /* 캐리지: 위치를 코드가 정하는 kinematic. X/Z 이동과 윈치의 기준점이다. */
@@ -77,13 +89,13 @@ export class ClawAssembly {
         /* 재우면 안 된다 — 잠든 사이에 윈치 모터 목표를 바꿔도 깨지 않아서
            집게가 가만히 있었다(하강 명령이 먹지 않던 원인). */
         .setCanSleep(false));
-    const bodyCol = R.ColliderDesc.cylinder(CLAW.bodyH, CLAW.bodyR)
+    const bodyCol = R.ColliderDesc.cylinder(this.dims.bodyH, this.dims.bodyR)
       .setDensity(900).setFriction(0.6).setRestitution(0.0)
       .setCollisionGroups(CLAW_FILTER).setContactSkin(0.001);
     this.bodyCollider = pw.world.createCollider(bodyCol, this.body);
     this.bodyCollider.userData = { claw: 'body' };
 
-    const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(CLAW.bodyR, CLAW.bodyR, CLAW.bodyH * 2, 20), metal);
+    const bodyMesh = new THREE.Mesh(new THREE.CylinderGeometry(this.dims.bodyR, this.dims.bodyR, this.dims.bodyH * 2, 20), metal);
     bodyMesh.castShadow = true;
     this.bodyMesh = bodyMesh;
     this.group.add(bodyMesh);
@@ -118,7 +130,7 @@ export class ClawAssembly {
     const out = new THREE.Vector3(Math.cos(yaw), 0, Math.sin(yaw));     // 바깥 반지름 방향
     const axis = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw));   // 경첩 축(접선)
 
-    const hinge = out.clone().multiplyScalar(CLAW.hingeR).setY(-CLAW.bodyH * 0.6);
+    const hinge = out.clone().multiplyScalar(this.dims.hingeR).setY(-this.dims.bodyH * 0.6);
     const bodyPos = this.body.translation();
 
     const fb = pw.world.createRigidBody(
@@ -133,9 +145,10 @@ export class ClawAssembly {
     const colliders = [];
     for (const s of SEGMENTS) {
       // 로컬 (x, y) 를 그 발의 방향으로 돌려 놓는다: +x 가 바깥, -x 가 안쪽
-      const pos = new THREE.Vector3(s.pos[0], s.pos[1], s.pos[2]).applyQuaternion(spin);
+      const k = this.scale;
+      const pos = new THREE.Vector3(s.pos[0] * k, s.pos[1] * k, s.pos[2] * k).applyQuaternion(spin);
       const rot = spin.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, s.rotZ)));
-      const desc = R.ColliderDesc.capsule(s.h, s.r)
+      const desc = R.ColliderDesc.capsule(s.h * k, s.r * k)
         .setTranslation(pos.x, pos.y, pos.z)
         .setRotation({ x: rot.x, y: rot.y, z: rot.z, w: rot.w })
         .setDensity(1200)
@@ -148,7 +161,7 @@ export class ClawAssembly {
       col.userData = { claw: 'finger', finger: index, seg: s.name };
       colliders.push(col);
 
-      const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(s.r, s.h * 2, 6, 12), material);
+      const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(s.r * k, s.h * 2 * k, 6, 12), material);
       mesh.position.copy(pos);
       mesh.quaternion.copy(rot);
       mesh.castShadow = true;
@@ -175,7 +188,7 @@ export class ClawAssembly {
   /** 윈치 목표 길이(m). 길수록 집게가 아래로 내려간다. */
   setWinch(length) {
     this.winchTarget = length;
-    this.winch.configureMotorPosition(-length, CLAW.winchStiffness, CLAW.winchDamping);
+    this.winch.configureMotorPosition(-length, CLAW.winchStiffness * this.forceScale, CLAW.winchDamping * this.forceScale);
   }
 
   /** 캐리지를 X/Z 로 옮긴다 (kinematic). */
@@ -184,16 +197,18 @@ export class ClawAssembly {
     this.carriage.setNextKinematicTranslation({ x, y, z });
   }
 
+  setGrip(stiffness) { this.grip = stiffness * this.torqueScale; if (this.targetAngle === CLAW.closedAngle) this.close(); }
+
   close() {
     this.targetAngle = CLAW.closedAngle;
     for (const f of this.fingers)
-      f.joint.configureMotorPosition(CLAW.closedAngle, CLAW.gripStiffness, CLAW.gripDamping);
+      f.joint.configureMotorPosition(CLAW.closedAngle, this.grip, CLAW.gripDamping * this.torqueScale);
   }
 
   open(hard = false) {
     this.targetAngle = CLAW.openAngle;
     for (const f of this.fingers)
-      f.joint.configureMotorPosition(CLAW.openAngle, hard ? CLAW.openStiffness * 3 : CLAW.openStiffness, CLAW.gripDamping);
+      f.joint.configureMotorPosition(CLAW.openAngle, (hard ? CLAW.openStiffness * 3 : CLAW.openStiffness) * this.torqueScale, CLAW.gripDamping * this.torqueScale);
   }
 
   /** 발의 실제 각도 — 몸통 기준 상대 회전을 그 발의 경첩 축에 투영해서 읽는다. */

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from '../vendor/GLTFLoader.js';
 import { MeshoptDecoder } from '../vendor/meshopt_decoder.module.js';
-import { clawContacts } from './claw-contact.js?v=191';
 
 /* 배경 글TF는 EXT_meshopt_compression 으로 줄여 두었다(84MB -> 15MB).
    디코더를 물린 로더를 하나 써서 모든 에셋을 같은 경로로 읽는다. */
@@ -40,15 +39,41 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import * as CANNON from '../vendor/cannon-es.js';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=212';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=212';
+import { GrabAnalyzer } from './claw/analyzer.js?v=212';
+import { ClawController, STATE } from './claw/controller.js?v=212';
 
 const CHUTE = { x: -.91, z: .53 };
-const GROUP_TOY = 1, GROUP_CLAW = 2;   // 집게가 더미를 밀고 지나가도록 (아래 clawBody)
+/* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
+   집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
+const CLAW_SCALE = 1.7;
+const TOY_FILTER = members(GROUP.TOY, GROUP.TOY | GROUP.CLAW | GROUP.WALL | GROUP.CHUTE);
 const REST_Y = 2.72;
-/* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
-   것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
-   실측: +0.55 = 팁 반경 0.36(활짝) · 0 = 0.18(기본) · -0.12 = 0.13(움켜쥠) · -0.42 = 0.01(맞닿음) */
-const GRIP_REST = 0, GRIP_OPEN = .55, GRIP_SHUT = -.42;
+/** 메시의 꼭짓점을 모아 볼록 껍질용 점 배열(Float32Array)로. 점이 많으면 솎는다. */
+function hullPoints(root, max = 160) {
+  const pts = [];
+  root.updateWorldMatrix(true, true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const v = new THREE.Vector3();
+  root.traverse(o => {
+    const pos = o.isMesh && o.geometry && o.geometry.attributes.position;
+    if (!pos) return;
+    const step = Math.max(1, Math.floor(pos.count / max));
+    for (let i = 0; i < pos.count; i += step) {
+      v.fromBufferAttribute(pos, i).applyMatrix4(o.matrixWorld).applyMatrix4(inv);
+      pts.push(v.x, v.y, v.z);
+    }
+  });
+  return pts.length >= 12 ? new Float32Array(pts) : null;
+}
+
+/** 기계마다 관리자가 정한 집게 힘 (없으면 기본값). */
+function machineGrip(machine) {
+  const v = machine && machine.grip;
+  return Number.isFinite(v) && v > 0 ? v : CLAW.gripStiffness;
+}
+
 const clamp = THREE.MathUtils.clamp;
 const ease = t => t * t * (3 - 2 * t);
 
@@ -218,30 +243,27 @@ export const Play3D = {
     /* 배경은 기계보다 훨씬 무겁다(9MB · 삼각형 100만). 이걸 기다렸다 화면을
        띄우면 시작이 한참 늦어지므로, 기계·인형만 먼저 세우고 배경은 뒤에서
        받아 끼운다. 도중에 나가면 받은 걸 버린다. */
-    this.claw = this.assets.Claw;
-    this.fingers = [0,1,2].map(i => this.claw.getObjectByName('Finger'+i));
-    this.fingerAngles = [GRIP_REST,GRIP_REST,GRIP_REST]; this.contactLimits = null;
-    /* 손가락마다 뻗은 방향이 120도씩 다르다. 그 반경 방향에 수직인 수평축이
-       여닫는 힌지축이다 — 이 축으로 돌려야 바깥으로 활짝 펴진다. */
-    this.fingerAxes = this.fingers.map(f => {
-      let sx = 0, sz = 0;
-      for (const c of f.children) { sx += c.position.x; sz += c.position.z; }
-      const len = Math.hypot(sx, sz) || 1;
-      return new THREE.Vector3(-sz / len, 0, sx / len);
-    });
+    /* GLB 안의 집게 모형은 쓰지 않는다 — Rapier 로 만든 집게가 곧 보이는 집게다. */
+    if (this.assets.Claw) this.assets.Claw.visible = false;
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
     this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
     this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
+    await initRapier();                       // wasm 준비 (두 번째부터는 즉시 반환)
+    if (!this.active || session !== this.session) return;
     this.buildPhysics(); this.stockToys();
     /* 굴리지 않는다. TOY_SLOTS 가 이미 서로 닿는 정확한 높이라 자리를 잡을 필요가
        없고, 조금만 굴려도(40스텝) 더미가 평평해진다. 바로 재워 모양을 유지하고,
        집게가 건드리면 그때 깨어나 제대로 무너진다. */
-    if (!this.restoredLayout) for (const toy of this.toys) toy.body.sleep();
+    if (!this.restoredLayout) this.pw.stepTimes(240);   // 더미가 자리를 잡게 한 뒤 시작
     this.saveToyLayout();
     this.resizeObserver = new ResizeObserver(() => this.resize()); this.resizeObserver.observe(this.root);
     this.view('angle'); this.resize(); this.bind();
-    for (const toy of this.toys) { toy.mesh.position.copy(toy.body.position); toy.mesh.quaternion.copy(toy.body.quaternion); }
+    for (const toy of this.toys) {
+      const p = toy.body.translation(), q = toy.body.rotation();
+      toy.mesh.position.set(p.x, p.y, p.z); toy.mesh.quaternion.set(q.x, q.y, q.z, q.w);
+    }
+    this.claw.sync();
     const label = document.getElementById('loading3dText');
     if (label) label.textContent = '조명과 화면 준비 중';
     document.getElementById('loading3dBar')?.style.setProperty('width', '96%');
@@ -256,28 +278,42 @@ export const Play3D = {
   },
 
   buildPhysics() {
-    this.world = new CANNON.World({ gravity: new CANNON.Vec3(0,-9.82,0) });
-    // 인형끼리 덜 붙고 조금 더 통통 튀게 — 더미가 굳어 보이지 않도록
-    this.world.defaultContactMaterial.friction = .42;
-    this.world.defaultContactMaterial.restitution = .22;
-    this.world.allowSleep = true;
-    this.world.solver.iterations = 12;
-    const wall = (x,y,z,w,h,d) => {
-      const body=new CANNON.Body({mass:0,shape:new CANNON.Box(new CANNON.Vec3(w/2,h/2,d/2)),position:new CANNON.Vec3(x,y,z)});
-      this.world.addBody(body);
+    const pw = new PhysicsWorld({ x: 0, y: -9.81, z: 0 });
+    this.pw = pw;
+    const R = pw.R;
+    const wall = (x, y, z, w, h, d) => {
+      const body = pw.world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(x, y, z));
+      pw.world.createCollider(R.ColliderDesc.cuboid(w / 2, h / 2, d / 2)
+        .setFriction(.5).setRestitution(0)
+        .setCollisionGroups(members(GROUP.WALL, GROUP.TOY | GROUP.CLAW))
+        .setContactSkin(.001), body);
     };
     wall(0,-.08,0,2.65,.16,1.95);
-    wall(-1.29,1.7,0,.10,3.5,1.95);wall(1.29,1.7,0,.10,3.5,1.95);
-    wall(0,1.7,-.95,2.65,3.5,.10);wall(0,1.7,.96,2.65,3.5,.10);
+    wall(-1.29,1.7,0,.10,3.5,1.95); wall(1.29,1.7,0,.10,3.5,1.95);
+    wall(0,1.7,-.95,2.65,3.5,.10); wall(0,1.7,.96,2.65,3.5,.10);
     wall(-.60,.36,.53,.025,.72,.62); wall(-1.22,.36,.53,.025,.72,.62);
     wall(-.91,.36,.23,.64,.72,.025); wall(-.91,.36,.83,.64,.72,.025);
 
-    /* 집게에도 몸통을 붙인다. 내려갈 때 옆 인형을 밀어내 더미가 실제로 흐트러진다.
-       물려는 인형만 잠깐 이 충돌에서 빼서(drop 참고) 밀어내지 않고 집을 수 있게 한다. */
-    this.clawBody = new CANNON.Body({ mass:0, type:CANNON.Body.KINEMATIC,
-      collisionFilterGroup: GROUP_CLAW, collisionFilterMask: GROUP_TOY });
-    this.clawBody.addShape(new CANNON.Sphere(.16), new CANNON.Vec3(0,-.12,0));
-    this.world.addBody(this.clawBody);
+    // 배출구 센서 — 인형이 실제로 여기 떨어져야 성공이다
+    const chuteBody = pw.world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(CHUTE.x, .10, CHUTE.z));
+    this.chuteCol = pw.world.createCollider(
+      R.ColliderDesc.cylinder(.10, .30).setSensor(true)
+        .setCollisionGroups(members(GROUP.CHUTE, GROUP.TOY)), chuteBody);
+
+    /* 집게: 실험실과 같은 구조. 발 세 개가 실제 collider 이고, 닫는 힘은
+       모터 토크라 인형에 막히면 중간에 멈춘다. 힘은 기계마다 관리자가 정한다. */
+    this.claw = new ClawAssembly(pw, this.scene, { x: 0, y: 3.03, z: 0 }, {
+      cableLength: .30, scale: CLAW_SCALE, color: 0xf0c23a,
+      grip: machineGrip(this.machine),
+    });
+    this.analyzer = new GrabAnalyzer(pw, this.claw, []);
+    this.controller = new ClawController(this.claw, this.analyzer, {
+      restLength: .30, maxLength: 2.35,
+      chute: { x: CHUTE.x, z: CHUTE.z }, home: { x: 0, z: 0 },
+      downSpeed: .42 * CLAW_SCALE, upSpeed: .48 * CLAW_SCALE, transportTime: 2.2,
+      onState: (st) => this.onClawState(st),
+    });
+    pw.onStep[0] = (dt) => this.controller.tick(dt);
   },
 
   stockToys() {
@@ -315,16 +351,26 @@ export const Play3D = {
         o.castShadow = true; o.receiveShadow = true;
         if (/cat|penguin/.test(id) && /Honey plush/.test(o.material.name)) o.material.color.set('#a2b8c8');
       });
-      const body = new CANNON.Body({ mass: .2, linearDamping:.26, angularDamping:.5, sleepSpeedLimit:.05, sleepTimeLimit:.9,
-        collisionFilterGroup: GROUP_TOY, collisionFilterMask: GROUP_TOY | GROUP_CLAW });
-      body.addShape(new CANNON.Sphere(.205),new CANNON.Vec3(0,-.015,0));
-      body.addShape(new CANNON.Sphere(.17),new CANNON.Vec3(0,.21,0));
+      /* 인형 모양대로 잡히게 하려면 공 두 개로는 안 된다. 실제 메시의 점들로
+         볼록 껍질을 떠서 collider 로 쓴다 — 실루엣이 그대로라 집게 발이
+         보이는 자리에서 걸린다. */
+      const R = this.pw.R;
+      const body = this.pw.world.createRigidBody(
+        R.RigidBodyDesc.dynamic().setCcdEnabled(true).setSoftCcdPrediction(.06)
+          .setLinearDamping(.26).setAngularDamping(.5));
+      const hull = hullPoints(mesh);
+      const shape = hull ? R.ColliderDesc.convexHull(hull) : R.ColliderDesc.ball(.2);
+      this.pw.world.createCollider(shape
+        .setMass(.2).setFriction(.95).setRestitution(.03)
+        .setFrictionCombineRule(R.CoefficientCombineRule.Average)
+        .setCollisionGroups(TOY_FILTER).setContactSkin(.0008), body);
       const s = TOY_SLOTS[i] || TOY_SLOTS[i % TOY_SLOTS.length];
       const yaw = [-.95, .45, -.25, 1.05, .05, -.60, .70][i % 7] + (Math.random() - .5) * .18;
       const pitch = [.12, -.32, .95, -.16, .08, -.64, .22][i % 7];
       const roll = [-1.18, .24, -.32, .84, -.20, .12, 1.30][i % 7];
-      body.quaternion.setFromEuler(pitch, yaw, roll, 'YZX');
-      mesh.quaternion.copy(body.quaternion);
+      const q0 = new THREE.Quaternion().setFromEuler(new THREE.Euler(pitch, yaw, roll, 'YZX'));
+      body.setRotation({ x: q0.x, y: q0.y, z: q0.z, w: q0.w }, false);
+      mesh.quaternion.copy(q0);
       const box = new THREE.Box3().setFromObject(mesh);
       let x = s[0] + (Math.random() - .5) * .12;
       let z = s[2] + (Math.random() - .5) * .12;
@@ -333,13 +379,23 @@ export const Play3D = {
       if (x + box.min.x < -.60 && z + box.max.z > .23) z = .20 - box.max.z;
       // Rotated feet and ears must stay above the floor and inside the glass.
       const y = Math.max(.035 - box.min.y, s[1] + (Math.random() - .5) * .10);
-      body.position.set(x, y, z);
+      body.setTranslation({ x, y, z }, false);
       if (saved.position) {
-        body.position.set(...saved.position); body.quaternion.set(...saved.quaternion); body.sleep();
+        body.setTranslation({ x: saved.position[0], y: saved.position[1], z: saved.position[2] }, false);
+        const [qx, qy, qz, qw] = saved.quaternion;
+        body.setRotation({ x: qx, y: qy, z: qz, w: qw }, false);
       }
-      this.world.addBody(body); this.scene.add(mesh);
-      return { id,mesh,body };
+      this.scene.add(mesh);
+      const toy = { id, mesh, body, colliders: [] };
+      for (let c = 0; c < body.numColliders(); c++) {
+        const col = body.collider(c);
+        col.userData = { toy, part: 'body' };
+        toy.colliders.push(col);
+      }
+      toy.hasCollider = (c) => toy.colliders.includes(c);
+      return toy;
     }).filter(Boolean);
+    this.analyzer.toys = this.toys;
   },
 
   bind() {
@@ -390,9 +446,10 @@ export const Play3D = {
 
   view(name) {
     this.viewName=name;
-    const positions={front:[0,2.15,7.2],angle:[2.3,2.85,7.1],top:[0,6.8,5]};
+    /* 더 가깝고 더 비스듬하게 — 인형통 안이 크게 보이도록. */
+    const positions={front:[0,1.95,5.3],angle:[3.0,2.95,5.0],top:[0,5.6,3.4]};
     this.camera.position.fromArray(positions[name]);
-    this.orbit.target.set(0,1.45,0);this.orbit.update();
+    this.orbit.target.set(0,1.15,0);this.orbit.update();
     this.root.querySelectorAll('[data-view]').forEach(btn=>btn.setAttribute('aria-pressed',String(btn.dataset.view===name)));
     this.resize();
   },
@@ -401,7 +458,7 @@ export const Play3D = {
     if(!this.active || !this.renderer)return;
     const {width,height}=this.root.getBoundingClientRect();if(!width||!height)return;
     this.renderer.setSize(width,height,false);this.camera.aspect=width/height;
-    this.camera.fov=THREE.MathUtils.radToDeg(2*Math.atan(Math.max(2.05,1.8/this.camera.aspect)/7.5));
+    this.camera.fov=THREE.MathUtils.radToDeg(2*Math.atan(Math.max(1.78,1.56/this.camera.aspect)/5.6));
     this.camera.updateProjectionMatrix();
   },
 
@@ -443,71 +500,32 @@ export const Play3D = {
       document.getElementById('clock3d').classList.toggle('warn',this.time<=5);
       document.getElementById('time3d').style.width=(this.time/PLAY_SECONDS*100)+'%';
     }
-    if(this.tween){
-      this.tween.elapsed+=dt;const t=clamp(this.tween.elapsed/this.tween.duration,0,1);
-      this.position.lerpVectors(this.tween.from,this.tween.to,ease(t));
-      if(t===1){const done=this.tween.resolve;this.tween=null;done(true);}
+    /* 물리는 Rapier 가 고정 간격으로 돈다. 집게 상태 기계도 그 안에서 같이
+       돌아간다(buildPhysics 의 onStep). 여기서는 결과를 보여주기만 한다. */
+    if (this.phase === 'aim') this.claw.moveCarriage(this.position.x, this.position.z);
+    this.pw.advance(dt);
+    this.analyzer.update();
+    this.claw.sync();
+    for (const toy of this.toys) {
+      const t = toy.body.translation(), r = toy.body.rotation();
+      toy.mesh.position.set(t.x, t.y, t.z);
+      toy.mesh.quaternion.set(r.x, r.y, r.z, r.w);
     }
-    /* 진자: 집게는 줄에 매달려 캐리지에 끌려온다. 움직이는 동안은 속도에 비례해
-       뒤로 처지고, 멈추면 스프링이 끌어당겨 두어 번 흔들리다 선다. 캐리지의 실제
-       이동량으로 계산하므로 레버 조작뿐 아니라 내리기·옮기기에서도 같이 흔들린다. */
-    const carVelX=(this.position.x-this.prevPos.x)/Math.max(dt,1e-4);
-    const carVelZ=(this.position.z-this.prevPos.z)/Math.max(dt,1e-4);
-    this.prevPos.copy(this.position);
-    const K=40, D=6, DRAG=6;                     // 스프링 · 감쇠 · 끌림
-    this.swingVel.x+=(-K*this.swing.x-D*this.swingVel.x-clamp(carVelX,-2.5,2.5)*DRAG)*dt;
-    this.swingVel.y+=(-K*this.swing.y-D*this.swingVel.y-clamp(carVelZ,-2.5,2.5)*DRAG)*dt;
-    this.swing.x=clamp(this.swing.x+this.swingVel.x*dt,-.28,.28);
-    this.swing.y=clamp(this.swing.y+this.swingVel.y*dt,-.28,.28);
-    if(this.phase==='dropping'){this.swing.set(0,0);this.swingVel.set(0,0);}
-    /* 집게 돌리기 — 레버를 민 쪽을 향해 집게가 천천히 돌아간다. 멈추면 그 방향을
-       그대로 유지한다 (실제 기계에서 집게를 돌려놓는 것처럼). */
-    const speed = Math.hypot(carVelX, carVelZ);
-    if (speed > .12 && this.phase === 'aim') {   // 조준 중 레버로 돌릴 때만
-      let d = Math.atan2(carVelX, carVelZ) - this.yaw;
-      while (d > Math.PI) d -= Math.PI * 2;
-      while (d < -Math.PI) d += Math.PI * 2;
-      this.yaw += d * (1 - Math.exp(-dt * 4));
-    }
-    // 매달린 지점(캐리지)에서 줄 길이만큼 기울어진 자리가 집게의 실제 위치
-    const pivotY=3.03, hang=Math.max(.2,pivotY-this.position.y);
-    this.clawPos.set(
-      this.position.x+Math.sin(this.swing.x)*hang,
-      pivotY-Math.cos(this.swing.x)*Math.cos(this.swing.y)*hang,
-      this.position.z+Math.sin(this.swing.y)*hang);
+    this.checkChute();
 
-    if(this.held){
-      /* 매달린 인형은 집게와 한 몸이다. 잡힌 순간의 자세와 잡힌 지점을 그대로 두고,
-         줄이 흔들리는 회전만 그 위에 얹는다. */
-      // 줄 기울기 + 잡은 뒤 집게가 돌아간 만큼. 인형도 집게를 따라 같이 돌아간다.
-      const sq=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x))
-        .multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw-this.heldYaw));
-      const off=this.heldOffset.clone().applyQuaternion(sq);
-      const b=this.held.body;
-      b.position.set(this.clawPos.x+off.x,this.clawPos.y+off.y,this.clawPos.z+off.z);
-      b.velocity.setZero();b.angularVelocity.setZero();
-      const q=sq.clone().multiply(this.heldQuat);
-      b.quaternion.set(q.x,q.y,q.z,q.w);
-    }
+    // 캐리지·줄·그림자는 집게 실제 위치를 따라간다
+    const cl = this.claw.body.translation();
+    const car = this.claw.origin;
+    this.assets.Carriage.position.set(car.x, 3.06, car.z);
+    this.assets.Gantry.position.z = car.z;
+    const top = new THREE.Vector3(car.x, 3.03, car.z);
+    const span = new THREE.Vector3(cl.x - top.x, cl.y - top.y, cl.z - top.z);
+    this.cable.scale.y = Math.max(.08, span.length());
+    this.cable.position.copy(top).addScaledVector(span, .5);
+    this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), span.clone().normalize());
+    this.shadow.position.set(cl.x, .015, cl.z);
+    this.shadow.visible = this.phase === 'aim';
 
-    this.clawBody.position.set(this.clawPos.x,this.clawPos.y,this.clawPos.z);
-    this.world.step(1/60,dt,3);
-    for(const toy of this.toys){toy.mesh.position.copy(toy.body.position);toy.mesh.quaternion.copy(toy.body.quaternion);}
-    this.claw.position.copy(this.clawPos);
-    // 줄이 기운 방향으로 눕히고, 그 위에 돌아간 각도를 얹는다
-    const tilt=new THREE.Quaternion().setFromEuler(new THREE.Euler(-this.swing.y,0,this.swing.x));
-    const spin=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
-    this.claw.quaternion.copy(tilt.clone().multiply(spin));
-    this.assets.Carriage.position.set(this.position.x,3.06,this.position.z);
-    this.assets.Gantry.position.z=this.position.z;
-    // 줄은 캐리지와 집게를 잇는다 — 흔들리면 같이 비스듬해진다
-    const top=new THREE.Vector3(this.position.x,pivotY,this.position.z);
-    const bottom=this.clawPos.clone().addScaledVector(new THREE.Vector3(Math.sin(this.swing.x),-Math.cos(this.swing.x),Math.sin(this.swing.y)).normalize(),-.12);
-    const span=new THREE.Vector3().subVectors(bottom,top);
-    this.cable.scale.y=Math.max(.08,span.length());
-    this.cable.position.copy(top).addScaledVector(span,.5);
-    this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),span.clone().normalize());
-    this.shadow.position.set(this.clawPos.x,.015,this.clawPos.z);this.shadow.visible=this.phase==='aim';
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
   },
@@ -521,117 +539,52 @@ export const Play3D = {
   /* 놓거나 떨어뜨린 인형이 다 구르고 멈출 때까지 기다린다. 전에는 고정 시간만
      세고 결과를 냈더니, 인형이 아직 떨어지는 중인데 실패 화면이 떠서 "제대로
      보여주지도 않고 실패시킨다"는 느낌을 줬다. */
-  async settle(toy, maxMs = 2800) {
-    const t0 = performance.now();
-    while (this.active && performance.now() - t0 < maxMs) {
-      if (!await this.pause(90)) return false;
-      if (performance.now() - t0 < 300) continue;      // 놓자마자 멈춘 것으로 보지 않게
-      if (toy.body.sleepState === CANNON.Body.SLEEPING || toy.body.velocity.length() < .09) break;
-    }
-    return this.active;
-  },
-  /** 집게 입 벌리기/오므리기. v 는 벌어짐(1 = 모델 기본, 클수록 활짝).
-      끝날 때까지 기다릴 수 있게 약속을 돌려준다 — 다 내려간 뒤에 움켜쥐는
-      순서를 만들려면 애니메이션이 끝나는 시점을 알아야 한다. */
-  grip(v, ms = 220) {
-    clearInterval(this.gripTimer);
-    const to = v, from = this.gripT ?? GRIP_REST;
-    const fromAngles=this.fingerAngles.slice();
-    const t0 = performance.now();
-    this.gripTimer = setInterval(() => {
-      const t = clamp((performance.now() - t0) / ms, 0, 1);
-      this.gripT = from + (to - from) * ease(t);
-      this.fingers.forEach((f, i) => {
-        const requested=fromAngles[i]+(v-fromAngles[i])*ease(t);
-        this.fingerAngles[i]=v<fromAngles[i]?Math.max(requested,this.contactLimits?.[i]??v):requested;
-        f.setRotationFromAxisAngle(this.fingerAxes[i],this.fingerAngles[i]);
-      });
-      if (t === 1) clearInterval(this.gripTimer);
-    }, 16);
-    return this.pause(ms);
-  },
-  releaseToy() {
-    if(!this.held)return;
-    this.held.body.type=CANNON.Body.DYNAMIC;this.held.body.mass=.22;this.held.body.updateMassProperties();
-    // The visual fingers open, but the coarse claw collider does not; let the released prize clear it.
-    this.held.body.collisionResponse=true;this.held.body.collisionFilterMask=GROUP_TOY;
-    this.held.body.wakeUp();this.held.body.velocity.set(0,-.15,0);
-    this.held=null;this.contactLimits=null;this.grip(GRIP_OPEN);
+  drop() {
+    if (this.phase !== 'aim') return;
+    this.phase = 'dropping';
+    this.release(); this.velocity.set(0, 0);
+    document.getElementById('drop3d').disabled = true;
+    this.caught = null;
+    App.lastAttempt = { dollId: null, accuracy: 0, kind: this.timedOut ? 'timeout' : 'empty' };
+    this.controller.drop();
+    haptic(20);
   },
 
-  async drop() {
-    if(this.phase!=='aim')return;
-    const session=this.session;const alive=()=>this.active&&this.session===session;
-    const near=this.nearest(),chance=this.odds(near);
-    this.phase='dropping';this.release();this.velocity.set(0,0);
-    document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);
-    const target=near&&near.distance<.29?near.toy:null;
-    // 물려는 인형만 집게 몸통을 통과시킨다 — 안 그러면 집기 전에 밀려난다
-    if(target){
-      target.body.collisionFilterMask=GROUP_TOY;
-      target.body.type=CANNON.Body.KINEMATIC;target.body.updateMassProperties();
-      target.body.velocity.setZero();target.body.angularVelocity.setZero();
+  /** 상태 기계가 단계를 바꿀 때마다 안내 문구를 맞춘다. */
+  onClawState(st) {
+    const text = {
+      [STATE.DESCENDING]: '집게가 내려가요',
+      [STATE.BOTTOM_REACHED]: '바닥에 닿았어요',
+      [STATE.CLOSING]: '움켜쥐는 중',
+      [STATE.GRIP_SETTLE]: '꽉 잡는 중',
+      [STATE.LIFTING]: '들어 올리는 중',
+      [STATE.TRANSPORT]: '배출구로 옮기는 중',
+      [STATE.RELEASE]: '인형을 내려놔요',
+      [STATE.RETURN]: '돌아가는 중',
+    }[st];
+    if (text) this.status(text);
+    if (st === STATE.LIFTING) {
+      // 무엇을 물고 올라오는지 이때 기록해 둔다 (실패 화면이 그 인형을 보여준다)
+      const held = this.analyzer.heldToy;
+      if (held) App.lastAttempt = { dollId: held.id, accuracy: 100, kind: 'slip' };
     }
-    const won=!!target&&Math.random()*100<chance;
-    const slipped=!!target&&!won&&Math.random()>.3;
-    App.lastAttempt={dollId:target?.id||null,accuracy:near?Math.round(Math.max(0,1-near.distance/.32)*100):0,
-      kind:this.timedOut?'timeout':target?'miss':'empty'};
-    // Keep the original housing above the toy; only the native hinges may rotate.
-    const targetBounds = target ? new THREE.Box3().setFromObject(target.mesh,true) : null;
-    let down = targetBounds ? Math.max(.30,targetBounds.max.y+.095) : .46;
-    if(target){
-      const position=this.claw.position.clone(),quaternion=this.claw.quaternion.clone();
-      this.claw.position.set(this.position.x,down,this.position.z);
-      this.claw.quaternion.setFromAxisAngle(new THREE.Vector3(0,1,0),this.yaw);
-      const contacts=clawContacts(this.claw,this.fingers,this.fingerAxes,target.mesh,GRIP_OPEN,GRIP_SHUT);
-      down+=contacts.lift;this.contactLimits=contacts.limits;
-      this.claw.position.copy(position);this.claw.quaternion.copy(quaternion);this.claw.updateMatrixWorld(true);
+    if (st === STATE.RETURN) {
+      // 한 판 끝. 배출구에 들어간 게 있으면 성공.
+      const toy = this.caught;
+      setTimeout(() => {
+        if (!this.active) return;
+        this.finish(!!toy, toy ? toy.id : (App.lastAttempt && App.lastAttempt.dollId), toy);
+      }, 700);
     }
-    // 먼저 입을 활짝 벌린 뒤 내려간다 — 벌린 채로 내려가야 인형을 감싸는 것처럼 보인다
-    await this.grip(GRIP_OPEN,260);if(!alive())return;
-    await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
-    await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
-    this.status('움켜쥐는 중');
-    // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
-    await this.grip(GRIP_SHUT,560);if(!alive())return;
-    await this.pause(160);if(!alive())return;
-    if(target&&(won||slipped)){
-      this.held=target;target.body.type=CANNON.Body.KINEMATIC;target.body.mass=0;target.body.updateMassProperties();
-      target.body.collisionResponse=false;target.body.wakeUp();
-      /* 인형을 똑바로 세우지 않는다. 누워 있으면 누운 채로, 집게가 닿은 그 지점을
-         잡고 들어 올린다 — 배를 물었는데 머리를 문 것처럼 보이지 않도록. */
-      const q=target.body.quaternion, p=target.body.position;
-      this.heldQuat=new THREE.Quaternion(q.x,q.y,q.z,q.w); this.heldYaw=this.yaw;
-      this.heldOffset=new THREE.Vector3(
-        p.x-this.clawPos.x, p.y-this.clawPos.y, p.z-this.clawPos.z);
-    }
-    if(target&&!this.held){
-      await this.grip(GRIP_OPEN,220);if(!alive())return;
-      target.body.type=CANNON.Body.DYNAMIC;target.body.updateMassProperties();target.body.wakeUp();
-    }
-    this.phase='lifting';this.status('들어 올리는 중');
-    await this.travel([this.position.x,REST_Y,this.position.z],1.2);if(!alive())return;
-    if(!this.held){
-      if(target)target.body.collisionFilterMask=GROUP_TOY|GROUP_CLAW;
-      this.grip(GRIP_REST,260);this.status('아쉽게 놓쳤어요');
-      await this.pause(760);if(!alive())return;this.finish(false,target?.id);return;}
-    if(slipped){
-      this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);
-      if(!await this.settle(target))return;
-      await this.pause(420);if(!alive())return;
-      this.finish(false,target.id);return;
-    }
-    this.phase='carrying';this.status('배출구로 옮기는 중');
-    // Align the prize center with the chute, then let travel sway settle.
-    const centerOffset = new THREE.Vector3(0,.09,0).applyQuaternion(this.heldQuat).add(this.heldOffset);
-    await this.travel([CHUTE.x-centerOffset.x,REST_Y,CHUTE.z-centerOffset.z],1.25);if(!alive())return;
-    await this.travel([this.position.x,this.position.y,this.position.z],.9);if(!alive())return;
-    this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
-    if(!await this.settle(target))return;
-    await this.pause(360);if(!alive())return;           // 자리 잡은 모습을 한 박자 보여준다
-    const p=target.body.position;
-    // 큰 인형은 배출구 벽에 걸쳐 멈추기도 한다 — 배출구 위에 걸렸으면 성공으로 친다
-    this.finish(Math.abs(p.x-CHUTE.x)<.32&&Math.abs(p.z-CHUTE.z)<.32&&p.y<1,target.id,target);
+  },
+
+  /** 배출구 센서에 인형이 들어왔는지 본다. */
+  checkChute() {
+    if (this.caught || !this.chuteCol) return;
+    this.pw.world.intersectionPairsWith(this.chuteCol, (other) => {
+      const toy = other.userData && other.userData.toy;
+      if (toy && !this.caught) this.caught = toy;
+    });
   },
 
   finish(won,id=null,toy=null) {
@@ -654,20 +607,18 @@ export const Play3D = {
   saveToyLayout() {
     // 못 내보낸 인형이 있으면 저장하지 않는다 — 저장하면 그 인형이 영영 빠진다
     if (this.toys && !this.skippedToys) {
-      const prior = Store.state.layouts?.[this.machine.id + ':green3d'] || [];
       Store.saveLayout(this.machine, 'green3d', this.toys.filter(t => t !== this.wonToy).map(t => {
-        const i = this.toys.indexOf(t);
-        if (t === this.held && prior[i]) return prior[i];
-        return {dollId:t.id,position:[t.body.position.x,t.body.position.y,t.body.position.z],quaternion:[t.body.quaternion.x,t.body.quaternion.y,t.body.quaternion.z,t.body.quaternion.w]};
+        const p = t.body.translation(), q = t.body.rotation();
+        return { dollId: t.id, position: [p.x, p.y, p.z], quaternion: [q.x, q.y, q.z, q.w] };
       }));
     }
   },
   /* 인형을 새로 채우고 배치를 처음 상태로 되돌린다. 집게에 밀려 한쪽으로
      쏠리거나 남은 수가 줄었을 때 쓴다. 티켓은 쓰지 않는다. */
   rearrange() {
-    if (!this.toys || this.phase !== 'aim' || this.held) return;
+    if (!this.toys || this.phase !== 'aim') return;
     for (const toy of this.toys) {
-      this.world.removeBody(toy.body);
+      this.pw.world.removeRigidBody(toy.body);
       this.scene.remove(toy.mesh);
       // 지오메트리는 원본 에셋과 공유하므로 두고, 인형마다 복제한 재질만 버린다
       toy.mesh.traverse(o => { if (o.isMesh) o.material.dispose(); });
@@ -675,7 +626,7 @@ export const Play3D = {
     this.toys = null; this.wonToy = null;
     Store.refillMachine(this.machine, TOY_COUNT);   // 재고를 채우고 저장된 배치를 지운다
     this.stockToys();
-    for (const toy of this.toys) toy.body.sleep();
+    this.analyzer.toys = this.toys;
     this.saveToyLayout();
     this.status('다시 채웠어요');
     haptic(20);
@@ -719,6 +670,8 @@ export const Play3D = {
     this.disposeObject(this.scene);this.disposeObject(this.pack);
     this.environment?.dispose();this.environment=null;
     this.renderer?.dispose();this.renderer?.forceContextLoss();
+    try { this.pw?.free(); } catch (_) {}
+    this.pw=null; this.claw=null; this.analyzer=null; this.controller=null; this.chuteCol=null;
     this.scene=null;this.pack=null;this.renderer=null;this.assets=null;this.held=null;
   }
 };
