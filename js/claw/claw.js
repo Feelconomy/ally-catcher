@@ -9,18 +9,23 @@ import { GROUP, members } from './world.js';
 
 export const CLAW = {
   fingers: 3,
-  hingeR: 0.044,        // 몸통 중심에서 경첩까지
-  bodyR: 0.050,
-  bodyH: 0.030,
-  openAngle: 0.62,      // + 가 바깥쪽
+  /* 벌린 폭이 인형 몸통(지름 0.156m)을 감쌀 만큼은 돼야 한다. 전에는 폭이
+     0.076m 라 인형의 1/8 크기여서 무엇도 감싸지 못했다.
+     경첩 반경 0.09 + 벌림 1.0rad → 발끝 반경 0.145, 발끝 사이 폭 0.25m. */
+  hingeR: 0.090,        // 몸통 중심에서 경첩까지
+  bodyR: 0.075,
+  bodyH: 0.032,
+  openAngle: 1.00,      // + 가 바깥쪽
   closedAngle: -0.30,   // - 가 안쪽(오므림)
   /* 모터는 force-based 스프링이다: 토크 = stiffness*(목표-현재) - damping*속도.
      stiffness 가 곧 집게 힘(GRIP_FORCE)이고, 유한하므로 인형이 버티면 못 닫는다. */
   /* 경첩에서 발끝까지 지렛대가 약 0.115m 다. stiffness 1.6 이면 발끝이 12N 으로
      눌러 0.83N 짜리 인형을 18mm 파고들었다. 발끝 힘이 2~3N 이 되게 낮춘다. */
-  gripStiffness: 0.5,
-  gripDamping: 0.05,
-  openStiffness: 0.5,
+  gripStiffness: 1.2,
+  gripDamping: 0.06,
+  /* 벌림은 세게. 0.5 였을 땐 목표가 1.0rad 인데도 제 무게에 눌려 0.61 에서
+     멈춰, 벌린 폭이 0.076m 밖에 안 나왔다(인형 몸통 0.156m 을 못 감쌈). */
+  openStiffness: 2.5,
   /* 줄 힘. 집게(약 0.42kg · 4.2N)를 들 만큼만 준다. 전에 900 이었을 땐 막혔을 때
      30N 넘게 밀어붙여 인형(0.83N)을 뚫었다 — 접촉이 이기도록 10N 선으로 낮춘다. */
   winchStiffness: 260,
@@ -32,9 +37,9 @@ const CLAW_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
 /* 발 하나의 모양 — 경첩이 원점, 아래로 내려가며 안쪽(-X)으로 휜다.
    마지막 tip 이 인형 표면에 걸리는 부분이라 제일 중요하다. */
 const SEGMENTS = [
-  { name: 'upper', r: 0.0095, h: 0.0275, pos: [0.0000, -0.0275, 0], rotZ: 0.0000 },
-  { name: 'middle', r: 0.009, h: 0.0225, pos: [-0.0129, -0.0734, 0], rotZ: -0.6109 },
-  { name: 'tip', r: 0.0085, h: 0.0190, pos: [-0.0437, -0.0984, 0], rotZ: -1.2217 },
+  { name: 'upper', r: 0.0130, h: 0.0275, pos: [0.0000, -0.0275, 0], rotZ: 0.0000 },
+  { name: 'middle', r: 0.0120, h: 0.0225, pos: [-0.0129, -0.0734, 0], rotZ: -0.6109 },
+  { name: 'tip', r: 0.0110, h: 0.0190, pos: [-0.0437, -0.0984, 0], rotZ: -1.2217 },
 ];
 
 export class ClawAssembly {
