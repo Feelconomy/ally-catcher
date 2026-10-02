@@ -1,11 +1,11 @@
 /* 집게 물리 실험실 — 게임과 분리해서 Phase 1~9 를 눈으로 확인하는 곳.
    요구 22·23: 콜라이더/접촉점/법선/힘을 그리고, 관통이 생기면 경고를 띄운다. */
 import * as THREE from 'three';
-import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js';
-import { Toy } from './toy.js';
-import { ClawAssembly, CLAW } from './claw.js';
-import { GrabAnalyzer, GRIP } from './analyzer.js';
-import { ClawController, STATE } from './controller.js';
+import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js?v=39435';
+import { Toy } from './toy.js?v=39435';
+import { ClawAssembly, CLAW } from './claw.js?v=39435';
+import { GrabAnalyzer, GRIP } from './analyzer.js?v=39435';
+import { ClawController, STATE } from './controller.js?v=39435';
 
 const hud = document.getElementById('hud');
 const testlog = document.getElementById('testlog');
@@ -45,8 +45,8 @@ await initRapier();
 const pw = new PhysicsWorld();
 const R = pw.R;
 
-const BOX = { w: 0.86, d: 0.64, wallH: 0.62 };         // 기계 내부 (m)
-const CHUTE = { x: -0.30, z: 0.21, r: 0.095 };
+const BOX = { w: 1.20, d: 0.92, wallH: 0.62 };         // 기계 내부 (m). 집게 폭 0.32 보다 넉넉해야 벽에 안 걸린다
+const CHUTE = { x: -0.38, z: 0.26, r: 0.115 };   // 집게가 닿는 범위(±0.41, ±0.27) 안이어야 한다
 
 function staticBox(cx, cy, cz, hx, hy, hz, group = GROUP.WALL) {
   const b = pw.world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(cx, cy, cz));
@@ -87,9 +87,11 @@ function spawnToys() {
      겹친 채로 만들면 첫 프레임에 서로를 밀어내며 깊은 관통이 생긴다. */
   /* 한 겹으로 벌려 둔다. 2층으로 쌓으면 더미 꼭대기가 0.33m 라 집게가 그 위에
      얹힌 채 멈춰서(발끝 0.31m) 인형 옆으로 내려갈 틈이 없었다. */
+  /* 한 겹으로 벌려 둔다. 2층으로 쌓으면 더미 꼭대기가 집게 발끝보다 높아
+     집게가 그 위에 얹힌 채 멈춘다. */
   const spots = [
-    [-0.30, 0.004, -0.17], [0, 0.004, -0.17], [0.30, 0.004, -0.17],
-    [-0.30, 0.004,  0.17], [0, 0.004,  0.17], [0.30, 0.004,  0.17],
+    [-0.34, 0.004, -0.22], [0, 0.004, -0.22], [0.34, 0.004, -0.22],
+    [-0.34, 0.004,  0.22], [0, 0.004,  0.22], [0.34, 0.004,  0.22],
   ];
   spots.forEach((p, i) => {
     toys.push(new Toy(pw, scene, {
@@ -98,13 +100,21 @@ function spawnToys() {
       color: COLORS[i % COLORS.length],
     }));
   });
-  pw.stepTimes(90);          // 더미가 자리를 잡은 뒤에 시작한다
+  pw.stepTimes(600);         // 더미가 완전히 가라앉을 때까지 (쓰러지는 데 2초 넘게 걸린다)
 }
 spawnToys();
 
 // ---------------------------------------------------------------- 집게
 const claw = new ClawAssembly(pw, scene, { x: 0, y: 0.86, z: 0 }, { cableLength: 0.12 });
 const analyzer = new GrabAnalyzer(pw, claw, toys);
+/* 집게 반경이 0.18 이라 벽에 닿지 않는 범위로 가둔다. 안 그러면 가장자리
+   인형을 노릴 때 발이 벽에 걸려 내려가다 멈춘다. */
+const REACH = 0.19;
+const clampX = (x) => Math.max(-BOX.w / 2 + REACH, Math.min(BOX.w / 2 - REACH, x));
+const clampZ = (z) => Math.max(-BOX.d / 2 + REACH, Math.min(BOX.d / 2 - REACH, z));
+const rawMove = claw.moveCarriage.bind(claw);
+claw.moveCarriage = (x, z, y) => rawMove(clampX(x), clampZ(z), y);
+
 const controller = new ClawController(claw, analyzer, {
   restLength: 0.12, maxLength: 0.62,
   chute: { x: CHUTE.x, z: CHUTE.z }, home: { x: 0, z: 0 },
@@ -157,7 +167,8 @@ function checkChute() {
 
 // ---------------------------------------------------------------- 루프
 let slow = false, last = performance.now(), warnCooldown = 0;
-controller.onState = (s) => { if (s === STATE.RETURN) caught = null; };
+// 배출 기록은 '다음 판을 시작할 때' 지운다. RETURN 에서 지웠더니 방금 떨어뜨린 걸 지워버렸다.
+controller.onState = (s) => { if (s === STATE.DESCENDING) caught = null; };
 
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000) * (slow ? 0.25 : 1);
@@ -265,7 +276,7 @@ function runDrop(x, z, maxSteps = 3600) {
     grip: [...seen].join(' > '), caught: caught ? caught.id : null, moved };
 }
 
-function resetPile() { spawnToys(); analyzer.toys = toys; caught = null; controller.set(STATE.IDLE); claw.open(true); claw.setWinch(controller.restLength); controller.winchCmd = controller.restLength; claw.moveCarriage(0, 0); pw.stepTimes(170); }
+function resetPile() { spawnToys(); analyzer.toys = toys; caught = null; controller.set(STATE.IDLE); claw.open(true); claw.setWinch(controller.restLength); controller.winchCmd = controller.restLength; claw.moveCarriage(0, 0); pw.stepTimes(240); }
 
 const TOLERANCE_MM = 4;      // 이 이상 파고들면 실패로 본다
 async function runTests() {

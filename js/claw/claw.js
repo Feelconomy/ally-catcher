@@ -16,7 +16,7 @@ export const CLAW = {
   bodyR: 0.075,
   bodyH: 0.032,
   openAngle: 1.00,      // + 가 바깥쪽
-  closedAngle: -0.30,   // - 가 안쪽(오므림)
+  closedAngle: -0.10,   // - 가 안쪽(오므림). 발이 길어져 이 각도면 발끝이 중심에서 만난다
   /* 모터는 force-based 스프링이다: 토크 = stiffness*(목표-현재) - damping*속도.
      stiffness 가 곧 집게 힘(GRIP_FORCE)이고, 유한하므로 인형이 버티면 못 닫는다. */
   /* 경첩에서 발끝까지 지렛대가 약 0.115m 다. stiffness 1.6 이면 발끝이 12N 으로
@@ -37,9 +37,9 @@ const CLAW_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
 /* 발 하나의 모양 — 경첩이 원점, 아래로 내려가며 안쪽(-X)으로 휜다.
    마지막 tip 이 인형 표면에 걸리는 부분이라 제일 중요하다. */
 const SEGMENTS = [
-  { name: 'upper', r: 0.0130, h: 0.0275, pos: [0.0000, -0.0275, 0], rotZ: 0.0000 },
-  { name: 'middle', r: 0.0120, h: 0.0225, pos: [-0.0129, -0.0734, 0], rotZ: -0.6109 },
-  { name: 'tip', r: 0.0110, h: 0.0190, pos: [-0.0437, -0.0984, 0], rotZ: -1.2217 },
+  { name: 'upper', r: 0.0135, h: 0.0440, pos: [0.0000, -0.0440, 0], rotZ: 0.0000 },
+  { name: 'middle', r: 0.0125, h: 0.0360, pos: [-0.0206, -0.1175, 0], rotZ: -0.6109 },
+  { name: 'tip', r: 0.0115, h: 0.0305, pos: [-0.0700, -0.1574, 0], rotZ: -1.2217 },
 ];
 
 export class ClawAssembly {
@@ -107,15 +107,20 @@ export class ClawAssembly {
   _makeFinger(index, yaw, material) {
     const R = this.pw.R;
     const pw = this.pw;
-    // 경첩 위치(몸통 기준): 바깥으로 hingeR, 몸통 아래쪽
-    const hinge = new THREE.Vector3(Math.cos(yaw) * CLAW.hingeR, -CLAW.bodyH * 0.6, Math.sin(yaw) * CLAW.hingeR);
+    /* 발은 제 몸을 Y 로 돌려 세우지 않는다. 돌려 세웠더니 경첩 축 (0,0,1) 이
+       발의 로컬 축으로 해석돼 같이 돌아갔고, 세 발이 120도로 갈라지지 않고
+       전부 한 방향으로 꺾였다. 대신 120도 회전을 collider 좌표에 구워 넣고,
+       경첩 축만 발마다 다른 '접선 방향'으로 준다. */
+    const spin = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -yaw, 0));
+    const out = new THREE.Vector3(Math.cos(yaw), 0, Math.sin(yaw));     // 바깥 반지름 방향
+    const axis = new THREE.Vector3(-Math.sin(yaw), 0, Math.cos(yaw));   // 경첩 축(접선)
+
+    const hinge = out.clone().multiplyScalar(CLAW.hingeR).setY(-CLAW.bodyH * 0.6);
     const bodyPos = this.body.translation();
-    const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, -yaw, 0));
 
     const fb = pw.world.createRigidBody(
       R.RigidBodyDesc.dynamic()
         .setTranslation(bodyPos.x + hinge.x, bodyPos.y + hinge.y, bodyPos.z + hinge.z)
-        .setRotation({ x: quat.x, y: quat.y, z: quat.z, w: quat.w })
         .setCcdEnabled(true)
         .setSoftCcdPrediction(0.04)
         .setAngularDamping(1.2)
@@ -124,33 +129,35 @@ export class ClawAssembly {
     const group = new THREE.Group();
     const colliders = [];
     for (const s of SEGMENTS) {
+      // 로컬 (x, y) 를 그 발의 방향으로 돌려 놓는다: +x 가 바깥, -x 가 안쪽
+      const pos = new THREE.Vector3(s.pos[0], s.pos[1], s.pos[2]).applyQuaternion(spin);
+      const rot = spin.clone().multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, s.rotZ)));
       const desc = R.ColliderDesc.capsule(s.h, s.r)
-        .setTranslation(s.pos[0], s.pos[1], s.pos[2])
+        .setTranslation(pos.x, pos.y, pos.z)
+        .setRotation({ x: rot.x, y: rot.y, z: rot.z, w: rot.w })
         .setDensity(1200)
         .setFriction(0.95)                 // 금속이지만 집게는 잘 무는 편
         .setRestitution(0.0)
         .setFrictionCombineRule(R.CoefficientCombineRule.Max)
         .setCollisionGroups(CLAW_FILTER)
         .setContactSkin(0.0005);
-      if (s.rotZ) {
-        const q = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, 0, s.rotZ));
-        desc.setRotation({ x: q.x, y: q.y, z: q.z, w: q.w });
-      }
       const col = pw.world.createCollider(desc, fb);
       col.userData = { claw: 'finger', finger: index, seg: s.name };
       colliders.push(col);
 
       const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(s.r, s.h * 2, 6, 12), material);
-      mesh.position.set(s.pos[0], s.pos[1], s.pos[2]);
-      if (s.rotZ) mesh.rotation.z = s.rotZ;
+      mesh.position.copy(pos);
+      mesh.quaternion.copy(rot);
       mesh.castShadow = true;
       group.add(mesh);
     }
     this.group.add(group);
 
-    /* 경첩: 발이 Z 축(제 몸 기준) 둘레로만 돈다. 모터가 닫는 쪽으로 토크를 건다. */
+    /* 경첩: 발마다 제 접선 축 둘레로만 돈다. 두 몸체 모두 회전이 없으므로
+       같은 월드 축을 그대로 양쪽 로컬 축으로 쓸 수 있다. */
     const jd = R.JointData.revolute(
-      { x: hinge.x, y: hinge.y, z: hinge.z }, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 1 });
+      { x: hinge.x, y: hinge.y, z: hinge.z }, { x: 0, y: 0, z: 0 },
+      { x: axis.x, y: axis.y, z: axis.z });
     const joint = pw.world.createImpulseJoint(jd, this.body, fb, true);
     joint.setContactsEnabled(false);
     joint.configureMotorModel(R.MotorModel.ForceBased);
@@ -159,7 +166,7 @@ export class ClawAssembly {
        바깥으로 밀려 벌어진다. */
     joint.setLimits(CLAW.closedAngle - 0.05, CLAW.openAngle + 0.60);
 
-    return { index, yaw, body: fb, joint, colliders, group, hinge };
+    return { index, yaw, axis, body: fb, joint, colliders, group, hinge };
   }
 
   /** 윈치 목표 길이(m). 길수록 집게가 아래로 내려간다. */
@@ -186,13 +193,13 @@ export class ClawAssembly {
       f.joint.configureMotorPosition(CLAW.openAngle, hard ? CLAW.openStiffness * 3 : CLAW.openStiffness, CLAW.gripDamping);
   }
 
-  /** 발의 실제 각도 — 몸통 기준 상대 회전에서 뽑는다. */
+  /** 발의 실제 각도 — 몸통 기준 상대 회전을 그 발의 경첩 축에 투영해서 읽는다. */
   fingerAngle(f) {
     const bq = this.body.rotation(), fq = f.body.rotation();
     const inv = new THREE.Quaternion(bq.x, bq.y, bq.z, bq.w).invert();
     const rel = new THREE.Quaternion(fq.x, fq.y, fq.z, fq.w).premultiply(inv);
-    const e = new THREE.Euler().setFromQuaternion(rel, 'YZX');
-    return e.z;
+    const v = new THREE.Vector3(rel.x, rel.y, rel.z);
+    return 2 * Math.atan2(v.dot(f.axis), rel.w);
   }
 
   get clawY() { return this.body.translation().y; }

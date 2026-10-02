@@ -27,6 +27,7 @@ export class ClawController {
        목표를 한 번에 바꾸면 모터 오차가 커져 집게를 내리꽂듯 밀어 넣고,
        그 힘이 접촉을 이겨 인형을 뚫는다(측정: 23mm). 속도로 내보내면
        모터 오차가 작게 유지돼 접촉이 이긴다. */
+    this.transportTime = opts.transportTime ?? 3.2;   // 배출구까지 옮기는 시간(초)
     this.downSpeed = opts.downSpeed ?? 0.42;      // m/s
     this.upSpeed = opts.upSpeed ?? 0.34;
     this.winchCmd = claw.winchTarget;
@@ -99,12 +100,14 @@ export class ClawController {
       case STATE.TRANSPORT: {
         // 배출구 위로 수평 이동. 관성 때문에 인형이 흔들리고, 약하면 떨어진다.
         const p = claw.origin;
-        const k = Math.min(1, this.t / 1.6);
+        /* 천천히 옮긴다. 1.6초(최고 ~1.2m/s)에 옮겼더니 관성으로 인형이
+           빠져나갔다. 들고 가는 동안 흔들리긴 해도 버틸 만큼 늦춘다. */
+        const k = Math.min(1, this.t / this.transportTime);
         const ease = k * k * (3 - 2 * k);
         claw.moveCarriage(
           this.startX + (this.chute.x - this.startX) * ease,
           this.startZ + (this.chute.z - this.startZ) * ease, p.y);
-        if (k >= 1 && this.t > 1.9) this.set(STATE.RELEASE);
+        if (k >= 1 && this.t > this.transportTime + 0.5) this.set(STATE.RELEASE);
         break;
       }
       case STATE.RELEASE:
