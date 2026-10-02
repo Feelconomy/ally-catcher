@@ -211,6 +211,12 @@ export class ClawAssembly {
       f.joint.configureMotorPosition(CLAW.openAngle, (hard ? CLAW.openStiffness * 3 : CLAW.openStiffness) * this.torqueScale, CLAW.gripDamping * this.torqueScale);
   }
 
+  /** 발이 지금 얼마나 빨리 여닫히는지 (제 경첩 축 기준, rad/s). */
+  fingerSpeed(f) {
+    const w = f.body.angvel();
+    return Math.abs(w.x * f.axis.x + w.y * f.axis.y + w.z * f.axis.z);
+  }
+
   /** 발의 실제 각도 — 몸통 기준 상대 회전을 그 발의 경첩 축에 투영해서 읽는다. */
   fingerAngle(f) {
     const bq = this.body.rotation(), fq = f.body.rotation();

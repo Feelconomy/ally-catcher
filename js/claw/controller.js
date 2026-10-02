@@ -25,6 +25,7 @@ export class ClawController {
     this.chute = opts.chute ?? { x: -0.42, z: 0.30 };
     this.home = opts.home ?? { x: 0, z: 0 };
     this.settleTime = opts.settleTime ?? 0.25;    // 15번 요구: 0.15~0.35초
+    this.minCloseTime = opts.minCloseTime ?? 0.35;   // 이보다 일찍은 닫힘을 끝내지 않는다
     /* 윈치는 '목표 길이로 순간 이동'이 아니라 줄을 일정 속도로 푼다/감는다.
        목표를 한 번에 바꾸면 모터 오차가 커져 집게를 내리꽂듯 밀어 넣고,
        그 힘이 접촉을 이겨 인형을 뚫는다(측정: 23mm). 속도로 내보내면
@@ -90,10 +91,15 @@ export class ClawController {
         break;
 
       case STATE.CLOSING: {
+        /* 바닥에서 '설정된 집게 힘'으로 움켜쥐는 구간. 여기서 다 쥐고 나서
+           올라가야 한다. */
         claw.close();
-        // 발이 더 못 닫히면(인형에 막혔거나 끝까지 닫혔으면) 다음 단계
-        const moving = claw.fingers.some(f => Math.abs(f.body.angvel().z) > 0.25);
-        if ((!moving && this.t > 0.22) || this.t > 1.1) this.set(STATE.GRIP_SETTLE);
+        /* 다 닫혔는지는 발이 아직 움직이는가로 본다. 전에는 월드 Z 축 각속도만
+           봤는데, 발은 120도씩 다른 축으로 돌기 때문에 B·C 발의 움직임을 절반도
+           못 읽었다. 그래서 아직 닫히는 중에 다음 단계로 넘어갔고, 실제로
+           움켜쥐는 동작이 들어 올리는 도중에 이어졌다. 제 축에 투영해서 본다. */
+        const moving = claw.fingers.some(f => claw.fingerSpeed(f) > 0.25);
+        if ((!moving && this.t > this.minCloseTime) || this.t > 1.6) this.set(STATE.GRIP_SETTLE);
         break;
       }
       case STATE.GRIP_SETTLE:

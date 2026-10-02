@@ -1,11 +1,11 @@
 /* 집게 물리 실험실 — 게임과 분리해서 Phase 1~9 를 눈으로 확인하는 곳.
    요구 22·23: 콜라이더/접촉점/법선/힘을 그리고, 관통이 생기면 경고를 띄운다. */
 import * as THREE from 'three';
-import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js?v=40142';
-import { Toy } from './toy.js?v=40142';
-import { ClawAssembly, CLAW } from './claw.js?v=40142';
-import { GrabAnalyzer, GRIP } from './analyzer.js?v=40142';
-import { ClawController, STATE } from './controller.js?v=40142';
+import { initRapier, PhysicsWorld, GROUP, members, FIXED_DT } from './world.js?v=81693';
+import { Toy } from './toy.js?v=81693';
+import { ClawAssembly, CLAW } from './claw.js?v=81693';
+import { GrabAnalyzer, GRIP } from './analyzer.js?v=81693';
+import { ClawController, STATE } from './controller.js?v=81693';
 
 const hud = document.getElementById('hud');
 const testlog = document.getElementById('testlog');
