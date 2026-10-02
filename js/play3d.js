@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=221';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=221';
-import { GrabAnalyzer } from './claw/analyzer.js?v=221';
-import { ClawController, STATE } from './claw/controller.js?v=221';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=223';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=223';
+import { GrabAnalyzer } from './claw/analyzer.js?v=223';
+import { ClawController, STATE } from './claw/controller.js?v=223';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -327,14 +327,15 @@ export const Play3D = {
     /* 집게: 실험실과 같은 구조. 발 세 개가 실제 collider 이고, 닫는 힘은
        모터 토크라 인형에 막히면 중간에 멈춘다. 힘은 기계마다 관리자가 정한다. */
     this.claw = new ClawAssembly(pw, this.scene, { x: 0, y: 3.03, z: 0 }, {
-      cableLength: .30, scale: CLAW_SCALE, color: 0xf0c23a,
+      cableLength: .30, scale: CLAW_SCALE, color: 0xf0c23a, maxLength: 2.45,
       grip: machineGrip(this.machine),
     });
     this.analyzer = new GrabAnalyzer(pw, this.claw, []);
     this.controller = new ClawController(this.claw, this.analyzer, {
       restLength: .30, maxLength: 2.35,
       chute: { x: CHUTE.x, z: CHUTE.z }, home: { x: 0, z: 0 },
-      downSpeed: .42 * CLAW_SCALE, upSpeed: .48 * CLAW_SCALE, transportTime: 2.2,
+      /* 조작 속도. 느리다는 말이 많아 올렸다 (내림 0.71→1.35, 올림 0.82→1.60 m/s). */
+      downSpeed: 1.7, upSpeed: 2.2, transportTime: 1.5, maxLength: 2.35,
       onState: (st) => this.onClawState(st),
     });
     pw.onStep[0] = (dt) => this.controller.tick(dt);
@@ -509,9 +510,9 @@ export const Play3D = {
     if(this.phase==='aim') {
       this.time=Math.max(0,this.time-dt);
       // 레버를 밀면 곧바로 최고 속도가 되지 않고 천천히 실렸다가 천천히 멎는다
-      // 조작이 굼떠서 최고 속도와 반응을 함께 올렸다 (1.18 → 2.0, 감쇠 6.5 → 9)
-      const target=this.input.clone().multiplyScalar(2.0);
-      this.velocity.lerp(target,1-Math.exp(-dt*9));
+      // 조작이 굼떠서 최고 속도와 반응을 함께 올렸다 (1.18 → 3.4, 감쇠 6.5 → 14)
+      const target=this.input.clone().multiplyScalar(3.4);
+      this.velocity.lerp(target,1-Math.exp(-dt*14));
       const nx=this.position.x+this.velocity.x*dt, nz=this.position.z+this.velocity.y*dt;
       this.position.x=clamp(nx,-RANGE.x,RANGE.x); this.position.z=clamp(nz,RANGE.zMin,RANGE.zMax);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다

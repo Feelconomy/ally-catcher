@@ -35,7 +35,10 @@ export const CLAW = {
   winchDamping: 26,
 };
 
-const CLAW_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
+/* 집게는 인형하고만 부딪힌다. 벽까지 넣었더니 가장자리에서 발이 유리에 닿는
+   순간 막히지 않은 Y 축으로 튕겨 올라가거나(실측 +1.0m) 벽을 파고들었다.
+   집게가 통 밖으로 나가지 않게 막는 일은 캐리지 이동 범위가 맡는다. */
+const CLAW_FILTER = members(GROUP.CLAW, GROUP.TOY);
 
 /* 발 하나의 모양 — 경첩이 원점, 아래로 내려가며 안쪽(-X)으로 휜다.
    마지막 tip 이 인형 표면에 걸리는 부분이라 제일 중요하다. */
@@ -51,7 +54,8 @@ export class ClawAssembly {
    * @param {THREE.Scene} scene
    * @param {{x:number,y:number,z:number}} origin  캐리지(윈치 상단) 위치
    */
-  constructor(pw, scene, origin, { cableLength = 0.46, scale = 1, color = 0xf2c232, grip = CLAW.gripStiffness } = {}) {
+  constructor(pw, scene, origin, opts = {}) {
+    const { cableLength = 0.46, scale = 1, color = 0xf2c232, grip = CLAW.gripStiffness } = opts;
     const R = pw.R;
     this.pw = pw;
     this.origin = { ...origin };
@@ -106,6 +110,9 @@ export class ClawAssembly {
     this.winch = pw.world.createImpulseJoint(winch, this.carriage, this.body, true);
     this.winch.setContactsEnabled(false);
     this.winch.configureMotorModel(R.MotorModel.ForceBased);
+    /* 줄이 늘어나거나 집게가 캐리지 위로 솟지 못하게 물리적 한계를 둔다.
+       (prismatic 위치는 캐리지 기준이라 아래가 음수) */
+    this.winch.setLimits(-(opts.maxLength ?? 2.6), -0.02);
     this.setWinch(cableLength);
 
     // ---- 발 세 개

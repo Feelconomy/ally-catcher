@@ -26,6 +26,11 @@ export class ClawController {
     this.home = opts.home ?? { x: 0, z: 0 };
     this.settleTime = opts.settleTime ?? 0.25;    // 15번 요구: 0.15~0.35초
     this.minCloseTime = opts.minCloseTime ?? 0.35;   // 이보다 일찍은 닫힘을 끝내지 않는다
+    /* 막혔을 때 더 밀어보는 시간. 길면 하강이 그만큼 길게 느껴진다
+       (0.9초였을 때 하강 2.6초 중 0.9초가 이 대기였다). */
+    this.stallWait = opts.stallWait ?? 0.40;
+    this.releaseTime = opts.releaseTime ?? 0.75;
+    this.returnTime = opts.returnTime ?? 0.9;
     /* 윈치는 '목표 길이로 순간 이동'이 아니라 줄을 일정 속도로 푼다/감는다.
        목표를 한 번에 바꾸면 모터 오차가 커져 집게를 내리꽂듯 밀어 넣고,
        그 힘이 접촉을 이겨 인형을 뚫는다(측정: 23mm). 속도로 내보내면
@@ -83,7 +88,7 @@ export class ClawController {
            못하고, 정말 꼼짝 않을 때만(0.9초) 바닥으로 친다. */
         const vy = Math.abs(claw.body.linvel().y);
         if (this.t > 0.25 && vy < 0.03) this.stuckFor += dt; else this.stuckFor = 0;
-        if (done || this.stuckFor > 0.90 || this.t > 5.0) this.set(STATE.BOTTOM_REACHED);
+        if (done || this.stuckFor > this.stallWait || this.t > 5.0) this.set(STATE.BOTTOM_REACHED);
         break;
       }
       case STATE.BOTTOM_REACHED:
@@ -134,11 +139,11 @@ export class ClawController {
         /* 발을 벌리기만 한다. 인형을 떼어내거나 옮기지 않는다 —
            접촉이 사라지면 중력이 알아서 떨어뜨린다. */
         claw.open();
-        if (this.t > 1.1) this.set(STATE.RETURN);
+        if (this.t > this.releaseTime) this.set(STATE.RETURN);
         break;
 
       case STATE.RETURN: {
-        const k = Math.min(1, this.t / 1.2);
+        const k = Math.min(1, this.t / this.returnTime);
         const ease = k * k * (3 - 2 * k);
         claw.moveCarriage(
           this.chute.x + (this.home.x - this.chute.x) * ease,
