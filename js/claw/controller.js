@@ -6,6 +6,8 @@
    올라오는 이유는 접촉력과 마찰뿐이다. 성공 판정도 여기서 하지 않는다 —
    배출구 센서에 인형이 실제로 떨어졌을 때만 성공이다. */
 
+export const MAX_SLACK = 0.020;   // 줄이 실제 위치보다 앞설 수 있는 한계(m) = 미는 힘 상한(0.02 x 260 ≈ 5N)
+
 export const STATE = {
   IDLE: 'IDLE', DESCENDING: 'DESCENDING', BOTTOM_REACHED: 'BOTTOM_REACHED',
   CLOSING: 'CLOSING', GRIP_SETTLE: 'GRIP_SETTLE', LIFTING: 'LIFTING',
@@ -27,16 +29,17 @@ export class ClawController {
        목표를 한 번에 바꾸면 모터 오차가 커져 집게를 내리꽂듯 밀어 넣고,
        그 힘이 접촉을 이겨 인형을 뚫는다(측정: 23mm). 속도로 내보내면
        모터 오차가 작게 유지돼 접촉이 이긴다. */
-    this.transportTime = opts.transportTime ?? 3.2;   // 배출구까지 옮기는 시간(초)
+    this.transportTime = opts.transportTime ?? 2.4;   // 배출구까지 옮기는 시간(초)
     this.downSpeed = opts.downSpeed ?? 0.42;      // m/s
-    this.upSpeed = opts.upSpeed ?? 0.34;
+    this.upSpeed = opts.upSpeed ?? 0.48;
     this.winchCmd = claw.winchTarget;
+    this.doneFor = 0;
     this.onState = opts.onState || (() => {});
     this.stuckFor = 0;
   }
 
   set(state) {
-    this.state = state; this.t = 0; this.stuckFor = 0;
+    this.state = state; this.t = 0; this.stuckFor = 0; this.doneFor = 0;
     if (state === STATE.IDLE) this.winchCmd = this.claw.winchTarget;
     if (state === STATE.TRANSPORT) this.rememberStart();
     this.onState(state);
@@ -44,13 +47,20 @@ export class ClawController {
 
   drop() { if (this.state === STATE.IDLE) this.set(STATE.DESCENDING); }
 
-  /** 줄을 목표 길이 쪽으로 dt 만큼만 풀거나 감는다. */
+  /** 줄을 목표 길이 쪽으로 dt 만큼만 풀거나 감는다.
+      명령이 실제 위치보다 너무 앞서 나가면 모터 힘(= 강성 x 오차)이 커져서
+      집게가 인형을 밀고 들어간다. 실제 줄처럼 '조금 당기다 늘어지게' 상한을
+      둔다 — 막히면 더 못 내려가고, 힘은 MAX_SLACK x 강성(약 9N)에서 멈춘다. */
   _winchToward(target, speed, dt) {
     const d = target - this.winchCmd;
     const step = speed * dt;
     this.winchCmd += Math.abs(d) <= step ? d : Math.sign(d) * step;
+    if (target > this.winchCmd) {          // 내리는 중: 줄이 늘어질 수 있다
+      const slackLimit = this.lengthNow() + MAX_SLACK;
+      if (this.winchCmd > slackLimit) this.winchCmd = slackLimit;
+    }
     this.claw.setWinch(this.winchCmd);
-    return Math.abs(target - this.winchCmd) < 1e-4;
+    return Math.abs(target - this.winchCmd) < 1e-3;
   }
 
   /** 물리 스텝마다 호출 (고정 dt). */
@@ -67,12 +77,12 @@ export class ClawController {
         const done = this._winchToward(this.maxLength, this.downSpeed, dt);
         /* 줄은 계속 풀리는데 집게가 안 내려가면 = 인형/바닥에 막힌 것.
            그 상태로 더 밀지 않고 거기서 집는다. */
-        const lag = this.winchCmd - this.lengthNow();
+        /* 인형에 닿아도 바로 멈추지 않는다 — 실제 집게처럼 더미를 밀어내며
+           바닥 쪽으로 계속 내려가려 한다. 줄 힘은 위에서 묶여 있어 뚫지는
+           못하고, 정말 꼼짝 않을 때만(0.9초) 바닥으로 친다. */
         const vy = Math.abs(claw.body.linvel().y);
-        /* 막힌 판정은 '줄은 풀리는데 집게가 실제로 안 내려갈 때'만. 내려가기
-           시작하는 0.25초 동안은 가속 때문에 자연히 뒤처지므로 세지 않는다. */
-        if (this.t > 0.25 && lag > 0.02 && vy < 0.05) this.stuckFor += dt; else this.stuckFor = 0;
-        if (done || this.stuckFor > 0.20 || this.t > 4.5) this.set(STATE.BOTTOM_REACHED);
+        if (this.t > 0.25 && vy < 0.03) this.stuckFor += dt; else this.stuckFor = 0;
+        if (done || this.stuckFor > 0.90 || this.t > 5.0) this.set(STATE.BOTTOM_REACHED);
         break;
       }
       case STATE.BOTTOM_REACHED:
@@ -92,8 +102,12 @@ export class ClawController {
         break;
 
       case STATE.LIFTING: {
+        /* 다 감았으면 짧게만 고르고 바로 옮긴다. 전에는 '목표 높이에 12mm 안으로
+           들어와야' 했는데, 인형을 달면 집게가 19mm 처져서 조건이 영영 안 맞아
+           매번 4초 타임아웃까지 기다렸다. */
         const done = this._winchToward(this.restLength, this.upSpeed, dt);
-        if ((done && reached) || this.t > 4.0) this.set(STATE.TRANSPORT);
+        if (done) this.doneFor += dt; else this.doneFor = 0;
+        if (this.doneFor > 0.2 || this.t > 3.0) this.set(STATE.TRANSPORT);
         break;
       }
 
@@ -107,7 +121,7 @@ export class ClawController {
         claw.moveCarriage(
           this.startX + (this.chute.x - this.startX) * ease,
           this.startZ + (this.chute.z - this.startZ) * ease, p.y);
-        if (k >= 1 && this.t > this.transportTime + 0.5) this.set(STATE.RELEASE);
+        if (k >= 1 && this.t > this.transportTime + 0.25) this.set(STATE.RELEASE);
         break;
       }
       case STATE.RELEASE:
