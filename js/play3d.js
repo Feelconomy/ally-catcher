@@ -39,12 +39,18 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=213';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=213';
-import { GrabAnalyzer } from './claw/analyzer.js?v=213';
-import { ClawController, STATE } from './claw/controller.js?v=213';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=216';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=216';
+import { GrabAnalyzer } from './claw/analyzer.js?v=216';
+import { ClawController, STATE } from './claw/controller.js?v=216';
 
-const CHUTE = { x: -.91, z: .53 };
+const CHUTE = { x: -.89, z: .53 };
+/* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
+   끝까지 밀면 발이 벽에 얹혀 집게가 떠오르고(실측 +0.32) 그 자리에서 드롭하면
+   조금 내려가다 만다. 벽은 중심 ±1.29 에 두께 0.10 이라 안쪽 면이 ±1.24,
+   앞뒤는 -0.90 / 0.91 이다. 그 안쪽 면에서 발 반경만큼 더 뺀다. */
+const CLAW_REACH = .31;
+const RANGE = { x: 1.24 - CLAW_REACH - .02, zMin: -.90 + CLAW_REACH + .02, zMax: .91 - CLAW_REACH - .02 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
    집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
 const CLAW_SCALE = 1.7;
@@ -291,13 +297,15 @@ export const Play3D = {
     wall(0,-.08,0,2.65,.16,1.95);
     wall(-1.29,1.7,0,.10,3.5,1.95); wall(1.29,1.7,0,.10,3.5,1.95);
     wall(0,1.7,-.95,2.65,3.5,.10); wall(0,1.7,.96,2.65,3.5,.10);
-    wall(-.60,.36,.53,.025,.72,.62); wall(-1.22,.36,.53,.025,.72,.62);
-    wall(-.91,.36,.23,.64,.72,.025); wall(-.91,.36,.83,.64,.72,.025);
+    /* 배출구 입구. 0.62 x 0.60 이었는데 비스듬히 누운 인형(최대 0.6 남짓)이
+       턱에 걸터앉는 일이 잦아 0.76 x 0.78 로 넓혔다. */
+    wall(-.51,.36,.53,.025,.72,.78); wall(-1.27,.36,.53,.025,.72,.78);
+    wall(-.89,.36,.14,.76,.72,.025); wall(-.89,.36,.92,.76,.72,.025);
 
     // 배출구 센서 — 인형이 실제로 여기 떨어져야 성공이다
     const chuteBody = pw.world.createRigidBody(R.RigidBodyDesc.fixed().setTranslation(CHUTE.x, .10, CHUTE.z));
     this.chuteCol = pw.world.createCollider(
-      R.ColliderDesc.cylinder(.10, .30).setSensor(true)
+      R.ColliderDesc.cylinder(.10, .36).setSensor(true)
         .setCollisionGroups(members(GROUP.CHUTE, GROUP.TOY)), chuteBody);
 
     /* 집게: 실험실과 같은 구조. 발 세 개가 실제 collider 이고, 닫는 힘은
@@ -484,10 +492,11 @@ export const Play3D = {
     if(this.phase==='aim') {
       this.time=Math.max(0,this.time-dt);
       // 레버를 밀면 곧바로 최고 속도가 되지 않고 천천히 실렸다가 천천히 멎는다
-      const target=this.input.clone().multiplyScalar(1.18);
-      this.velocity.lerp(target,1-Math.exp(-dt*6.5));
+      // 조작이 굼떠서 최고 속도와 반응을 함께 올렸다 (1.18 → 2.0, 감쇠 6.5 → 9)
+      const target=this.input.clone().multiplyScalar(2.0);
+      this.velocity.lerp(target,1-Math.exp(-dt*9));
       const nx=this.position.x+this.velocity.x*dt, nz=this.position.z+this.velocity.y*dt;
-      this.position.x=clamp(nx,-1.02,1.02); this.position.z=clamp(nz,-.66,.67);
+      this.position.x=clamp(nx,-RANGE.x,RANGE.x); this.position.z=clamp(nz,RANGE.zMin,RANGE.zMax);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
       if(nz!==this.position.z)this.velocity.y*=-.3;
       if(this.time<=0){this.timedOut=true;this.drop();}   // 시간이 끝나 저절로 내려간 판

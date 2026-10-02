@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=213').catch(() => { warmed = false; });
+    import('./play3d.js?v=216').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -66,12 +66,13 @@ const GREEN3D_ERRORS = {
   server: ['인형통을 불러오지 못했어요', '잠시 뒤 다시 시도해 주세요.\n그동안 기본 모드로 놀 수 있어요.'],
   local: ['로컬 서버가 필요해요', '3D 모드는 파일로 열면 동작하지 않아요.\n로컬 서버로 열어 주세요.'],
 };
-function green3DError(kind) {
+function green3DError(kind, detail) {
   const [title, body] = GREEN3D_ERRORS[kind] || GREEN3D_ERRORS.server;
   return `<div class="green3d-loading l3 l3-err" role="alert">
     ${friendIcon('olly', 92, 'peek')}
     <strong>${title}</strong>
     <p>${esc(body)}</p>
+    ${detail ? `<code class="l3-why">${esc(detail)}</code>` : ''}
     <button class="btn btn--primary" id="retry3d">다시 시도</button>
     <button class="btn btn--text" id="fallback2d">기본 모드로 계속</button>
   </div>`;
@@ -87,7 +88,7 @@ async function startGreen3D(machine) {
   if (!document.getElementById('loading3d')) screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=213');
+    const { Play3D } = await import('./play3d.js?v=216');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);
@@ -95,7 +96,11 @@ async function startGreen3D(machine) {
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D?.stop();
     console.error('3D cabinet:', error);
-    screenEl().innerHTML = green3DError(location.protocol === 'file:' ? 'local' : navigator.onLine ? 'server' : 'offline');
+    /* 무엇 때문에 실패했는지 화면에도 남긴다 — 로그를 못 보는 상황에서
+       '다시 시도'만 반복하지 않도록. */
+    const why = String(error && (error.message || error)).slice(0, 120);
+    screenEl().innerHTML = green3DError(
+      location.protocol === 'file:' ? 'local' : navigator.onLine ? 'server' : 'offline', why);
     document.getElementById('retry3d').onclick = () => startGreen3D(machine);
     document.getElementById('fallback2d').onclick = () => {
       Store.state.settings.skin = 'arcade'; Store.save(); Play.start(machine, 'arcade');

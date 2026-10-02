@@ -29,6 +29,9 @@
 .l3-err .friend { color: rgba(14, 79, 44, .18); margin-bottom: 18px; }
 .l3-err strong { font-size: 19px; font-weight: 800; letter-spacing: -.02em; }
 .l3-err p { margin: 8px 0 26px; font-size: 14px; line-height: 1.6; color: rgba(14, 79, 44, .65); white-space: pre-line; }
+.l3-err .l3-why { display: block; max-width: 300px; margin: -12px auto 18px; padding: 8px 10px;
+  border-radius: 8px; background: rgba(14, 79, 44, .07); color: rgba(14, 79, 44, .7);
+  font-size: 11px; line-height: 1.5; word-break: break-all; }
 .l3-err .btn { width: 100%; max-width: 300px; }
 .l3-err .btn + .btn { margin-top: 6px; }
 @keyframes l3-olly {
