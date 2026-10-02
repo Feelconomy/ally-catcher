@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=212';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=212';
-import { GrabAnalyzer } from './claw/analyzer.js?v=212';
-import { ClawController, STATE } from './claw/controller.js?v=212';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=213';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=213';
+import { GrabAnalyzer } from './claw/analyzer.js?v=213';
+import { ClawController, STATE } from './claw/controller.js?v=213';
 
 const CHUTE = { x: -.91, z: .53 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
@@ -465,9 +465,11 @@ export const Play3D = {
   nearest() {
     let best=null;
     for(const toy of this.toys){
-      const p=toy.body.position;
+      const p=toy.body.translation();                       // Rapier 는 translation()
       const distance=Math.hypot(p.x-this.position.x,p.z-this.position.z);
-      if(!best || (distance<.29 && best.distance<.29 ? p.y>best.toy.body.position.y : distance<best.distance))best={toy,distance};
+      const topper = distance<.29 && best && best.distance<.29
+        ? p.y > best.toy.body.translation().y : distance < (best ? best.distance : Infinity);
+      if(!best || topper) best={toy,distance};
     }
     return best;
   },
