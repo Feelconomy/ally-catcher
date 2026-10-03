@@ -28,15 +28,31 @@ function dollArt(id, state) {
   return `dolls/${id}.svg`;
 }
 
+/* 인형 그림마다 캔버스 여백이 달라, 같은 상자에 object-fit:contain 으로 넣어도
+   어떤 인형은 작아 보인다(올리가 상자의 75%, 원이는 100%). 그림의 투명 영역을 뺀
+   실제 크기를 재서, 상자를 넘지 않는 선에서 키워 눈에 보이는 크기를 맞춘다.
+   값 = min(상자/그림높이, 상자/그림너비). 그림을 바꾸면 다시 재야 한다 —
+   캔버스에 그려 알파 > 12 인 픽셀의 경계상자를 재면 나온다. 없는 id 는 1. */
+const ART_FIT = {
+  olly: 1.33, kori: 1.00, tiger: 1.04, hanbok: 1.04, snorkel: 1.04,
+  summer: 1.04, acorn: 1.04, ski: 1.04, pig: 1.03, bunny: 1.02,
+  spring: 1.02, santa: 1.02, hanbokkori: 1.01,
+};
+
 /** `state` is one of DOLL_STATES; omit it for the resting pose. */
 function dollImg(id, size, extra, state) {
   const px = size || 84;
   const src = dollArt(id, state || 'idle');
+  /* transform 은 자리를 차지하지 않아, 격자·목록의 칸 크기는 그대로 둔 채 그림만 맞춘다.
+     더미의 인형은 extra 로 rotate 를 받으므로 둘을 합쳐야 한다 — 따로 쓰면 뒤엣것이 이긴다. */
+  const rest = (extra || '').replace(/transform\s*:\s*[^;]*;?/g, '');
+  const rot = /transform\s*:\s*([^;]+)/.exec(extra || '');
+  const tf = [ART_FIT[id] ? `scale(${ART_FIT[id]})` : '', rot ? rot[1].trim() : ''].filter(Boolean).join(' ');
   /* 관리자 인형 화면은 img 가 90개(내려받기 15MB · 디코딩 35MB)나 되는데 그중
      절반은 화면 밖이다. 폰 사파리는 디코딩 예산을 넘기면 뒤쪽·큰 그림부터 조용히
      안 그린다 — 곰돌이 단지가 안 보이던 이유. 보이는 것만 받아 그린다. */
   return `<img src="${esc(src)}" alt="" width="${px}" height="${px}" loading="lazy" decoding="async"
-    style="width:${px}px;height:${px}px;object-fit:contain${extra ? ';' + extra : ''}">`;
+    style="width:${px}px;height:${px}px;object-fit:contain${tf ? ';transform:' + tf : ''}${rest ? ';' + rest : ''}">`;
 }
 
 /** 프로필 대표로 쓸 수 있는 인형 id 목록 (차단 6종 제외, 실제 존재하는 것만). */

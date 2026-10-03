@@ -1113,11 +1113,11 @@ const Dialogs = {
   },
 
   /* --- 32 보상 획득 ------------------------------------------------------ */
-  reward(tickets, reason, machine) {
+  reward(tickets, reason, machine, repaint) {
     const before = Store.state.tickets - tickets;
     setTheme('');
     shellEl().style.background = '';
-    Screens.mission();   // 보상 후 미션 화면을 갱신
+    (repaint || Screens.mission)();   // 보상 후 원래 있던 화면을 갱신
 
     dialog(`
       <div class="art xl" style="background:var(--yellow-soft);color:var(--yellow-pressed)">${icon('ticketFill', 46)}</div>

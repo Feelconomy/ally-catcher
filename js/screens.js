@@ -253,7 +253,6 @@ const Screens = {
       <div class="home-head">
         <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=120" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
-        <button class="iconbtn" data-route="search" aria-label="검색">${icon('search', 18)}</button>
         ${walletChip()}
       </div>
       <div class="chiprow">
@@ -687,7 +686,7 @@ const Screens = {
           <button class="chip sm" data-act="f" data-v="all"  aria-pressed="${filter === 'all'}">전체 ${total}</button>
           <button class="chip sm" data-act="f" data-v="rare" aria-pressed="${filter === 'rare'}">레어 ${rare}</button>
           <button class="chip sm" data-act="f" data-v="dupe" aria-pressed="${filter === 'dupe'}">중복 ${dupes}</button>
-          <button class="chip sm" data-route="codex">도감</button>
+          <button class="chip sm" data-route="codex">도감${Store.collectionsReady() ? '<span class="chip-dot"></span>' : ''}</button>
         </div>
         <div class="scroll pad">
           <div class="prize-grid">
@@ -723,36 +722,64 @@ const Screens = {
   /* --- 29 인형 도감 ------------------------------------------------------ */
   codex() {
     setTheme('');
+    const tab = App.codexTab === 'collection' ? 'collection' : 'all';
     const counts = Store.prizeCounts();
     const owned = Store.codexOwned();
     // The season roster is larger than the dolls in play; the rest stay locked.
     const lockedSlots = Math.max(0, CODEX_TOTAL - DOLL_IDS.length);
+    const cols = Store.collections().filter(c => c.ids.length);
+    const ready = cols.filter(c => c.done && !c.claimed).length;
+    const complete = cols.filter(c => c.claimed).length;
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('인형 도감')}
-      <div style="margin:0 20px 16px" class="card pad">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:13px;font-weight:700">수집률</span>
-          <span style="font-size:16px;font-weight:700;color:var(--green)">${owned} / ${CODEX_TOTAL}</span>
-        </div>
-        <div style="margin-top:11px">${meter((owned / CODEX_TOTAL) * 100, 'tall')}</div>
-        <div style="margin-top:9px;font-size:11px;font-weight:600;color:var(--ink-45)">시즌1 컬렉션 완성 시 티켓 ${CODEX_REWARD_TICKETS}장 지급</div>
+      <div class="chiprow" style="padding-bottom:12px">
+        <button class="chip sm" data-act="tab" data-t="all" aria-pressed="${tab === 'all'}">전체 ${owned}/${CODEX_TOTAL}</button>
+        <button class="chip sm" data-act="tab" data-t="collection" aria-pressed="${tab === 'collection'}">
+          컬렉션 ${complete}/${cols.length}${ready ? '<span class="chip-dot"></span>' : ''}</button>
       </div>
-      <div class="scroll pad">
-        <div class="codex-grid">
-          ${DOLL_IDS.map(id => counts[id]
-            ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
-            : `<div class="locked">${dollSilhouette(id, 50)}<span class="lk">${icon('lock', 10)}</span></div>`).join('')}
-          ${Array.from({ length: lockedSlots }, () => `<div class="locked soon">?</div>`).join('')}
+
+      ${tab === 'all' ? `
+        <div style="margin:0 20px 16px" class="card pad">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;font-weight:700">수집률</span>
+            <span style="font-size:16px;font-weight:700;color:var(--green)">${owned} / ${CODEX_TOTAL}</span>
+          </div>
+          <div style="margin-top:11px">${meter((owned / CODEX_TOTAL) * 100, 'tall')}</div>
+          <div style="margin-top:9px;font-size:11px;font-weight:600;color:var(--ink-45)">시즌1 컬렉션 완성 시 티켓 ${CODEX_REWARD_TICKETS}장 지급</div>
         </div>
-        <div style="height:24px"></div>
-      </div>
+        <div class="scroll pad">
+          <div class="codex-grid">
+            ${DOLL_IDS.map(id => counts[id]
+              ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
+              : `<div class="locked">${dollSilhouette(id, 50)}<span class="lk">${icon('lock', 10)}</span></div>`).join('')}
+            ${Array.from({ length: lockedSlots }, () => `<div class="locked soon">?</div>`).join('')}
+          </div>
+          <div style="height:24px"></div>
+        </div>`
+      : `
+        <div class="scroll pad" style="display:flex;flex-direction:column;gap:12px">
+          <p class="col-intro">인형통 하나에 들어 있는 인형을 전부 모으면 보너스 티켓을 드려요.</p>
+          ${cols.map(c => collectionCard(c)).join('')}
+          <div style="height:24px"></div>
+        </div>`}
     </div>`;
 
     bind(screenEl(), {
       back: () => go('storage'),
       doll: el => Sheets.dollDetail(el.dataset.id),
+      tab: el => { App.codexTab = el.dataset.t; Screens.codex(); },
+      claimCol: el => {
+        const n = Store.claimCollection(el.dataset.id);
+        if (!n) { Screens.codex(); return; }
+        const m = MACHINES.find(x => x.id === el.dataset.id);
+        Dialogs.reward(n, `${m.name} 컬렉션을 완성했어요`, m, () => Screens.codex());
+      },
+      playCol: el => {
+        const m = MACHINES.find(x => x.id === el.dataset.id);
+        if (m) go('machine', m.id);
+      },
     });
   },
 
@@ -1126,7 +1153,9 @@ const Screens = {
         if (k === 'haptics' && Store.state.settings[k]) haptic(20);
       },
       logout: () => {
+        // 로컬만 지우면 카카오 세션이 그대로 남아, 다음 실행 때 조용히 다시 로그인된다.
         Store.state.account = null; Store.save();
+        window.Auth?.logout();
         Overlay.closeAll(); go('login');
       },
       withdraw: () => Sheets.withdraw(),
@@ -1551,6 +1580,43 @@ function machineCard(m) {
       <span class="cost">티켓 ${m.cost}장</span>
     </span>
   </button>`;
+}
+
+/* 컬렉션 카드 — 인형통 하나의 수집 현황. 모은 인형은 그림, 아직인 인형은 실루엣.
+   다 모으면 보너스 티켓 버튼이 뜨고, 받고 나면 완성 표시만 남는다. */
+function collectionCard(c) {
+  const m = MACHINES.find(x => x.id === c.id);
+  if (!m) return '';
+  const pct = (c.owned.length / c.ids.length) * 100;
+  const counts = Store.prizeCounts();
+  const state = c.claimed ? 'claimed' : (c.done ? 'ready' : '');
+
+  return `<section class="colcard ${state}">
+    <div class="colcard-top">
+      <span class="hero" style="background:${m.bg}">${dollImg(m.hero, 42)}</span>
+      <span class="who">
+        <span class="nm">${esc(m.name)}</span>
+        <span class="mt">${c.owned.length} / ${c.ids.length}종 수집</span>
+      </span>
+      ${c.claimed
+        ? `<span class="done-badge">${icon('check', 12)} 완성</span>`
+        : `<span class="prize">${icon('ticketFill', 13)} ${c.tickets}장</span>`}
+    </div>
+
+    <div class="colcard-bar">${meter(pct)}</div>
+
+    <div class="colcard-dolls">
+      ${c.ids.map(id => counts[id]
+        ? `<button class="have" data-act="doll" data-id="${id}" aria-label="${esc(DOLLS[id].name)}">${dollImg(id, 34)}</button>`
+        : `<span class="want" title="${esc(DOLLS[id].name)}">${dollSilhouette(id, 30)}</span>`).join('')}
+    </div>
+
+    ${c.done && !c.claimed
+      ? `<button class="btn sm btn--accent" data-act="claimCol" data-id="${c.id}">보너스 티켓 ${c.tickets}장 받기</button>`
+      : c.claimed
+        ? ''
+        : `<button class="btn sm btn--text colcard-go" data-act="playCol" data-id="${c.id}">${c.missing.length}마리 남음 · 뽑으러 가기 ${icon('chevronRight3', 11)}</button>`}
+  </section>`;
 }
 
 /** Turns a 0–100 aim score into advice the player can act on. */

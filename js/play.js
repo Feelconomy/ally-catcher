@@ -44,18 +44,21 @@ const BED_ARCADE = [
   ...arcadeRow(3, [0.39, 0.55, 0.71, 0.87],         0, [3, 0, 4, 1]),     // 앞줄
 ];
 
+/* 줄 안에서는 크기를 똑같이 둔다 — 한 마리씩 들쭉날쭉하면 인형마다 크기가 다른
+   것처럼 보인다. 뒷줄이 앞줄보다 작은 것만 남겨 멀리 있는 느낌을 유지한다. */
+const CLASSIC_BACK = 56, CLASSIC_FRONT = 62;
 const BED_CLASSIC = [
   // 뒷줄 — 작고 높이 올라앉아 앞줄에 반쯤 가린다
-  { x: 0.345, layer: 0, size: 54, bottom: 32 },
-  { x: 0.465, layer: 0, size: 56, bottom: 29 },
-  { x: 0.585, layer: 0, size: 54, bottom: 33 },
-  { x: 0.705, layer: 0, size: 57, bottom: 29 },
-  { x: 0.825, layer: 0, size: 54, bottom: 32 },
+  { x: 0.345, layer: 0, size: CLASSIC_BACK, bottom: 32 },
+  { x: 0.465, layer: 0, size: CLASSIC_BACK, bottom: 29 },
+  { x: 0.585, layer: 0, size: CLASSIC_BACK, bottom: 33 },
+  { x: 0.705, layer: 0, size: CLASSIC_BACK, bottom: 29 },
+  { x: 0.825, layer: 0, size: CLASSIC_BACK, bottom: 32 },
   // 앞줄 — 크고 낮게, 뒷줄에 겹쳐 앉는다
-  { x: 0.405, layer: 1, size: 63, bottom: 7 },
-  { x: 0.525, layer: 1, size: 61, bottom: 10 },
-  { x: 0.645, layer: 1, size: 64, bottom: 6 },
-  { x: 0.765, layer: 1, size: 61, bottom: 9 },
+  { x: 0.405, layer: 1, size: CLASSIC_FRONT, bottom: 7 },
+  { x: 0.525, layer: 1, size: CLASSIC_FRONT, bottom: 10 },
+  { x: 0.645, layer: 1, size: CLASSIC_FRONT, bottom: 6 },
+  { x: 0.765, layer: 1, size: CLASSIC_FRONT, bottom: 9 },
 ];
 
 const SKINS = {

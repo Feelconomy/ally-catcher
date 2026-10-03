@@ -443,7 +443,7 @@ a:hover { color: var(--green-deep); }
 
 /* Home (02) */
 .home-head { flex-shrink: 0; padding: 6px 20px 14px; display: flex; align-items: center; gap: 8px; }
-.home-head .iconbtn { margin-left: auto; width: 34px; height: 34px; color: var(--ink-2); }
+.home-head .wallet { margin-left: auto; }
 .home-head .wordmark { margin-right: 2px; }
 .home-head .wordmark { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
 .home-head .wordmark:active, .home-head .brandmark:active { transform: scale(.94); }
@@ -1464,6 +1464,36 @@ a:hover { color: var(--green-deep); }
 .codex-grid > .locked.soon { font-size: 20px; font-weight: 800; color: rgba(23, 23, 23, .16); }
 .codex-grid > .unlocked:active { transform: scale(.95); }
 .codex-grid img { width: 56px; height: 56px; }
+
+/* 컬렉션 (29-1) — 인형통 하나를 다 모으면 보너스 */
+.chip .chip-dot { display: inline-block; width: 5px; height: 5px; margin-left: 5px; vertical-align: 2px; border-radius: 50%; background: var(--danger); }
+.chip[aria-pressed="true"] .chip-dot { background: #fff; }
+
+.col-intro { font-size: 12px; font-weight: 600; color: var(--ink-45); line-height: 1.5; margin-bottom: 2px; }
+
+.colcard { border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); padding: 14px 15px 15px; display: flex; flex-direction: column; gap: 11px; }
+.colcard.ready { box-shadow: var(--shadow-card), inset 0 0 0 1.5px var(--green); }
+.colcard.claimed { background: var(--surface-sunken); box-shadow: none; }
+
+.colcard-top { display: flex; align-items: center; gap: 11px; }
+.colcard-top .hero { width: 46px; height: 46px; flex-shrink: 0; border-radius: 13px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.colcard-top .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.colcard-top .nm { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.colcard-top .mt { font-size: 11px; font-weight: 600; color: var(--ink-45); font-variant-numeric: tabular-nums; }
+.colcard-top .prize,
+.colcard-top .done-badge { flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; padding: 5px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.colcard-top .prize { background: var(--yellow-soft); color: var(--yellow-ink); }
+.colcard-top .done-badge { background: rgba(0, 166, 80, .1); color: var(--green-pressed); }
+
+.colcard-bar .meter { height: 6px; }
+
+.colcard-dolls { display: flex; flex-wrap: wrap; gap: 6px; }
+.colcard-dolls > * { width: 38px; height: 38px; border-radius: 11px; background: var(--surface-sunken); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.colcard.claimed .colcard-dolls > * { background: var(--surface); }
+.colcard-dolls .have:active { transform: scale(.92); }
+.colcard-dolls .want { color: var(--ink-25); }
+
+.colcard-go { align-self: flex-start; padding-inline: 0; gap: 3px; color: var(--ink-50); }
 
 /* Missions (06 / 31) */
 .ticketcard { margin: 0 20px 14px; border-radius: var(--r-2xl); background: linear-gradient(135deg, var(--green) 0%, var(--green-lit) 100%); padding: 18px 20px 16px; color: #fff; flex-shrink: 0; box-shadow: 0 10px 24px rgba(0, 166, 80, .22); }

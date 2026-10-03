@@ -19,6 +19,7 @@ const DEFAULT_STATE = {
   missions: {},           // id -> progress count
   claimed: [],            // mission ids already collected
   bonusClaimed: false,
+  collections: [],        // 보너스를 이미 받은 컬렉션(기계) id
   adsWatchedToday: 0,
   adVideoIdx: 0,          // 광고 영상 번갈아 재생용 인덱스
   attendance: 5,
@@ -508,6 +509,39 @@ const Store = {
       left: WINS_PER_LEVEL - done,
       percent: Math.round((done / WINS_PER_LEVEL) * 100),
     };
+  },
+
+  /* --- 컬렉션 ------------------------------------------------------------
+     한 인형통의 contents 를 전부 모으면 보너스 티켓. 중복은 안 치고 종류만 센다. */
+  collection(machine) {
+    const have = this.prizeCounts();
+    const ids = (machine.contents || []).filter(id => DOLLS[id]);   // 관리자가 지운 인형은 뺀다
+    const owned = ids.filter(id => have[id]);
+    return {
+      id: machine.id,
+      ids,
+      owned,
+      missing: ids.filter(id => !have[id]),
+      done: ids.length > 0 && owned.length === ids.length,
+      claimed: this.state.collections.includes(machine.id),
+      tickets: collectionTickets(machine),
+    };
+  },
+
+  collections() { return MACHINES.map(m => this.collection(m)); },
+
+  /** 받을 수 있는 컬렉션 보너스 개수 — 도감 탭의 빨간 점에 쓴다. */
+  collectionsReady() { return this.collections().filter(c => c.done && !c.claimed).length; },
+
+  /** 보너스를 지급하고 받은 티켓 수를 돌려준다. 못 받으면 0. */
+  claimCollection(machineId) {
+    const m = MACHINES.find(x => x.id === machineId);
+    if (!m) return 0;
+    const c = this.collection(m);
+    if (!c.done || c.claimed) return 0;
+    this.state.collections.push(machineId);
+    this.addTickets(c.tickets);        // addTickets 가 save() 까지 한다
+    return c.tickets;
   },
 
   codexOwned() { return this.ownedIds().length; },

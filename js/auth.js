@@ -49,10 +49,24 @@ window.Auth = Auth;
 
 // 세션이 있으면 계정을 채우고, 로그인·스플래시 화면이면 홈으로 보낸다.
 // (계정으로의 데이터 연결은 sync.js 의 부팅 hydrate 가 __authReady 후 담당 — 여기선 라우팅만)
-function applySession(session) {
+function applySession(session, event) {
   Auth.user = session ? session.user : null;
   // Store 는 const 전역이라 window.Store 로는 안 잡힘 → bare 로 확인
-  if (!Auth.user || typeof Store === 'undefined' || !Store.state) return;
+  if (typeof Store === 'undefined' || !Store.state) return;
+  if (!Auth.user) {
+    /* 세션이 없다. 부팅 시점(INITIAL_SESSION)에는 아무것도 하지 않는다 — 카카오를
+       쓰지 않는 로컬 계정이 지워지면 안 된다. 실제로 로그아웃됐을 때만(SIGNED_OUT,
+       토큰 갱신 실패 포함) 카카오 계정을 내린다. 안 그러면 화면은 로그인된 것처럼
+       보이는데 다음 실행 때 익명 기기 데이터가 올라와 '로그인이 풀렸다' 가 된다. */
+    const acc = Store.state.account;
+    if (event === 'SIGNED_OUT' && acc && acc.provider === '카카오') {
+      Store.state.account = null;
+      Store.save();
+      if (typeof toast === 'function') toast('로그인이 만료돼 다시 로그인해야 해요', { tone: 'error' });
+      if (typeof go === 'function' && App.route !== 'login') go('login');
+    }
+    return;
+  }
   const prev = Store.state.account;
   Store.state.account = {
     provider: '카카오',
@@ -75,7 +89,7 @@ async function boot() {
   try {
     // 리다이렉트로 돌아온 경우 detectSessionInUrl 이 URL을 처리한 뒤 세션을 준다.
     const { data } = await sb.auth.getSession();
-    applySession(data.session || null);
+    applySession(data.session || null, 'INITIAL_SESSION');
   } catch (e) {
     console.warn('auth getSession 실패:', e && e.message);
   }
@@ -84,7 +98,7 @@ async function boot() {
     history.replaceState(null, '', location.origin + location.pathname + location.hash);
   }
   // 로그인/로그아웃 상태 변화 반영
-  sb.auth.onAuthStateChange((_evt, session) => { applySession(session); });
+  sb.auth.onAuthStateChange((evt, session) => { applySession(session, evt); });
   markReady();
   window.dispatchEvent(new Event('auth-ready'));
 }

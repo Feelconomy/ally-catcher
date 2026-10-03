@@ -225,6 +225,11 @@ const NH_RATE = 0.8;          // 100P → 80 멤버스P
 const NH_MIN = 1000;          // 최소 전환 포인트
 const CODEX_TOTAL = 35;       // 시즌1 도감 정원
 const CODEX_REWARD_TICKETS = 10;
+/* 컬렉션 — 한 인형통에 들어 있는 인형(contents)을 전부 모으면 주는 보너스.
+   인형이 많은 통일수록 오래 걸리니 마릿수에 비례해서 준다. */
+const COLLECTION_MIN_TICKETS = 3;
+const collectionTickets = (machine) =>
+  Math.max(COLLECTION_MIN_TICKETS, Math.round((machine.contents || []).length / 2));
 const SIGNUP_TICKETS = 10;
 const AD_TICKETS = 1;
 const AD_DAILY_LIMIT = 3;

@@ -218,6 +218,13 @@ const Sync = (function () {
         });
     }
 
+    /* 카카오로 로그인했던 기기인데 지금 세션이 없다 — 토큰 갱신이 한 번 실패했거나
+       네트워크가 잠깐 끊겼을 때 그렇다. 여기서 익명 기기 행을 끌어오면 티켓·인형이
+       통째로 다른(익명) 프로필로 바뀐다. 그게 '로그인이 풀렸다' 의 실체라, 그냥
+       로컬 상태를 두고 서버 쓰기만 멈춘다. */
+    const acc = Store.state.account;
+    if (acc && acc.provider === '카카오') return Promise.resolve('session-lost');
+
     // 비로그인(익명): 기기 행 조회 → 없으면 생성
     return req('GET', 'players?device_id=eq.' + encodeURIComponent(dev) + '&select=*')
       .then((rows) => (rows && rows.length) ? applyRow(rows[0]) : createRow({}));
