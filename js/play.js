@@ -191,7 +191,7 @@ const Play = {
     this.layoutDolls(this.machine);
     this.render();
     toast('인형을 다시 채웠어요', { mini: true });
-    haptic(20);
+    haptic(20); Sfx.play('refill');
   },
 
   stop() {
@@ -205,6 +205,7 @@ const Play = {
     clearInterval(this.timer); this.timer = null;
     clearTimeout(this.flickTimer);
     if (this.keys) { window.removeEventListener('keydown', this.keys); this.keys = null; }
+    Sfx.stop();
     if (this.onResize) {
       window.removeEventListener('resize', this.onResize);
       window.removeEventListener('orientationchange', this.onResize);
@@ -447,7 +448,7 @@ const Play = {
         btn.setPointerCapture(pointer);
         btn.dataset.active = '1';
         steer(btn.dataset.dir === 'left' ? -1 : 1);
-        haptic(8);
+        haptic(8); Sfx.play('grab');
       });
       ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type =>
         btn.addEventListener(type, ev => { if (ev.pointerId === pointer) this.releaseControls(); }));
@@ -465,7 +466,7 @@ const Play = {
       pointer = ev.pointerId;
       stick.setPointerCapture(pointer);
       track(ev);
-      haptic(8);
+      haptic(8); Sfx.play('grab');
     });
     stick.addEventListener('pointermove', track);
     ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(type =>
@@ -498,6 +499,7 @@ const Play = {
       const target = this.canMove() ? this.input * 0.42 : 0;
       this.velocity += (target - this.velocity) * (1 - Math.exp(-dt * 14));
       if (Math.abs(this.velocity) > 0.0005) this.move(this.velocity * dt);
+      Sfx.motor(Math.abs(this.velocity) / 0.42);   // 미는 세기만큼 모터가 돈다
       const claw = $('#claw', root);
       if (claw && !this.busy) claw.style.setProperty('--sway', (-this.velocity * 13).toFixed(2) + 'deg');
       // 뒤 집게발 맞추기는 강제 레이아웃을 부른다 — 집게가 움직일 때만 한다.
@@ -717,7 +719,7 @@ const Play = {
     btn.classList.add('btn--disabled');
     rig.dataset.busy = '1';
     this.setState('DROPPING');
-    haptic(20);
+    haptic(20); Sfx.play('drop');
 
     const chance = this.liveOdds();
     const inRange = !!near && near.dist < GRAB_RADIUS;
@@ -750,7 +752,7 @@ const Play = {
     if (!alive()) return;
 
     rig.dataset.grip = '1';
-    haptic(14);
+    haptic(14); Sfx.play('grip');
     await wait(300);
     if (!alive()) return;
 
@@ -831,7 +833,7 @@ const Play = {
       { transform: 'translate(0, 0) rotate(6deg)' }
     ], { duration: 780, easing: 'cubic-bezier(.42,0,1,1)' });
     this.setState('GOT IT');
-    haptic(40);
+    haptic(40); Sfx.play('land');
     await wait(920);
     if (!alive()) return;
     this.finish(true, carried.dollId);
@@ -905,7 +907,7 @@ const Play = {
     }
     if (reason === 'slip') {
       this.setState('DROPPED');
-      haptic(30);
+      haptic(30); Sfx.play('slip');
       toast('집게에서 미끄러졌어요', { mini: true, duration: 1300 });
     }
     await wait(260);

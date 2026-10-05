@@ -532,6 +532,7 @@ const Screens = {
        떨어졌는데 그 인형이 카탈로그에서 빠지면서 화면이 통째로 깨졌다. */
     const d = DOLLS[dollId] || DOLLS[DOLL_IDS[0]];
     if (!d) { go('home'); return; }
+    Sfx.play('win');
     const gradeLabel = { N: '노멀 등급', R: '레어 등급', SR: 'SR 등급' }[d.grade];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center">
@@ -582,6 +583,7 @@ const Screens = {
     const on = green ? 'onGreen' : 'onDark';
     const m = Play.machine || MACHINES[0];
     const next = Store.odds(m);
+    Sfx.play('fail');
     const attempt = App.lastAttempt || {};
     const doll = dollId && DOLLS[dollId];
     const bonus = Math.min(Store.state.failStreak * FAIL_BONUS, MAX_RATE - m.baseRate);
@@ -1151,6 +1153,7 @@ const Screens = {
         Store.save();
         el.setAttribute('aria-checked', String(Store.state.settings[k]));
         if (k === 'haptics' && Store.state.settings[k]) haptic(20);
+        if (k === 'sfx' && Store.state.settings[k]) Sfx.play('coin');   // 켜면 바로 들려 준다
       },
       logout: () => {
         // 로컬만 지우면 카카오 세션이 그대로 남아, 다음 실행 때 조용히 다시 로그인된다.

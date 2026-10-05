@@ -359,7 +359,7 @@ export const Play3D = {
     };
     stick.addEventListener('pointerdown',ev=>{
       if(this.phase!=='aim'||pointer!==null)return;
-      ev.preventDefault();pointer=ev.pointerId;stick.setPointerCapture(pointer);track(ev);haptic(8);
+      ev.preventDefault();pointer=ev.pointerId;stick.setPointerCapture(pointer);track(ev);haptic(8);Sfx.play('grab');
     },{signal});
     stick.addEventListener('pointermove',track,{signal});
     for(const type of ['pointerup','pointercancel','lostpointercapture']) stick.addEventListener(type,ev=>{if(ev.pointerId===pointer)this.release();},{signal});
@@ -434,6 +434,7 @@ export const Play3D = {
       this.position.x=clamp(nx,-1.02,1.02); this.position.z=clamp(nz,-.66,.67);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
       if(nz!==this.position.z)this.velocity.y*=-.3;
+      Sfx.motor(this.velocity.length() / 1.18);   // 미는 세기만큼 모터가 돈다
       if(this.time<=0&&!this.coaching){this.timedOut=true;this.drop();}   // 시간이 끝나 저절로 내려간 판
       const near=this.nearest();
       const id=near&&near.distance<.32?near.toy.id:null;
@@ -567,7 +568,7 @@ export const Play3D = {
     const session=this.session;const alive=()=>this.active&&this.session===session;
     const near=this.nearest(),chance=this.odds(near);
     this.phase='dropping';this.release();this.velocity.set(0,0);
-    document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);
+    document.getElementById('drop3d').disabled=true;this.status('집게가 내려가요');haptic(20);Sfx.motorOff();Sfx.play('drop');
     const target=near&&near.distance<.29?near.toy:null;
     // 물려는 인형만 집게 몸통을 통과시킨다 — 안 그러면 집기 전에 밀려난다
     if(target){
@@ -594,7 +595,7 @@ export const Play3D = {
     await this.grip(GRIP_OPEN,260);if(!alive())return;
     await this.travel([this.position.x,down,this.position.z],1.05);if(!alive())return;
     await this.pause(140);if(!alive())return;                    // 바닥에서 한 박자 멈춘다
-    this.status('움켜쥐는 중');
+    this.status('움켜쥐는 중'); Sfx.play('grip');
     // 인형이 있으면 표면에 닿을 만큼만, 빈손이면 끝까지 오므린다
     await this.grip(GRIP_SHUT,560);if(!alive())return;
     await this.pause(160);if(!alive())return;
@@ -619,7 +620,7 @@ export const Play3D = {
       this.grip(GRIP_REST,260);this.status('아쉽게 놓쳤어요');
       await this.pause(760);if(!alive())return;this.finish(false,target?.id);return;}
     if(slipped){
-      this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);
+      this.releaseToy();App.lastAttempt.kind='slip';this.status('앗, 놓쳤어요');haptic(25);Sfx.play('slip');
       if(!await this.settle(target))return;
       await this.pause(420);if(!alive())return;
       this.finish(false,target.id);return;
@@ -629,7 +630,7 @@ export const Play3D = {
     const centerOffset = new THREE.Vector3(0,.09,0).applyQuaternion(this.heldQuat).add(this.heldOffset);
     await this.travel([CHUTE.x-centerOffset.x,REST_Y,CHUTE.z-centerOffset.z],1.25);if(!alive())return;
     await this.travel([this.position.x,this.position.y,this.position.z],.9);if(!alive())return;
-    this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);
+    this.phase='releasing';this.status('인형을 내려놔요');this.releaseToy();haptic(35);Sfx.play('land');
     if(!await this.settle(target))return;
     await this.pause(360);if(!alive())return;           // 자리 잡은 모습을 한 박자 보여준다
     const p=target.body.position;
@@ -681,7 +682,7 @@ export const Play3D = {
     for (const toy of this.toys) toy.body.sleep();
     this.saveToyLayout();
     this.status('다시 채웠어요');
-    haptic(20);
+    haptic(20); Sfx.play('refill');
   },
 
   async loadMeadow(session) {
@@ -718,6 +719,7 @@ export const Play3D = {
     clearTimeout(this.meadowTimer);
     this.delayResolve?.(false);this.delayResolve=null;
     this.tween?.resolve(false);this.tween=null;
+    Sfx.stop();
     this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();
     this.disposeObject(this.scene);this.disposeObject(this.pack);
     this.environment?.dispose();this.environment=null;
