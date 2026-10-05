@@ -1583,6 +1583,13 @@ a:hover { color: var(--green-deep); }
 .nh-logo--sm { width: 42px; height: 42px; font-size: 17px; }
 .nh-logo--md { width: 50px; height: 50px; border-radius: 15px; font-size: 20px; }
 .nh-logo--lg { width: 76px; height: 76px; border-radius: 26px; font-size: 28px; animation: pop .5s ease-out both; }
+/* 아직 실제로 동작하지 않는 기능 표시. NH멤버스는 화면 흐름만 있고 연결은
+   되지 않아서, 되는 것처럼 보이는 자리마다 '예정' 을 붙인다. */
+.soon { display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 6px; font-size: 10px; font-weight: 700; font-style: normal; letter-spacing: 0; background: rgba(255, 255, 255, .22); color: #fff; vertical-align: 2px; }
+.soon-note { margin-top: 4px; padding: 14px; border-radius: 14px; background: var(--yellow-soft); font-size: 11px; font-weight: 600; line-height: 1.7; color: var(--yellow-ink); }
+.soon-note strong { display: block; margin-bottom: 4px; font-size: 12px; font-weight: 700; }
+.soon-badge { margin-top: 10px; padding: 5px 12px; border-radius: 999px; background: rgba(0, 0, 0, .2); color: #fff; font-size: 11px; font-weight: 700; position: relative; }
+
 .nh-card .top .t { font-size: 15px; font-weight: 700; color: #fff; letter-spacing: -.01em; }
 .nh-card .top .s { margin-top: 3px; font-size: 11px; font-weight: 600; color: rgba(255, 255, 255, .78); }
 .nh-card .top .chev { width: 26px; height: 26px; border-radius: 50%; background: var(--nh-gold); color: var(--nh-gold-ink); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }

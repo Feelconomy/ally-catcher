@@ -928,7 +928,7 @@ const Screens = {
           <button class="top" style="width:100%;text-align:left" data-act="nh">
             <span class="nh-logo nh-logo--sm">NH</span>
             <span style="flex:1">
-              <span class="t" style="display:block">NH멤버스 포인트로 전환</span>
+              <span class="t" style="display:block">NH멤버스 포인트로 전환 <em class="soon">예정</em></span>
               <span class="s" style="display:block">농협 계열사 어디서나 현금처럼</span>
             </span>
             <span class="chev">${icon('chevronRight3', 16)}</span>
@@ -947,9 +947,9 @@ const Screens = {
           </div>
           <div class="cta">
             <button class="btn md ${convertible ? 'btn--nh' : 'btn--disabled'}" data-act="convert" ${convertible ? '' : 'disabled'}>
-              ${convertible ? `${fmt(convertible)}P 전환하기` : `${fmt(NH_MIN)}P부터 전환할 수 있어요`}
+              ${convertible ? `${fmt(convertible)}P 전환하기 (예정)` : `${fmt(NH_MIN)}P부터 전환할 수 있어요`}
             </button>
-            <div class="fine">NH멤버스 앱 연동 후 전환됩니다. 전환된 포인트는 되돌릴 수 없어요.</div>
+            <div class="fine">아직 NH멤버스와 실제로 연결되지 않았어요. 지금 보이는 전환 과정은 미리보기이고, 포인트는 그대로 남습니다.</div>
           </div>
         </div>
         <div style="height:24px"></div>
@@ -1107,7 +1107,7 @@ const Screens = {
           <div class="group-label">계정</div>
           <div class="card list">
             <div class="row"><span class="label">연결된 계정</span><span class="value">${esc(acc ? acc.provider : '게스트')}</span></div>
-            <div class="row"><span class="label">NH멤버스 연동</span><span class="value" style="color:${Store.state.nhLinked ? 'var(--nh-green)' : ''}">${Store.state.nhLinked ? '연동됨' : '미연동'}</span></div>
+            <div class="row"><span class="label">NH멤버스 연동</span><span class="value" style="color:${Store.state.nhLinked ? 'var(--nh-green)' : ''}">${Store.state.nhLinked ? '연동됨 (예정)' : '미연동'}</span></div>
             <button class="row" style="width:100%" data-act="rename"><span class="label" style="text-align:left">닉네임 변경</span><span class="chev">${icon('chevronRight3', 18)}</span></button>
           </div>
         </div>
@@ -1188,7 +1188,7 @@ const Screens = {
     setTheme('');
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
-      ${appbar('NH멤버스 연동')}
+      ${appbar('NH멤버스 연동', { meta: '예정' })}
       <div style="margin:0 20px 18px;border-radius:var(--r-2xl);background:linear-gradient(100deg,var(--nh-green),var(--nh-green-deep));padding:24px 22px;color:#fff;display:flex;align-items:center;gap:14px">
         <span class="nh-logo nh-logo--md">NH</span>
         <div style="flex:1">
@@ -1218,13 +1218,15 @@ const Screens = {
           </span>
           <span style="margin-top:8px;font-size:11px;font-weight:600;color:var(--ink-45);display:block">문자를 받지 못했다면 재요청해 주세요</span>
         </label>
-        <div style="margin-top:4px;padding:14px;border-radius:14px;background:rgba(0,166,81,.07);font-size:11px;font-weight:600;line-height:1.6;color:var(--nh-green-deep)">
-          본인 확인을 위해 이름과 휴대폰 번호를 NH멤버스에 전달합니다. 동의 후에도 마이페이지에서 연동을 해제할 수 있어요.
+        <div class="soon-note">
+          <strong>아직 준비 중인 기능이에요</strong>
+          NH멤버스와 실제로 연결되지 않습니다. 입력한 이름과 번호는 어디로도 보내지 않고, 인증번호도 실제로 오지 않아요.
+          화면 흐름만 미리 보여 드립니다.
         </div>
       </div>
 
       <div style="padding:16px 20px calc(34px + var(--safe-b))">
-        <button class="btn btn--disabled" id="linkBtn" data-act="link" disabled>연동 완료하기</button>
+        <button class="btn btn--disabled" id="linkBtn" data-act="link" disabled>연동 완료하기 (예정)</button>
       </div>
     </div>`;
 
@@ -1248,7 +1250,7 @@ const Screens = {
         codeField.style.display = '';
         $('#nhCode').addEventListener('input', refresh);
         $('#nhCode').focus();
-        toast('인증번호를 보냈어요', { tone: 'ok' });
+        toast('인증번호를 보낸 것처럼 보여 드려요 (예정)', { tone: 'warn' });
         let left = 180;
         clearInterval(countdown);
         countdown = setInterval(() => {
@@ -1263,7 +1265,7 @@ const Screens = {
       link: () => {
         clearInterval(countdown);
         Store.state.nhLinked = true; Store.save();
-        toast('NH멤버스 계정을 연동했어요', { tone: 'ok' });
+        toast('연동된 것처럼 표시했어요 — 실제 연동은 예정이에요', { tone: 'warn' });
         go('exchange');
       },
     });
@@ -1282,14 +1284,15 @@ const Screens = {
         <div class="blob"></div>
         <span class="nh-logo nh-logo--lg">NH</span>
         <h2>전환이 끝났어요</h2>
+        <div class="soon-badge">예정 · 포인트는 그대로 남아 있어요</div>
         <div class="receipt">
-          <div class="ln"><span class="l">사용 포인트</span><span class="v">${fmt(used)}P</span></div>
+          <div class="ln"><span class="l">전환될 포인트</span><span class="v">${fmt(used)}P</span></div>
           <div class="hr"></div>
-          <div class="ln"><span class="l">받은 멤버스 포인트</span><span class="v big">${fmt(got)}P</span></div>
+          <div class="ln"><span class="l">받게 될 멤버스 포인트</span><span class="v big">${fmt(got)}P</span></div>
           <div class="txid">거래번호 ${esc(tx)}</div>
         </div>
         <div style="margin-top:auto;padding-bottom:calc(34px + var(--safe-b));width:100%;display:flex;flex-direction:column;gap:10px;position:relative">
-          <button class="btn btn--nh-gold" data-act="nhApp">NH멤버스 앱에서 확인</button>
+          <button class="btn btn--nh-gold" data-act="nhApp">NH멤버스 앱에서 확인 (예정)</button>
           <button class="btn md btn--translucent" data-act="back">교환소로 돌아가기</button>
         </div>
       </div>

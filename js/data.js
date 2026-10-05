@@ -229,7 +229,7 @@ const TEST_TICKETS = 10;      // 미션 화면의 테스트용 충전 버튼이 
 const MY_MENU = [
   { id: 'exchange', label: '포인트 교환소',        icon: 'ticketFill', route: 'exchange' },
   { id: 'entries',  label: '추첨 응모 내역',        icon: 'inbox',      route: 'entries' },
-  { id: 'nh',       label: 'NH멤버스 계정 연동',    icon: 'link',       route: 'nh-link' },
+  { id: 'nh',       label: 'NH멤버스 계정 연동 (예정)', icon: 'link',    route: 'nh-link' },
   { id: 'invite',   label: '친구 초대하기', icon: 'personPlus', action: 'invite' },
   { id: 'notif',    label: '알림 설정',            icon: 'bell',       route: 'notif' },
   { id: 'support',  label: '고객센터',             icon: 'bubble',     action: 'support' },

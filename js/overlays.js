@@ -1281,9 +1281,9 @@ const Dialogs = {
     const got = Math.floor(amount * NH_RATE);
     const { close } = dialog(`
       <div class="spinner-lg brand" style="margin:0 auto"></div>
-      <h3 style="margin-top:20px;font-size:18px">NH멤버스로 전환 중</h3>
+      <h3 style="margin-top:20px;font-size:18px">NH멤버스로 전환 중 (예정)</h3>
       <p>${fmt(amount)}P → ${fmt(got)} 멤버스P<br>최대 1분이 걸릴 수 있어요</p>
-      <div class="code">창을 닫아도 전환은 계속 진행됩니다</div>`,
+      <div class="code">실제 전환은 아직 연결되지 않았어요</div>`,
       null, { persistent: true, scrim: 'deep' });
 
     setTimeout(() => {
@@ -1291,7 +1291,9 @@ const Dialogs = {
       // NH멤버스 점검 시간(00:00~04:00)에는 전환이 막힌다 — 설계 38번 화면.
       const hour = new Date().getHours();
       if (hour < 4) { Dialogs.convertFailed(amount); return; }
-      Store.addPoints(-amount);
+      /* 포인트는 차감하지 않는다. NH멤버스와 실제로 연결되지 않은 상태라
+         (화면 흐름만 미리보기) 여기서 깎으면 아무것도 못 받고 포인트만 사라진다.
+         실제 연동이 붙으면 이 줄을 되살린다. */
       const tx = 'NHM-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + String(Date.now() % 10000).padStart(4, '0');
       go('convert-done', `${amount}|${got}|${tx}`);
     }, 1800);
@@ -1301,7 +1303,7 @@ const Dialogs = {
   convertFailed(amount) {
     dialog(`
       <div class="art" style="background:var(--danger-bg);color:var(--danger)">${icon('circleExclamation', 26)}</div>
-      <h3>전환에 실패했어요</h3>
+      <h3>전환에 실패했어요 (예정)</h3>
       <p>NH멤버스 점검 시간(00:00~04:00)에는<br>전환할 수 없어요. 포인트는 그대로 있어요.</p>
       <div class="code">오류 코드 NHM_MAINTENANCE_503</div>
       <div class="actions side">
