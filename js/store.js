@@ -28,7 +28,7 @@ const DEFAULT_STATE = {
   bookmarks: [],
   recent: RECENT_SEEDS.slice(),
   nhLinked: false,
-  settings: { haptics: true, sfx: false, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
+  settings: { haptics: true, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
   notifications: { osGranted: false, missions: false, raffle: false, newMachine: false, marketing: false },
   coachDone: false,
   coach3dDone: false,     // 3D 는 조작이 달라 튜토리얼을 따로 센다

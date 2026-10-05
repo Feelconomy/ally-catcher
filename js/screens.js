@@ -1116,7 +1116,6 @@ const Screens = {
           <div class="group-label">앱</div>
           <div class="card list">
             ${toggleRow('haptics', '진동 피드백', s.haptics)}
-            ${toggleRow('sfx', '효과음', s.sfx)}
             ${toggleRow('dataSaver', '데이터 절약 모드', s.dataSaver)}
             <button class="row" style="width:100%" data-act="cache"><span class="label" style="text-align:left">캐시 삭제</span><span class="value">34.2MB</span></button>
           </div>
