@@ -1358,7 +1358,8 @@ const Screens = {
     const tab = App.adminTab || 'dolls';
     const a = Store.state.admin;
     const dirty = Object.keys(a.dolls).length + Object.keys(a.machines).length
-                + Object.keys(a.custom).length;
+                + Object.keys(a.custom).length + Object.keys(a.raffles || {}).length
+                + Object.keys(a.customRaffles || {}).length;
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
@@ -1366,11 +1367,15 @@ const Screens = {
       <div class="chiprow">
         <button class="chip" aria-pressed="${tab === 'dolls'}" data-act="tab" data-t="dolls">인형 ${DOLL_IDS.length}</button>
         <button class="chip" aria-pressed="${tab === 'machines'}" data-act="tab" data-t="machines">기계 ${MACHINES.length}</button>
+        <button class="chip" aria-pressed="${tab === 'raffles'}" data-act="tab" data-t="raffles">추첨 ${RAFFLES.length}</button>
         <button class="chip" aria-pressed="${tab === 'screen'}" data-act="tab" data-t="screen">화면</button>
         <button class="chip" aria-pressed="${tab === 'loading'}" data-act="tab" data-t="loading">3D 로딩</button>
       </div>
       <div class="scroll pad">
-        ${tab === 'machines' ? adminMachineList() : tab === 'screen' ? adminSkinPicker() : tab === 'loading' ? adminLoadingPreview() : adminDollGrid()}
+        ${tab === 'machines' ? adminMachineList()
+          : tab === 'raffles' ? adminRaffleList()
+          : tab === 'screen' ? adminSkinPicker()
+          : tab === 'loading' ? adminLoadingPreview() : adminDollGrid()}
         ${tab === 'loading' ? '' : '<button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>'}
         <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
           ${window.Sync && Sync.enabled
@@ -1392,6 +1397,8 @@ const Screens = {
       },
       machine: el => Sheets.adminMachine(el.dataset.id),
       newMachine: () => Sheets.adminMachine(null),
+      raffle: el => Sheets.adminRaffle(el.dataset.id),
+      newRaffle: () => Sheets.adminRaffle(null),
       moveUp: el => reorder(el.dataset.id, -1),
       moveDown: el => reorder(el.dataset.id, 1),
       lf: el => { App.adminLoad = { ...App.adminLoad, friend: el.dataset.v }; Screens.admin(); },
@@ -1403,7 +1410,8 @@ const Screens = {
         toast(`${modeName(el.dataset.s)} 화면으로 바꿨어요`, { tone: 'ok' });
       },
       reset: () => {
-        Store.state.admin = { dolls: {}, machines: {}, custom: {}, skin: 'arcade' };
+        Store.state.admin = { dolls: {}, machines: {}, custom: {}, customMachines: {},
+          raffles: {}, customRaffles: {}, skin: 'arcade' };
         // 서버까지 비운 다음에 새로고침해야 되돌린 게 다시 딸려오지 않는다.
         Store.pushAdmin().then(() => location.reload());
       },
@@ -1564,6 +1572,37 @@ function adminMachineList() {
       <span class="plus">${icon('plusThick', 22)}</span>
       <span class="nm">기계 추가</span>
       <span class="mt">이름 · 설명 · 티켓 · 넣을 인형</span>
+    </button>
+  </div>`;
+}
+
+/* 관리자 '추첨' 탭. 기계 목록과 같은 카드 모양이라 눈에 익은 자리에 같은 정보가 온다.
+   발표일이 지난 건 따로 표시한다 — 이 화면을 만든 이유가 그거라서. */
+function adminRaffleList() {
+  const today = new Date().toISOString().slice(5, 10).replace('-', '.');
+  const entered = Store.allEntries();
+  return `<div class="adm-machines">
+    ${RAFFLES.map(r => {
+      const n = entered.filter(e => e.raffle === r.id).length;
+      const past = r.announce && r.announce < today;
+      return `<div class="adm-mrow">
+      <button class="adm-mcard" data-act="raffle" data-id="${r.id}">
+        <span class="top">
+          <span class="hero" style="background:${r.bg};color:${r.iconColor}">${icon(r.icon, 24)}</span>
+          <span class="txt">
+            <span class="nm">${esc(r.name)}</span>
+            <span class="mt">${fmt(r.cost)}P · ${r.winners}명 당첨</span>
+            <span class="mt ${past ? 'warn' : ''}">${esc(r.announce || '발표일 없음')} 발표${past ? ' · 지난 날짜' : ''}${n ? ` · 내 응모 ${n}건` : ''}</span>
+          </span>
+          <span class="chev">${icon('chevronRight3', 18)}</span>
+        </span>
+      </button>
+      </div>`;
+    }).join('')}
+    <button class="adm-mcard add" data-act="newRaffle">
+      <span class="plus">${icon('plusThick', 22)}</span>
+      <span class="nm">추첨 추가</span>
+      <span class="mt">이름 · 포인트 · 당첨 인원 · 발표일</span>
     </button>
   </div>`;
 }

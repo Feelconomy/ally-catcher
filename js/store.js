@@ -37,7 +37,7 @@ const DEFAULT_STATE = {
   // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
   // custom 은 관리자가 직접 추가한 인형(포즈 이미지는 data URL).
   // skin: classic (basic), arcade (green 2D), green3d (green 3D).
-  admin: { dolls: {}, machines: {}, custom: {}, skin: 'arcade' },
+  admin: { dolls: {}, machines: {}, custom: {}, raffles: {}, customRaffles: {}, skin: 'arcade' },
 };
 
 const Store = {
@@ -54,8 +54,11 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
-    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, customMachines: {}, skin: 'arcade' }, (saved && saved.admin) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, customMachines: {},
+      raffles: {}, customRaffles: {}, skin: 'arcade' }, (saved && saved.admin) || {});
     this.state.admin.customMachines = this.state.admin.customMachines || {};
+    this.state.admin.raffles = this.state.admin.raffles || {};
+    this.state.admin.customRaffles = this.state.admin.customRaffles || {};
     // 마이그레이션: 이 플래그가 생기기 전에 이미 가입(onboarded)한 사용자는
     // 보너스를 받은 것으로 간주해, 재접속 때 소급 지급/토스트가 뜨지 않게 한다.
     if (saved && saved.onboarded && saved.signupBonus === undefined) {
@@ -122,6 +125,18 @@ const Store = {
       list.sort((x, y) => at(x.id) - at(y.id));
     }
     MACHINES.length = 0; MACHINES.push(...list);
+    /* 추첨도 같은 방식으로 다시 세운다. 이벤트는 매주 바뀌는데 코드에 박아 두면
+       배포를 해야 바뀌고, 지난 발표일이 그대로 노출된다. 기계와 달리 화면이
+       추첨 객체를 들고 있지 않아 매번 새로 만들어도 된다. */
+    const rl = RAFFLE_BASE.map(r => JSON.parse(JSON.stringify(r)));
+    for (const id in (a.customRaffles || {})) rl.push(JSON.parse(JSON.stringify(a.customRaffles[id])));
+    for (const id in (a.raffles || {})) {
+      const r = rl.find(x => x.id === id);
+      if (!r) continue;
+      const { deleted, ...rest } = a.raffles[id];
+      if (deleted) rl.splice(rl.indexOf(r), 1); else Object.assign(r, rest);
+    }
+    RAFFLES.length = 0; RAFFLES.push(...rl);
     // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
     DOLL_IDS.length = 0;
     DOLL_IDS.push.apply(DOLL_IDS, Object.keys(DOLLS));
@@ -182,6 +197,25 @@ const Store = {
     if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
     if (before) bag[machine.id] = before; else delete bag[machine.id];
     return false;
+  },
+
+  /** 관리자가 추가한 추첨. 실패하면 false (보통 localStorage 용량 초과). */
+  addCustomRaffle(raffle) {
+    const bag = this.state.admin.customRaffles = this.state.admin.customRaffles || {};
+    const before = bag[raffle.id];
+    bag[raffle.id] = raffle;
+    if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
+    if (before) bag[raffle.id] = before; else delete bag[raffle.id];
+    return false;
+  },
+
+  /** 추첨 삭제 — 추가한 건 지우고, 기본 추첨은 '삭제됨'만 남긴다(되살릴 수 있게).
+      이미 응모한 내역은 state.entries 에 따로 있어 그대로 남는다. */
+  removeRaffle(id) {
+    const bag = this.state.admin.customRaffles = this.state.admin.customRaffles || {};
+    if (bag[id]) delete bag[id];
+    else (this.state.admin.raffles[id] = this.state.admin.raffles[id] || {}).deleted = true;
+    this.applyAdmin(); this.pushAdmin();
   },
 
   /** 기계 순서를 한 칸 올리거나(-1) 내린다(+1). 홈 목록도 이 순서를 따른다. */

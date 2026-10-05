@@ -173,8 +173,11 @@ const Sync = (function () {
       .then((rows) => {
         if (!rows || !rows.length || !rows[0].data) return false;
         Store.state.admin = Object.assign(
-          { dolls: {}, machines: {}, custom: {}, customMachines: {}, skin: 'arcade' }, rows[0].data);
+          { dolls: {}, machines: {}, custom: {}, customMachines: {},
+            raffles: {}, customRaffles: {}, skin: 'arcade' }, rows[0].data);
         Store.state.admin.customMachines = Store.state.admin.customMachines || {};
+        Store.state.admin.raffles = Store.state.admin.raffles || {};
+        Store.state.admin.customRaffles = Store.state.admin.customRaffles || {};
         Store.applyAdmin();          // 카탈로그를 덮어쓰고 없는 인형은 정리
         suspended = true; Store.save(); suspended = false;
         return true;

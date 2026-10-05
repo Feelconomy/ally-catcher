@@ -209,6 +209,20 @@ const RAFFLES = [
     icon: 'coffee', bg: '#FFF4C2', iconColor: '#8A6A00', winners: 200, announce: '08.21' },
 ];
 
+/* 기본 추첨 사본. 관리자가 고치거나 지워도 되돌릴 수 있도록, 기계·인형과 같이
+   Store.applyAdmin() 이 매번 여기서 다시 세운 뒤 수정분을 얹는다. */
+const RAFFLE_BASE = JSON.parse(JSON.stringify(RAFFLES));
+
+/* 추첨 카드에 쓸 수 있는 아이콘과 색. 관리자가 고르는 목록이라 짧게 둔다. */
+const RAFFLE_LOOKS = [
+  { icon: 'musicMicrophone', bg: '#FFF0F3', iconColor: '#D24A6A' },
+  { icon: 'coffee',          bg: '#FFF4C2', iconColor: '#8A6A00' },
+  { icon: 'ticketFill',      bg: '#EAF7DE', iconColor: '#00762F' },
+  { icon: 'calendar',        bg: '#EEF1FF', iconColor: '#4A5BD2' },
+  { icon: 'star',            bg: '#FFF3DC', iconColor: '#B4761A' },
+  { icon: 'inbox',           bg: '#F0F3F6', iconColor: '#4A5560' },
+];
+
 /* Seeded entry history so 응모 내역 has the three states the design shows. */
 const TEST_TICKETS = 10;      // 미션 화면의 테스트용 충전 버튼이 주는 장수
 

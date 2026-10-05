@@ -618,6 +618,84 @@ const Sheets = {
         });
       });
   },
+
+  /* --- 관리자 · 추첨 편집 ------------------------------------------------
+     이벤트는 매주 바뀌는데 코드에 박혀 있어서, 지난 발표일이 그대로 교환소에
+     걸려 있었다. 값만 고치면 되도록 카탈로그(서버)에 얹는다. */
+  adminRaffle(raffleId) {
+    const isNew = !raffleId;
+    const r = isNew
+      ? Object.assign({ id: 'r' + Date.now(), name: '', note: '', cost: 100, winners: 10,
+          announce: '' }, RAFFLE_LOOKS[0])
+      : RAFFLES.find(x => x.id === raffleId);
+    if (!r) return;
+    const builtin = !isNew && RAFFLE_BASE.some(b => b.id === r.id);
+    let look = Math.max(0, RAFFLE_LOOKS.findIndex(l => l.icon === r.icon));
+
+    sheet(`
+      <h3>${isNew ? '추첨 추가' : '추첨 설정'}</h3>
+      <label class="field" style="margin-top:16px">
+        <span class="lbl">경품 이름</span>
+        <span class="box"><input id="rn" type="text" maxlength="24" value="${esc(r.name)}" placeholder="예: 카페 모바일 기프티콘"></span>
+      </label>
+      <label class="field" style="margin-top:12px">
+        <span class="lbl">안내 문구</span>
+        <span class="box"><input id="rt" type="text" maxlength="40" value="${esc(r.note || '')}" placeholder="예: 추첨 200명 · 응모 8,910"></span>
+      </label>
+
+      <div class="entry-calc" style="margin-top:14px">
+        <div class="ln"><span class="l">응모 포인트</span>
+          <input class="adm-in num" id="rc" type="tel" inputmode="numeric" value="${r.cost}" aria-label="응모 포인트"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">당첨 인원</span>
+          <input class="adm-in num" id="rw" type="tel" inputmode="numeric" value="${r.winners}" aria-label="당첨 인원"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">발표일</span>
+          <input class="adm-in num wide" id="ra" type="text" maxlength="5" value="${esc(r.announce || '')}" placeholder="MM.DD" aria-label="발표일"></div>
+      </div>
+
+      <div class="group-label" style="margin:18px 0 8px">카드 모양</div>
+      <div class="adm-looks" id="looks">
+        ${RAFFLE_LOOKS.map((l, i) => `<button class="lk" data-act="look" data-i="${i}" aria-pressed="${i === look}"
+          style="background:${l.bg};color:${l.iconColor}" aria-label="모양 ${i + 1}">${icon(l.icon, 22)}</button>`).join('')}
+      </div>
+
+      <button class="btn btn--primary" style="margin-top:18px" data-act="save">${isNew ? '추가하기' : '저장'}</button>
+      ${isNew ? '' : `<button class="btn md btn--text" style="margin-top:4px;color:var(--danger)" data-act="del">이 추첨 ${builtin ? '숨기기' : '삭제'}</button>`}`,
+      (node, close) => {
+        const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
+        bind(node, {
+          look: el => {
+            look = Number(el.dataset.i);
+            $$('#looks .lk', node).forEach((b, i) => b.setAttribute('aria-pressed', String(i === look)));
+          },
+          del: () => {
+            Store.removeRaffle(r.id);
+            close(); Screens.admin();
+            toast(builtin ? '추첨을 숨겼어요' : '추첨을 지웠어요', { mini: true });
+          },
+          save: () => {
+            const name = $('#rn', node).value.trim();
+            if (!name) return toast('경품 이름을 입력해 주세요', { tone: 'error' });
+            const announce = $('#ra', node).value.trim();
+            // 발표일은 교환소와 응모 내역에 그대로 찍히는 문자열이라 모양만 본다.
+            if (announce && !/^\d{2}\.\d{2}$/.test(announce))
+              return toast('발표일은 MM.DD 로 적어 주세요', { tone: 'error' });
+            const cost = num($('#rc', node), 99999);
+            if (!cost) return toast('응모 포인트를 입력해 주세요', { tone: 'error' });
+            const patch = Object.assign({
+              name, note: $('#rt', node).value.trim(),
+              cost, winners: num($('#rw', node), 99999), announce,
+            }, RAFFLE_LOOKS[look]);
+            if (isNew) {
+              if (!Store.addCustomRaffle(Object.assign({ id: r.id }, patch)))
+                return toast('저장 공간이 부족해요', { tone: 'error' });
+            } else Store.setAdmin('raffles', r.id, patch);
+            close(); Screens.admin(); toast('저장했어요', { tone: 'ok' });
+          },
+        });
+      });
+  },
 };
 
 /* 인형 삭제 확인. 되돌리기 어려운 부분(이미 뽑은 사람의 보관함)을 먼저 말하고,
