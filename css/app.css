@@ -1343,20 +1343,9 @@ a:hover { color: var(--green-deep); }
      통째로 밀렸다(측정: 내용 480px · 보이는 폭 420px). 가로는 잘라 둔다. */
   overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
 }
-/* 배경을 덜 밋밋하게 하려고 둔 장식 원. 단색 원으로 두면 호의 경계가 또렷해서,
-   그 선이 하필 제목 줄을 가로질러 '디자인이 잘렸다' 로 읽혔다. 가장자리를 0 까지
-   떨어뜨려 빛 번짐처럼 보이게 한다 — 경계가 없으면 잘릴 것도 없다. */
 .result .blob { position: absolute; border-radius: 50%; pointer-events: none; }
-.result .blob.a {
-  top: -160px; left: -80px; width: 320px; height: 320px;
-  background: radial-gradient(circle,
-    rgba(255, 212, 0, .26) 0%, rgba(255, 212, 0, .15) 48%, rgba(255, 212, 0, 0) 70%);
-}
-.result .blob.b {
-  bottom: -90px; right: -80px; width: 280px; height: 280px;
-  background: radial-gradient(circle,
-    rgba(255, 255, 255, .13) 0%, rgba(255, 255, 255, .06) 48%, rgba(255, 255, 255, 0) 70%);
-}
+.result .blob.a { top: -146px; left: -60px; width: 280px; height: 280px; background: rgba(255, 212, 0, .28); }
+.result .blob.b { bottom: -70px; right: -60px; width: 240px; height: 240px; background: rgba(255, 255, 255, .12); }
 .result .kicker { font-size: 14px; font-weight: 700; color: var(--yellow); letter-spacing: .1em; position: relative; }
 .result h2 { margin-top: 10px; font-size: 34px; font-weight: 700; color: #fff; letter-spacing: -.03em; text-align: center; position: relative; }
 .result .prize {

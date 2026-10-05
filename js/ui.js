@@ -104,8 +104,12 @@ const THEME_BG = { dark: '#141414', green: '#00A650', yellow: '#FFD400', arcade:
 /* 폰에서는 주소창이 접혔다 펴질 때 100dvh 가 실제로 보이는 높이와 어긋나, 셸이
    화면보다 짧아지면서 아래로 앱 바깥 배경(베이지)이 비칠 때가 있다. 뒷배경까지
    화면 색으로 칠해 두면 그 틈이 보이지 않는다. 데스크톱은 셸을 폰처럼 가운데
-   띄워 보여주는 화면이라 바깥을 칠하면 안 되므로 좁은 화면에서만 칠한다. */
-const narrow = window.matchMedia('(max-width: 479px)');
+   띄워 보여주는 화면이라 바깥을 칠하면 안 되므로 좁은 화면에서만 칠한다.
+
+   조건은 app.css 의 '폰 카드' 미디어쿼리와 짝이다 — 카드로 띄우지 않는 크기면
+   바깥도 화면 색으로 칠한다. 둘이 어긋나면 모서리가 각진 셸 옆으로 베이지가
+   비쳐 색이 안 칠해진 것처럼 보인다. */
+const narrow = window.matchMedia('(max-width: 479px), (max-height: 599px)');
 
 function paintBackdrop(name) {
   // body 에 칠한다. html 에 칠하면 body 가 자기 배경(--canvas)으로 그 위를 덮어
