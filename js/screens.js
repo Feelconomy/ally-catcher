@@ -596,7 +596,7 @@ const Screens = {
     const copy = {
       slip:    { k: 'SO CLOSE',    h: '집게에서 놓쳤어요',   s: '' },
       miss:    { k: 'JUST MISSED', h: '집게가 빗나갔어요',   s: '' },
-      empty:   { k: 'EMPTY',       h: '빈손으로 올라왔어요', s: '집게 아래에 인형이 없었어요' },
+      empty:   { k: 'AIR GRAB',    h: '공기만 꽉 잡았어요',  s: '집게 아래에 인형이 없었어요' },
       timeout: { k: 'TIME UP',     h: '시간이 다 됐어요',    s: '시간이 끝나 집게가 저절로 내려갔어요' },
     }[kind];
 
@@ -609,7 +609,7 @@ const Screens = {
 
         ${!doll || kind === 'timeout' || kind === 'empty' ? `
           <div class="prize empty-claw">
-            ${icon('circleExclamation', 64)}
+            ${emptyClawArt()}
           </div>
           <div class="slip-name dim">${esc(copy.s)}</div>`
         : `
@@ -1675,6 +1675,48 @@ function collectionCard(c) {
         ? ''
         : `<button class="btn sm btn--text colcard-go" data-act="playCol" data-id="${c.id}">${c.missing.length}마리 남음 · 뽑으러 가기 ${icon('chevronRight3', 11)}</button>`}
   </section>`;
+}
+
+/* 아무것도 못 잡고 올라온 판에 쓰는 그림. 경고 아이콘(!) 대신 게임에 나오는 그
+   집게가 빈 채로 꽉 다물려 있는 모습을 그린다 — 무슨 일이 있었는지 한눈에 읽히고,
+   '잘못했다' 가 아니라 '헛잡았다' 로 보인다. 밑의 점 세 개가 훑고 간 자리다.
+   색(줄·먼지)은 currentColor 라, 어두운 화면과 초록 화면에서 각각 맞춘다. */
+function emptyClawArt() {
+  return `<svg class="empty-claw-art" viewBox="0 0 160 160" role="img" aria-label="아무것도 잡지 못한 집게">
+    <defs>
+      <linearGradient id="ecArm" x1="0" y1="0" x2="1" y2=".4">
+        <stop offset="0" stop-color="#FFEE9B"/><stop offset=".5" stop-color="#FFD400"/><stop offset="1" stop-color="#B98F00"/>
+      </linearGradient>
+      <linearGradient id="ecHead" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#B98F00"/><stop offset=".26" stop-color="#FFE87A"/>
+        <stop offset=".6" stop-color="#FFD400"/><stop offset="1" stop-color="#9E7700"/>
+      </linearGradient>
+    </defs>
+
+    <!-- 매달린 줄 -->
+    <path d="M80 4 V28" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>
+    <rect x="72" y="26" width="16" height="15" rx="6" fill="url(#ecHead)"/>
+
+    <!-- 뒤쪽 발톱 — 몸통에 반쯤 가리게 먼저 그린다 -->
+    <path d="M80 52 C 87 78, 85 104, 80 120" fill="none" stroke="#9A7600" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- 몸통 -->
+    <rect x="47" y="40" width="66" height="23" rx="11" fill="url(#ecHead)"/>
+
+    <!-- 앞 발톱 둘. 가운데가 바깥으로 불룩해 사이가 텅 빈 게 보이고,
+         끝은 거의 맞닿아 '닫힌 채 올라왔다' 가 읽힌다. -->
+    <path d="M60 62 C 47 82, 57 104, 73 116" fill="none" stroke="url(#ecArm)" stroke-width="9.5" stroke-linecap="round"/>
+    <path d="M100 62 C 113 82, 103 104, 87 116" fill="none" stroke="url(#ecArm)" stroke-width="9.5" stroke-linecap="round"/>
+
+    <!-- 헛잡고 지나간 자리 -->
+    <g fill="currentColor">
+      <circle cx="80" cy="135" r="4" opacity=".55"/>
+      <circle cx="60" cy="143" r="2.8" opacity=".38"/>
+      <circle cx="100" cy="143" r="2.8" opacity=".38"/>
+      <circle cx="72" cy="150" r="1.9" opacity=".24"/>
+      <circle cx="90" cy="150" r="1.9" opacity=".24"/>
+    </g>
+  </svg>`;
 }
 
 /** Turns a 0–100 aim score into advice the player can act on. */
