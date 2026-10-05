@@ -1752,6 +1752,8 @@ a:hover { color: var(--green-deep); }
 /* Cut-out shaped to the single-axis lever. */
 /* 조작대 자리는 Play.coach() 가 실측해서 인라인으로 넣는다. */
 .coach .hole.coach-lever { border-radius: 24px; }
+/* 3D 튜토리얼 — 강조할 자리가 스틱·버튼·칩줄로 제각각이라 coach3D() 가 실측해 넣는다. */
+.coach .hole.coach-3d { border-radius: 18px; }
 .coach .bubble { position: absolute; width: 250px; background: #fff; border-radius: var(--r-xl); padding: 16px 18px; }
 .coach .bubble .step { font-size: 11px; font-weight: 700; color: var(--green); letter-spacing: .06em; }
 .coach .bubble .t { margin-top: 7px; font-size: 15px; font-weight: 700; letter-spacing: -.01em; }

@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=208').catch(() => { warmed = false; });
+    import('./play3d.js?v=210').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -87,7 +87,7 @@ async function startGreen3D(machine) {
   if (!document.getElementById('loading3d')) screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=208');
+    const { Play3D } = await import('./play3d.js?v=210');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);
@@ -101,4 +101,81 @@ async function startGreen3D(machine) {
       Store.state.settings.skin = 'arcade'; Store.save(); Play.start(machine, 'arcade');
     };
   }
+}
+
+/* ── 3D 첫 판 튜토리얼 ───────────────────────────────────────────────
+   2D 의 Play.coach() 와 같은 모양이지만 조작이 달라 단계가 다르다
+   (레버 하나 → 조이스틱 + 드롭 버튼 + 시점 전환). 2D 를 먼저 해 봤더라도
+   3D 는 처음이면 다시 보여 줘야 해서 플래그도 따로 쓴다. */
+function coach3D(play) {
+  const steps = [
+    { sel: '#stick3d', t: '조이스틱으로 집게를 움직여요',
+      d: '손가락으로 스틱을 밀면 그 방향으로 집게가 갑니다. 앞뒤로도 움직여요.' },
+    { sel: '.green3d-target', t: '조준한 인형과 확률을 봐요',
+      d: '집게 아래에 걸린 인형 이름과 이번 판 확률이 여기 뜹니다. 아무것도 없으면 빈손으로 올라와요.' },
+    { sel: '.green3d-views', t: '시점을 바꿔 가며 맞춰요',
+      d: '위에서 보면 앞뒤 위치가, 정면에서 보면 좌우 위치가 잘 보여요.' },
+    { sel: '#drop3d', t: '드롭은 한 판에 한 번이에요',
+      d: '자리를 잡았으면 드롭을 누르세요. 시간이 끝나면 그 자리에서 저절로 내려갑니다.' },
+  ];
+
+  play.coaching = true;
+  const { node, close } = Overlay.open(`<div class="coach">
+    <div class="hole coach-3d"></div>
+    <div class="bubble">
+      <div class="step"></div><div class="t"></div><div class="d"></div>
+      <div class="ft">
+        <div class="dots"></div>
+        <button class="skip" data-act="skip">건너뛰기</button>
+        <button class="next" data-act="next">다음</button>
+      </div>
+    </div>
+  </div>`, null, { persistent: true });
+
+  $('.scrim', node).style.background = 'transparent';
+  const hole = $('.coach-3d', node), bubble = $('.bubble', node);
+  let i = 0;
+
+  /* 구멍과 말풍선 자리는 실제 요소를 재서 넣는다 — 조작대 높이가 기기마다 달라
+     CSS 로 박아 두면 어긋난다. 말풍선은 강조한 자리를 가리지 않는 쪽에 붙인다. */
+  const place = () => {
+    const el = document.querySelector(steps[i].sel), shell = shellEl().getBoundingClientRect();
+    if (!el) { hole.style.display = 'none'; return; }
+    hole.style.display = '';
+    const r = el.getBoundingClientRect();
+    Object.assign(hole.style, {
+      left: (r.left - shell.left - 6) + 'px', top: (r.top - shell.top - 6) + 'px',
+      width: (r.width + 12) + 'px', height: (r.height + 12) + 'px',
+    });
+    const above = r.top - shell.top > shell.height * 0.5;
+    const w = Math.min(250, shell.width - 32);
+    bubble.style.width = w + 'px';
+    bubble.style.left = Math.max(16, Math.min(
+      r.left - shell.left + r.width / 2 - w / 2, shell.width - w - 16)) + 'px';
+    bubble.style.top = above ? '' : (r.bottom - shell.top + 14) + 'px';
+    bubble.style.bottom = above ? (shell.bottom - r.top + 14) + 'px' : '';
+  };
+
+  const paint = () => {
+    $('.step', node).textContent = `STEP ${i + 1} / ${steps.length}`;
+    $('.t', node).textContent = steps[i].t;
+    $('.d', node).textContent = steps[i].d;
+    $('.dots', node).innerHTML = steps.map((_, k) => `<i class="${k === i ? 'on' : ''}"></i>`).join('');
+    $('.next', node).textContent = i === steps.length - 1 ? '시작' : '다음';
+    place();
+  };
+
+  const done = () => {
+    play.coaching = false;
+    Store.state.coach3dDone = true; Store.save();
+    window.removeEventListener('resize', place);
+    close();
+  };
+
+  window.addEventListener('resize', place);
+  bind(node, {
+    skip: done,
+    next: () => { if (i === steps.length - 1) done(); else { i++; paint(); } },
+  });
+  paint();
 }
