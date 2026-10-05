@@ -1193,7 +1193,6 @@ const Dialogs = {
   /* --- 32 보상 획득 ------------------------------------------------------ */
   reward(tickets, reason, machine, repaint) {
     const before = Store.state.tickets - tickets;
-    Sfx.play('coin');
     setTheme('');
     shellEl().style.background = '';
     (repaint || Screens.mission)();   // 보상 후 원래 있던 화면을 갱신

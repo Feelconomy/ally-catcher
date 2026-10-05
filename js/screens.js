@@ -532,7 +532,6 @@ const Screens = {
        떨어졌는데 그 인형이 카탈로그에서 빠지면서 화면이 통째로 깨졌다. */
     const d = DOLLS[dollId] || DOLLS[DOLL_IDS[0]];
     if (!d) { go('home'); return; }
-    Sfx.play('win');
     const gradeLabel = { N: '노멀 등급', R: '레어 등급', SR: 'SR 등급' }[d.grade];
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center">
@@ -583,7 +582,6 @@ const Screens = {
     const on = green ? 'onGreen' : 'onDark';
     const m = Play.machine || MACHINES[0];
     const next = Store.odds(m);
-    Sfx.play('fail');
     const attempt = App.lastAttempt || {};
     const doll = dollId && DOLLS[dollId];
     const bonus = Math.min(Store.state.failStreak * FAIL_BONUS, MAX_RATE - m.baseRate);
@@ -1153,7 +1151,6 @@ const Screens = {
         Store.save();
         el.setAttribute('aria-checked', String(Store.state.settings[k]));
         if (k === 'haptics' && Store.state.settings[k]) haptic(20);
-        if (k === 'sfx' && Store.state.settings[k]) Sfx.play('coin');   // 켜면 바로 들려 준다
       },
       logout: () => {
         // 로컬만 지우면 카카오 세션이 그대로 남아, 다음 실행 때 조용히 다시 로그인된다.
@@ -1364,6 +1361,11 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('관리자', { meta: dirty ? `${dirty}건 수정됨` : '' })}
+      <div style="margin:0 20px 14px" class="live-card" id="liveCard">
+        <span class="dot"></span>
+        <span class="n" id="liveN">…</span>
+        <span class="l" id="liveL">지금 접속 중</span>
+      </div>
       <div class="chiprow">
         <button class="chip" aria-pressed="${tab === 'dolls'}" data-act="tab" data-t="dolls">인형 ${DOLL_IDS.length}</button>
         <button class="chip" aria-pressed="${tab === 'machines'}" data-act="tab" data-t="machines">기계 ${MACHINES.length}</button>
@@ -1384,6 +1386,18 @@ const Screens = {
         </div>
       </div>
     </div>`;
+
+    /* 접속자 수는 숫자만 갈아 끼운다 — 화면을 다시 그리면 탭 위치가 튄다.
+       이 화면을 떠나면 App.unwatchLive 로 구독을 끊는다. */
+    App.unwatchLive?.();
+    App.unwatchLive = window.Presence ? Presence.watch((n, st) => {
+      const card = document.getElementById('liveCard');
+      if (!card) { App.unwatchLive?.(); App.unwatchLive = null; return; }
+      card.dataset.state = st;
+      document.getElementById('liveN').textContent = n == null ? '—' : n;
+      document.getElementById('liveL').textContent =
+        n == null ? (st === 'connecting' ? '접속자 수 확인 중' : '집계를 쓸 수 없어요') : '지금 접속 중';
+    }) : null;
 
     bind(screenEl(), {
       back: () => go('home'),

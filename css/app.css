@@ -1476,6 +1476,17 @@ a:hover { color: var(--green-deep); }
 .codex-grid > .unlocked:active { transform: scale(.95); }
 .codex-grid img { width: 56px; height: 56px; }
 
+/* 관리자 — 지금 접속 중인 사람 수. Realtime presence 라 숫자가 바로 바뀐다. */
+.live-card { display: flex; align-items: center; gap: 9px; padding: 13px 16px; border-radius: var(--r-xl); background: var(--surface); box-shadow: var(--shadow-card); }
+.live-card .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green-signal); flex-shrink: 0; animation: live-pulse 2s ease-in-out infinite; }
+.live-card .n { font-size: 20px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.live-card .l { font-size: 12px; font-weight: 600; color: var(--ink-45); }
+/* 집계가 안 되는 상태 — 0 명처럼 보이지 않게 회색으로 */
+.live-card[data-state="off"] .dot, .live-card[data-state="connecting"] .dot { background: var(--ink-25); animation: none; }
+.live-card[data-state="off"] .n { color: var(--ink-30); }
+@keyframes live-pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .live-card .dot { animation: none; } }
+
 /* 컬렉션 (29-1) — 인형통 하나를 다 모으면 보너스 */
 .chip .chip-dot { display: inline-block; width: 5px; height: 5px; margin-left: 5px; vertical-align: 2px; border-radius: 50%; background: var(--danger); }
 .chip[aria-pressed="true"] .chip-dot { background: #fff; }

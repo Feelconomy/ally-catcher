@@ -28,10 +28,9 @@ const DEFAULT_STATE = {
   bookmarks: [],
   recent: RECENT_SEEDS.slice(),
   nhLinked: false,
-  settings: { haptics: true, sfx: true, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
+  settings: { haptics: true, sfx: false, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
   notifications: { osGranted: false, missions: false, raffle: false, newMachine: false, marketing: false },
   coachDone: false,
-  sfxReady: false,        // 효과음이 생기기 전 저장분을 한 번 켜 주기 위한 표식
   coach3dDone: false,     // 3D 는 조작이 달라 튜토리얼을 따로 센다
   day: null,
   // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
@@ -64,11 +63,6 @@ const Store = {
     if (saved && saved.onboarded && saved.signupBonus === undefined) {
       this.state.signupBonus = true;
     }
-    /* 마이그레이션: 효과음이 아예 없던 시절의 저장분은 sfx:false 가 '껐다'가
-       아니라 그냥 기본값이다. 소리가 생긴 지금 한 번만 켜 준다 — 그 뒤에 끄면
-       sfxReady 가 저장돼 다시 켜지지 않는다. */
-    if (saved && !saved.sfxReady) this.state.settings.sfx = true;
-    this.state.sfxReady = true;
     // 마이그레이션: 프로필 대표가 차단된 옛 인형이면 허용 인형으로 바꾼다.
     if (this.state.account && typeof safeAvatar === 'function') {
       this.state.account.avatar = safeAvatar(this.state.account.avatar);

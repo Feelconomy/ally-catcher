@@ -265,6 +265,7 @@ const Sync = (function () {
     get suspended() { return suspended; },
     hydrate, savePlayer, recordPrize, reconcilePrizes, flush, wipe,
     loadCatalog, saveCatalog,
+    deviceId: getDeviceId,       // 동시접속 집계가 기기당 한 명으로 세려고 쓴다
   };
 })();
 
