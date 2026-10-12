@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=238';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=238';
-import { GrabAnalyzer } from './claw/analyzer.js?v=238';
-import { ClawController, STATE } from './claw/controller.js?v=238';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=239';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=239';
+import { GrabAnalyzer } from './claw/analyzer.js?v=239';
+import { ClawController, STATE } from './claw/controller.js?v=239';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -52,74 +52,11 @@ const CHUTE = { x: -.89, z: .53 };
 const CLAW_REACH = .31;
 /* 조준 광선: 인형과 통 바닥은 맞고 집게는 지나친다 (집게 필터가 TOY 만 받는다). */
 const AIM_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
-const AIM_SEG = 26;                      // 테두리를 나눌 조각 수 — 조각마다 광선 한 발
-const AIM_R = .255;                      // 빛 웅덩이 반지름
+const AIM_SEG = 28;                      // 링을 나눌 조각 수 — 조각마다 광선을 한 번 쏜다
+const AIM_R_IN = .150, AIM_R_OUT = .188, AIM_R_MID = (AIM_R_IN + AIM_R_OUT) / 2;
 /* 조각 높이를 가운데에서 이만큼까지만 벌린다. 인형 가장자리를 넘어가면 표면이
-   뚝 떨어지는데, 그대로 두면 자국이 절벽처럼 늘어져 하나로 안 읽힌다. */
+   뚝 떨어지는데, 그대로 두면 링이 절벽처럼 늘어져 하나의 자국으로 안 읽힌다. */
 const AIM_SPREAD = .13;
-
-/* 조준 자국의 그림. 가는 철사 같은 링 대신, 가운데가 따뜻하게 차오르고 테두리가
-   또렷한 '빛 웅덩이' 한 장을 그려 텍스처로 쓴다. 안쪽 십자는 정확히 어느 점으로
-   내려가는지 짚어 준다. 캔버스로 한 번만 그리면 되고, 모양을 고치려면 여기만 본다. */
-/* 바닥에 깔린 자국은 이 게임의 낮은 카메라에서 납작하게 눌려(90px 폭이 25px 로)
-   잘 안 읽힌다. 그래서 착지점 바로 위에 늘 정면을 보는 핀을 띄운다 — 각도와
-   상관없이 같은 크기로 보이고, 어느 인형 위에 떨어지는지 한눈에 짚어 준다. */
-function aimPinTexture() {
-  const W = 192, H = 256, c = document.createElement('canvas');
-  c.width = W; c.height = H;
-  const g = c.getContext('2d');
-  g.shadowColor = 'rgba(0,60,30,.45)'; g.shadowBlur = 16; g.shadowOffsetY = 4;
-  // 물방울 모양 — 둥근 머리에 아래로 뾰족한 꼭지
-  const cx = W / 2, cy = H * .38, r = W * .30;
-  g.beginPath();
-  g.arc(cx, cy, r, Math.PI * .82, Math.PI * .18);
-  g.quadraticCurveTo(cx + r * .62, cy + r * 1.25, cx, H * .93);
-  g.quadraticCurveTo(cx - r * .62, cy + r * 1.25, cx - r * Math.cos(Math.PI * .18), cy + r * Math.sin(Math.PI * .18));
-  g.closePath();
-  g.fillStyle = '#00A650'; g.fill();
-  g.shadowColor = 'transparent';
-  g.lineWidth = W * .045; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke();
-  // 안쪽 아래 화살표 — '여기로 내려간다'
-  g.fillStyle = '#fff';
-  g.beginPath();
-  g.moveTo(cx - r * .42, cy - r * .22);
-  g.lineTo(cx + r * .42, cy - r * .22);
-  g.lineTo(cx, cy + r * .42);
-  g.closePath(); g.fill();
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
-
-function aimTexture() {
-  const S = 256, c = document.createElement('canvas');
-  c.width = c.height = S;
-  const g = c.getContext('2d'), m = S / 2;
-  /* 노란 반투명은 파스텔 인형 위에서 대비가 없어 묻혔다. 집게가 드리운 그림자처럼
-     어둡게 깔고, 테두리만 브랜드 초록으로 또렷하게 긋는다 — 밝은 인형에도 흰
-     진열대에도 똑같이 보인다. 화면에서 이 자국은 폭 90px 쯤이고 비스듬히 보여
-     세로로 눌리니, 가는 선은 쓰지 않는다. */
-  const pool = g.createRadialGradient(m, m, 0, m, m, m);
-  pool.addColorStop(0, 'rgba(0,70,36,.30)');
-  pool.addColorStop(.58, 'rgba(0,70,36,.20)');
-  pool.addColorStop(.74, 'rgba(0,70,36,.10)');
-  pool.addColorStop(1, 'rgba(0,70,36,0)');
-  g.fillStyle = pool; g.beginPath(); g.arc(m, m, m, 0, 7); g.fill();
-  // 테두리 — 바깥은 짙은 초록, 안쪽은 밝은 초록. 두 겹이라 어떤 바탕에서도 끊겨 보인다
-  g.lineWidth = S * .10; g.strokeStyle = 'rgba(0,70,36,.85)';
-  g.beginPath(); g.arc(m, m, m * .74, 0, 7); g.stroke();
-  g.lineWidth = S * .055; g.strokeStyle = 'rgba(93,230,150,1)';
-  g.beginPath(); g.arc(m, m, m * .74, 0, 7); g.stroke();
-  // 가운데 심지 — 집게가 내려갈 바로 그 점
-  const core = g.createRadialGradient(m, m, 0, m, m, m * .17);
-  core.addColorStop(0, 'rgba(226,255,238,.95)');
-  core.addColorStop(.6, 'rgba(93,230,150,.55)');
-  core.addColorStop(1, 'rgba(93,230,150,0)');
-  g.fillStyle = core; g.beginPath(); g.arc(m, m, m * .17, 0, 7); g.fill();
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
-}
 const RANGE = { x: 1.24 - CLAW_REACH - .02, zMin: -.90 + CLAW_REACH + .02, zMax: .91 - CLAW_REACH - .02 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
    집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
@@ -323,40 +260,28 @@ export const Play3D = {
     if (this.assets.Claw) this.assets.Claw.visible = false;
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
-    /* 조준 표시. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보이고,
-       통째로 기울인 판은 인형 위에 얹힌 것처럼 보였다. 가운데 한 발 + 테두리
-       조각마다 한 발씩 광선을 쏴, 각자 그 자리의 표면 높이에 붙인다 — 인형 등의
-       굴곡을 따라 빛이 떨어진 자국이 된다.
+    /* 조준 표시. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보인다.
+       링을 통째로 기울이는 것도 결국 납작한 판이라 인형 위에 얹힌 것처럼 보였다.
+       그래서 링을 조각으로 나눠, 조각마다 바로 아래로 광선을 쏴 그 자리의 표면
+       높이에 붙인다 — 인형 등의 울퉁불퉁한 굴곡을 따라 그린 자국이 된다.
 
        깊이 검사는 끈다(depthTest:false). 표면에 붙여도 앞줄 인형에 가리는 각도가
-       남는데, 조준 표시는 가려지면 쓸모가 없다. */
-    const fanIdx = [];
-    for (let i = 0; i < AIM_SEG; i++) fanIdx.push(0, 1 + i, 1 + (i + 1) % AIM_SEG);
-    const fanGeo = new THREE.BufferGeometry();
-    const fanUV = new Float32Array((AIM_SEG + 1) * 2);
-    fanUV[0] = fanUV[1] = .5;
+       남는데, 조준 표시는 가려지면 쓸모가 없다. 색은 파스텔 더미에서 묻히지 않게
+       노랑 — 2D 의 노란 조준 빔과 같은 말이다. */
+    const aimMat = (o) => new THREE.MeshBasicMaterial(Object.assign(
+      { color: 0xFFC400, transparent: true, side: THREE.DoubleSide, depthWrite: false, depthTest: false }, o));
+    const ringIdx = [];
     for (let i = 0; i < AIM_SEG; i++) {
-      const a = (i / AIM_SEG) * Math.PI * 2;
-      fanUV[(1 + i) * 2] = .5 + Math.cos(a) * .5;
-      fanUV[(1 + i) * 2 + 1] = .5 + Math.sin(a) * .5;
+      const a = i * 2, b = ((i + 1) % AIM_SEG) * 2;
+      ringIdx.push(a, a + 1, b + 1, a, b + 1, b);
     }
-    fanGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array((AIM_SEG + 1) * 3), 3));
-    fanGeo.setAttribute('uv', new THREE.BufferAttribute(fanUV, 2));
-    fanGeo.setIndex(fanIdx);
-    this.aimTex = aimTexture();
-    this.shadow = new THREE.Mesh(fanGeo, new THREE.MeshBasicMaterial({
-      map: this.aimTex, transparent: true, side: THREE.DoubleSide,
-      depthWrite: false, depthTest: false,
-    }));
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(AIM_SEG * 6), 3));
+    ringGeo.setIndex(ringIdx);
+    this.shadow = new THREE.Mesh(ringGeo, aimMat({ opacity: .95 }));
     this.shadow.frustumCulled = false;               // 좌표를 직접 넣어 경계상자가 없다
     this.shadow.renderOrder = 990; this.scene.add(this.shadow);
-    this.aimPin = new THREE.Sprite(new THREE.SpriteMaterial({
-      map: aimPinTexture(), transparent: true, depthWrite: false, depthTest: false,
-    }));
-    this.aimPin.scale.set(.27, .36, 1);
-    this.aimPin.center.set(.5, 0);                   // 꼭지 끝이 착지점을 가리킨다
-    this.aimPin.renderOrder = 992; this.scene.add(this.aimPin);
-    this.aimH = new Float32Array(AIM_SEG + 1);       // [0]=가운데, 나머지는 테두리
+    this.aimH = new Float32Array(AIM_SEG);           // 조각별 높이 (부드럽게 따라간다)
     this.aimSettled = false;
     await initRapier();                       // wasm 준비 (두 번째부터는 즉시 반환)
     if (!this.active || session !== this.session) return;
@@ -666,28 +591,25 @@ export const Play3D = {
     this.cable.position.copy(top).addScaledVector(span, .5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), span.clone().normalize());
     const aiming = this.phase === 'aim';
-    this.shadow.visible = this.aimPin.visible = aiming;
+    this.shadow.visible = aiming;
     if (aiming) {
-      /* 가운데와 테두리 조각마다 바로 아래로 광선을 쏴 표면 높이에 붙인다. 면이
-         울퉁불퉁해 높이가 프레임마다 튀므로 천천히 따라가게 하고(판이 시작될 땐
-         바로 붙인다), 가운데에서 너무 벗어나면 잘라 하나의 자국으로 둔다. */
+      /* 조각마다 바로 아래로 광선을 쏴 그 자리의 표면 높이에 붙인다. 면이
+         울퉁불퉁해 높이가 프레임마다 튀므로 천천히 따라가게 하고(처음 한 번은
+         바로 붙인다), 가운데 높이에서 너무 벗어나면 잘라 하나의 자국으로 둔다. */
       const mid = this.pw.surfaceBelow(cl.x, cl.z, 2.6, AIM_FILTER) ?? 0;
       const k = this.aimSettled ? 1 - Math.exp(-dt * 16) : 1;
       const pos = this.shadow.geometry.attributes.position;
-      this.aimH[0] += (mid - this.aimH[0]) * k;
-      pos.setXYZ(0, cl.x, this.aimH[0] + .008, cl.z);
       for (let i = 0; i < AIM_SEG; i++) {
         const a = (i / AIM_SEG) * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
-        const h = this.pw.surfaceBelow(cl.x + cs * AIM_R, cl.z + sn * AIM_R, 2.6, AIM_FILTER);
+        const h = this.pw.surfaceBelow(cl.x + cs * AIM_R_MID, cl.z + sn * AIM_R_MID, 2.6, AIM_FILTER);
         const want = clamp(h ?? mid, mid - AIM_SPREAD, mid + AIM_SPREAD);
-        this.aimH[1 + i] += (want - this.aimH[1 + i]) * k;
-        pos.setXYZ(1 + i, cl.x + cs * AIM_R, this.aimH[1 + i] + .008, cl.z + sn * AIM_R);
+        this.aimH[i] += (want - this.aimH[i]) * k;
+        const y = this.aimH[i] + .008;               // 표면에 살짝 띄워 겹침을 피한다
+        pos.setXYZ(i * 2,     cl.x + cs * AIM_R_IN,  y, cl.z + sn * AIM_R_IN);
+        pos.setXYZ(i * 2 + 1, cl.x + cs * AIM_R_OUT, y, cl.z + sn * AIM_R_OUT);
       }
       this.aimSettled = true;
       pos.needsUpdate = true;
-      // 핀은 착지점 바로 위에서 천천히 오르내린다 — 멈춰 있어도 살아 있어 보인다
-      this.aimPin.position.set(cl.x, this.aimH[0] + .035 + Math.sin(now / 520) * .018, cl.z);
-      this.shadow.material.opacity = .9 + Math.sin(now / 520) * .1;
     } else this.aimSettled = false;                  // 다음 판엔 새 자리에 바로 붙는다
 
     this.orbit.update();this.renderer.render(this.scene,this.camera);
