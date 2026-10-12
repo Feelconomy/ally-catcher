@@ -18,10 +18,20 @@ const App = {
   splashTimers: null,
   levelUpTo: 0,
   lastAttempt: null,   // { dollId, accuracy, kind } from the last drop
+  pendingRoute: null,  // 인증 확정을 기다리는 동안 보류한 목적지 { route, arg }
 
   /** Routes that need an account before they will render. */
   guarded: ['play', 'loading', 'mission', 'exchange', 'entries', 'nh-link', 'settings', 'notif'],
 };
+
+/* 카카오 세션 복원은 비동기라, 로그인 직후 새로고침된 화면에서는 account 가
+   잠깐 비어 있다. 이 창에서 guarded 라우트로 가면 로그인 화면이 깜빡이므로,
+   인증이 확정될 때까지(__authReady) 목적지를 보류했다가 다시 시도한다. */
+function resolvePendingRoute() {
+  const p = App.pendingRoute;
+  App.pendingRoute = null;
+  if (p) render(p.route, p.arg);   // 이번엔 account/guest 가 확정된 상태로 가드를 탄다
+}
 
 function go(route, arg) {
   const next = arg ? `${route}/${encodeURIComponent(arg)}` : route;
@@ -42,7 +52,14 @@ function render(route, arg) {
   if (!Screens[route] && route !== 'play') route = 'home';
 
   if (App.guarded.includes(route) && !Store.state.account && !Store.state.guest) {
-    route = 'login'; arg = null;
+    if (window.Auth && Auth.enabled && !Auth.ready) {
+      // 인증 아직 확정 전 — 로그인으로 튕기지 말고 스플래시로 대기 후 원래 목적지로.
+      App.pendingRoute = { route, arg };
+      (window.__authReady || Promise.resolve()).then(resolvePendingRoute);
+      route = 'splash'; arg = null;
+    } else {
+      route = 'login'; arg = null;
+    }
   }
 
   App.route = route;

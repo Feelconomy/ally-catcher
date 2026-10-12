@@ -20,6 +20,7 @@ const sb = (cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY)
 const Auth = {
   client: sb,
   enabled: !!sb,
+  ready: false,   // 최초 세션 확정(INITIAL_SESSION 처리) 전에는 false — 라우트 가드가 이걸 기다린다
   user: null,
 
   nickname() {
@@ -79,13 +80,16 @@ function applySession(session, event) {
   // 기존 회원이 재지급받는 버그가 생긴다.
   Store.save();
   const curRoute = (typeof App !== 'undefined') ? App.route : null;
-  if (typeof go === 'function' && ['login', 'splash', null, undefined].includes(curRoute)) {
+  // guarded 라우트를 기다리느라 보류 중이면(App.pendingRoute) 그쪽 흐름이 목적지를
+  // 정하므로 여기서 홈으로 가로채지 않는다.
+  const pending = (typeof App !== 'undefined') && App.pendingRoute;
+  if (typeof go === 'function' && !pending && ['login', 'splash', null, undefined].includes(curRoute)) {
     go('home');
   }
 }
 
 async function boot() {
-  if (!sb) { markReady(); window.dispatchEvent(new Event('auth-ready')); return; }
+  if (!sb) { Auth.ready = true; markReady(); window.dispatchEvent(new Event('auth-ready')); return; }
   try {
     // 리다이렉트로 돌아온 경우 detectSessionInUrl 이 URL을 처리한 뒤 세션을 준다.
     const { data } = await sb.auth.getSession();
@@ -93,6 +97,8 @@ async function boot() {
   } catch (e) {
     console.warn('auth getSession 실패:', e && e.message);
   }
+  // 세션 유무가 확정됨 — 이제부터 가드가 로그인 여부로 판정해도 안전하다.
+  Auth.ready = true;
   // OAuth 흔적(code/error) 제거 — 새로고침 시 '사용된 code' 재교환으로 꼬이는 것 방지
   if (/[?&](code|error|error_description)=/.test(location.search)) {
     history.replaceState(null, '', location.origin + location.pathname + location.hash);
