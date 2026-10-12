@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=232';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=232';
-import { GrabAnalyzer } from './claw/analyzer.js?v=232';
-import { ClawController, STATE } from './claw/controller.js?v=232';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=233';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=233';
+import { GrabAnalyzer } from './claw/analyzer.js?v=233';
+import { ClawController, STATE } from './claw/controller.js?v=233';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -52,12 +52,11 @@ const CHUTE = { x: -.89, z: .53 };
 const CLAW_REACH = .31;
 /* 조준 광선: 인형과 통 바닥은 맞고 집게는 지나친다 (집게 필터가 TOY 만 받는다). */
 const AIM_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
-/* 링을 면에 맞춰 눕히되 45° 까지만. 더 가면 거의 옆으로 서서 다시 안 보인다
-   — 인형 옆구리에 광선이 닿으면 실제 면은 70~80° 씩 기울어 있다. */
-const AIM_MIN_Y = Math.cos(0.79);
-const AIM_UP = new THREE.Vector3(0, 0, 1);   // RingGeometry 는 XY 평면에 있어 법선이 +Z 다
-const AIM_N = new THREE.Vector3();       // 매 프레임 쓰는 임시 벡터 (새로 만들지 않는다)
-const AIM_Q = new THREE.Quaternion();
+const AIM_SEG = 28;                      // 링을 나눌 조각 수 — 조각마다 광선을 한 번 쏜다
+const AIM_R_IN = .150, AIM_R_OUT = .188, AIM_R_MID = (AIM_R_IN + AIM_R_OUT) / 2;
+/* 조각 높이를 가운데에서 이만큼까지만 벌린다. 인형 가장자리를 넘어가면 표면이
+   뚝 떨어지는데, 그대로 두면 링이 절벽처럼 늘어져 하나의 자국으로 안 읽힌다. */
+const AIM_SPREAD = .13;
 const RANGE = { x: 1.24 - CLAW_REACH - .02, zMin: -.90 + CLAW_REACH + .02, zMax: .91 - CLAW_REACH - .02 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
    집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
@@ -262,24 +261,28 @@ export const Play3D = {
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
     /* 조준 표시. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보인다.
-       매 프레임 집게 아래로 광선을 쏴, 처음 닿는 표면(인형 윗면이든 바닥이든)
-       위에 올린다. 링이 올라앉은 높이가 곧 그 자리의 더미 높이라, 어디가 높고
-       어디가 낮은지도 같이 읽힌다. 가는 세로줄은 집게와 그 지점을 이어 준다. */
-    /* 깊이 검사를 끈다(depthTest:false). 표면 위에 올려 놔도 앞줄 인형에 가려
-       안 보이는 각도가 생기는데, 조준 표시는 가려지면 쓸모가 없다. 인형 위로
-       비쳐 보이게 두고, 대신 색을 노랑으로 해 파스텔 더미에서 바로 눈에 띈다
-       (2D 의 노란 조준 빔과 같은 말을 쓴다). */
+       링을 통째로 기울이는 것도 결국 납작한 판이라 인형 위에 얹힌 것처럼 보였다.
+       그래서 링을 조각으로 나눠, 조각마다 바로 아래로 광선을 쏴 그 자리의 표면
+       높이에 붙인다 — 인형 등의 울퉁불퉁한 굴곡을 따라 그린 자국이 된다.
+
+       깊이 검사는 끈다(depthTest:false). 표면에 붙여도 앞줄 인형에 가리는 각도가
+       남는데, 조준 표시는 가려지면 쓸모가 없다. 색은 파스텔 더미에서 묻히지 않게
+       노랑 — 2D 의 노란 조준 빔과 같은 말이다. */
     const aimMat = (o) => new THREE.MeshBasicMaterial(Object.assign(
       { color: 0xFFC400, transparent: true, side: THREE.DoubleSide, depthWrite: false, depthTest: false }, o));
-    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.165,.195,44), aimMat({ opacity: .95 }));
+    const ringIdx = [];
+    for (let i = 0; i < AIM_SEG; i++) {
+      const a = i * 2, b = ((i + 1) % AIM_SEG) * 2;
+      ringIdx.push(a, a + 1, b + 1, a, b + 1, b);
+    }
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(AIM_SEG * 6), 3));
+    ringGeo.setIndex(ringIdx);
+    this.shadow = new THREE.Mesh(ringGeo, aimMat({ opacity: .95 }));
+    this.shadow.frustumCulled = false;               // 좌표를 직접 넣어 경계상자가 없다
     this.shadow.renderOrder = 990; this.scene.add(this.shadow);
-    this.aimNormal = new THREE.Vector3(0, 1, 0);     // 링이 현재 누워 있는 방향
-    /* 가운데 점은 구슬이다 — 납작한 원은 '정면' 시점에서 옆으로 누워 사라진다.
-       구슬은 어느 각도에서나 보여, 줄이 끝나는 자리가 늘 읽힌다. */
-    this.aimDot = new THREE.Mesh(new THREE.SphereGeometry(.028,14,10), aimMat({ opacity: .85 }));
-    this.aimDot.renderOrder = 991; this.scene.add(this.aimDot);
-    this.aimLine = new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,1,8), aimMat({ opacity: .42 }));
-    this.aimLine.renderOrder = 989; this.scene.add(this.aimLine);
+    this.aimH = new Float32Array(AIM_SEG);           // 조각별 높이 (부드럽게 따라간다)
+    this.aimSettled = false;
     await initRapier();                       // wasm 준비 (두 번째부터는 즉시 반환)
     if (!this.active || session !== this.session) return;
     this.buildPhysics(); this.stockToys();
@@ -588,30 +591,26 @@ export const Play3D = {
     this.cable.position.copy(top).addScaledVector(span, .5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), span.clone().normalize());
     const aiming = this.phase === 'aim';
-    this.shadow.visible = this.aimDot.visible = this.aimLine.visible = aiming;
+    this.shadow.visible = aiming;
     if (aiming) {
-      /* 집게 바로 아래로 쏘고(집게 자신은 필터가 거른다), 맞은 면의 기울기에
-         링을 눕힌다 — 인형 등에 떨어졌는데 수평이면 위에 떠 있는 것처럼 보인다.
-         면이 울퉁불퉁해 normal 이 프레임마다 튀므로 천천히 따라가게 하고,
-         너무 가파르면(측면) 링이 옆으로 누워 안 보이니 기울기를 제한한다. */
-      const hit = this.pw.surfaceHitBelow(cl.x, cl.z, 2.6, AIM_FILTER);
-      const y = (hit ? hit.y : 0) + .018;
-      const raw = hit ? AIM_N.set(hit.nx, hit.ny, hit.nz).normalize() : AIM_N.set(0, 1, 0);
-      if (raw.y < AIM_MIN_Y) {                       // 60° 넘게 기울면 그만큼만
-        raw.y = AIM_MIN_Y;
-        const h = Math.hypot(raw.x, raw.z) || 1, k = Math.sqrt(1 - AIM_MIN_Y * AIM_MIN_Y) / h;
-        raw.x *= k; raw.z *= k;
+      /* 조각마다 바로 아래로 광선을 쏴 그 자리의 표면 높이에 붙인다. 면이
+         울퉁불퉁해 높이가 프레임마다 튀므로 천천히 따라가게 하고(처음 한 번은
+         바로 붙인다), 가운데 높이에서 너무 벗어나면 잘라 하나의 자국으로 둔다. */
+      const mid = this.pw.surfaceBelow(cl.x, cl.z, 2.6, AIM_FILTER) ?? 0;
+      const k = this.aimSettled ? 1 - Math.exp(-dt * 16) : 1;
+      const pos = this.shadow.geometry.attributes.position;
+      for (let i = 0; i < AIM_SEG; i++) {
+        const a = (i / AIM_SEG) * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
+        const h = this.pw.surfaceBelow(cl.x + cs * AIM_R_MID, cl.z + sn * AIM_R_MID, 2.6, AIM_FILTER);
+        const want = clamp(h ?? mid, mid - AIM_SPREAD, mid + AIM_SPREAD);
+        this.aimH[i] += (want - this.aimH[i]) * k;
+        const y = this.aimH[i] + .008;               // 표면에 살짝 띄워 겹침을 피한다
+        pos.setXYZ(i * 2,     cl.x + cs * AIM_R_IN,  y, cl.z + sn * AIM_R_IN);
+        pos.setXYZ(i * 2 + 1, cl.x + cs * AIM_R_OUT, y, cl.z + sn * AIM_R_OUT);
       }
-      this.aimNormal.lerp(raw, 1 - Math.exp(-dt * 12)).normalize();
-      AIM_Q.setFromUnitVectors(AIM_UP, this.aimNormal);
-      this.shadow.quaternion.copy(AIM_Q);
-      this.shadow.position.set(cl.x, y, cl.z).addScaledVector(this.aimNormal, .004);
-      this.aimDot.position.set(cl.x, y, cl.z).addScaledVector(this.aimNormal, .03);
-      const from = cl.y - .22;                       // 집게 발끝 바로 아래부터
-      const len = Math.max(.02, from - y);
-      this.aimLine.scale.y = len;
-      this.aimLine.position.set(cl.x, y + len / 2, cl.z);
-    }
+      this.aimSettled = true;
+      pos.needsUpdate = true;
+    } else this.aimSettled = false;                  // 다음 판엔 새 자리에 바로 붙는다
 
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
