@@ -302,7 +302,7 @@ function attachSheetSwipe(node, close) {
 /** Centred dialog. `body` is everything inside the card. */
 function dialog(body, onMount, opts) {
   const o = opts || {};
-  return Overlay.open(`<div class="dialog ${o.wide ? 'wide' : ''}" role="dialog" aria-modal="true">${body}</div>`,
+  return Overlay.open(`<div class="dialog ${o.wide ? 'wide' : ''} ${o.cls || ''}" role="dialog" aria-modal="true">${body}</div>`,
     onMount, opts);
 }
 

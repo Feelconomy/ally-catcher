@@ -7,6 +7,7 @@ const STORE_KEY = 'ppopgiwang.v1';
 const DEFAULT_STATE = {
   onboarded: false,
   signupBonus: false,     // 가입 축하 티켓 지급 여부 (1회만)
+  annivClaimed: false,    // 올원뱅크 10주년 이벤트 축하 티켓 수령 여부 (1회만)
   account: null,          // { provider, nickname, avatar }
   guest: false,           // 둘러보기로 들어온 상태 — 새로고침해도 유지돼야 한다
   terms: { service: false, privacy: false, age: false, marketing: false },

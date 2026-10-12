@@ -308,7 +308,8 @@ const Sheets = {
       <button class="btn btn--primary" style="margin-top:14px" data-act="charge">티켓 충전하기</button>
 
       <div style="margin-top:22px" class="group-label">화면 바로가기</div>
-      <button class="btn md btn--outline" data-act="onboarding">온보딩 처음부터 보기</button>
+      <button class="btn md btn--outline" data-act="anniv">🎉 10주년 이벤트 팝업 보기</button>
+      <button class="btn md btn--outline" style="margin-top:10px" data-act="onboarding">온보딩 처음부터 보기</button>
       <button class="btn md btn--outline" style="margin-top:10px" data-act="admin">관리자 페이지</button>
 
       <button class="btn md btn--text" style="margin-top:10px" data-close>닫기</button>`,
@@ -333,6 +334,7 @@ const Sheets = {
             toast(`티켓 ${amount}장을 충전했어요`, { tone: 'ok' });
             if (['home', 'mission', 'play'].includes(App.route)) Screens[App.route] && Screens[App.route]();
           },
+          anniv: () => { close(); Dialogs.anniv(); },
           onboarding: () => { close(); go('onboarding'); },
           admin: () => { close(); go('admin'); },
         });
@@ -947,6 +949,26 @@ async function makeBragCard(dollId) {
 }
 
 const Dialogs = {
+
+  /* --- 이벤트 팝업 (올원뱅크 10주년) ------------------------------------- */
+  anniv() {
+    const claimed = Store.state.annivClaimed;
+    dialog(`
+      <button class="event-x" data-close aria-label="닫기">${icon('close', 18)}</button>
+      <img class="event-kv" src="assets/event-anniv.webp?v=234" alt="올원뱅크 10주년 기념 이벤트">
+      <button class="btn md btn--primary event-cta" data-act="claim" ${claimed ? 'disabled' : ''}>
+        ${claimed ? '이미 받았어요' : `${icon('ticketFill', 18)}10주년 축하 티켓 ${ANNIV_TICKETS}장 받기`}
+      </button>`,
+      (node, close) => bind(node, {
+        claim: () => {
+          if (Store.state.annivClaimed) { close(); return; }
+          Store.state.annivClaimed = true;
+          Store.addTickets(ANNIV_TICKETS);   // save 까지 함
+          close();
+          toast(`10주년 축하 티켓 ${ANNIV_TICKETS}장을 받았어요! 🎉`, { tone: 'ok' });
+        },
+      }), { cls: 'event', scrim: 'deep' });
+  },
 
   /* --- 자랑 카드 --------------------------------------------------------- */
   async brag(dollId) {

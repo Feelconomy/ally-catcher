@@ -245,6 +245,7 @@ const COLLECTION_MIN_TICKETS = 3;
 const collectionTickets = (machine) =>
   Math.max(COLLECTION_MIN_TICKETS, Math.round((machine.contents || []).length / 2));
 const SIGNUP_TICKETS = 10;
+const ANNIV_TICKETS = 10;      // 올원뱅크 10주년 이벤트 축하 티켓 (계정당 1회)
 const AD_TICKETS = 1;
 const AD_DAILY_LIMIT = 3;
 const AD_SECONDS = 30;

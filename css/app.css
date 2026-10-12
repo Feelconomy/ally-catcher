@@ -1738,6 +1738,14 @@ a:hover { color: var(--green-deep); }
   background: #fff; border-radius: 24px; padding: 28px 24px 22px; text-align: center;
   animation: dialogIn .22s cubic-bezier(.2, .8, .3, 1);
 }
+/* 이벤트 팝업(10주년 KV): 패딩·배경 없이 이미지 풀블리드 + X + CTA */
+.dialog.event { width: min(330px, 82vw); padding: 0; background: transparent; }
+.dialog.event .event-kv { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 24px; box-shadow: 0 18px 44px rgba(0, 0, 0, .3); }
+.dialog.event .event-x {
+  position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
+  background: rgba(0, 0, 0, .42); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 2;
+}
+.dialog.event .event-cta { margin-top: 14px; width: 100%; }
 /* 팝업은 transform 으로 가운데를 잡는다. 공용 riseIn 은 transform 을 통째로
    바꿔서, 도는 동안 가운데 맞춤이 풀려 팝업이 오른쪽 아래에서 튀어나온 뒤
    가운데로 순간이동했다. 가운데 맞춤을 키프레임 안에도 넣어 둔다. */
