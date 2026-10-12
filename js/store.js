@@ -22,7 +22,7 @@ const DEFAULT_STATE = {
   collections: [],        // 보너스를 이미 받은 컬렉션(기계) id
   adsWatchedToday: 0,
   adVideoIdx: 0,          // 광고 영상 번갈아 재생용 인덱스
-  attendance: 5,
+  attendance: 1,          // 신규 가입자는 오늘 출석 1일차 → 7일 연속 출석 1/7 로 시작
   entries: [],            // raffle entries
   stock: {},              // machineId -> 남아 있는 인형 [dollId] (뽑으면 줄고, 비면 리필)
   bookmarks: [],
