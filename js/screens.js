@@ -1017,6 +1017,9 @@ const Screens = {
   my() {
     setTheme('');
     const acc = Store.state.account;
+    // '게스트' 계정(둘러보기 중 닉네임·프로필만 정한 상태)은 진짜 로그인이 아니다 —
+    // 로그인 안내 CTA 는 계속 보여 준다.
+    const signedIn = !!(acc && acc.provider !== '게스트');
     const values = {
       exchange: `${fmt(Store.state.points)}P`,
       entries: `${Store.pendingEntries()}건`,
@@ -1034,7 +1037,7 @@ const Screens = {
           </span>
           ${acc ? `<span class="edit">프로필 ${icon('chevronRight3', 12)}</span>` : ''}
         </button>
-        ${acc ? '' : `<button class="guest-cta" data-route="login">
+        ${signedIn ? '' : `<button class="guest-cta" data-route="login">
           <span>로그인하면 뽑은 인형과 티켓이<br>모든 기기에 안전하게 저장돼요</span>
           <b>${icon('logoKakao', 14)}로그인</b>
         </button>`}
@@ -1153,7 +1156,9 @@ const Screens = {
       },
       logout: () => {
         // 로컬만 지우면 카카오 세션이 그대로 남아, 다음 실행 때 조용히 다시 로그인된다.
-        Store.state.account = null; Store.save();
+        // guest 도 내린다 — 안 그러면 둘러보기 이력이 남아 로그아웃 상태인데도
+        // guarded 화면(미션·교환소 등)이 그대로 열린다.
+        Store.state.account = null; Store.state.guest = false; Store.save();
         window.Auth?.logout();
         Overlay.closeAll(); go('login');
       },

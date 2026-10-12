@@ -163,7 +163,10 @@ const Sheets = {
         brag: () => { close(); Dialogs.brag(d.id); },
         rep: () => {
           if (BLOCKED_AVATARS.includes(d.id)) return;   // 차단 인형은 프로필로 못 씀
-          if (Store.state.account) { Store.state.account.avatar = d.id; Store.save(); }
+          // 게스트도 대표를 바꿀 수 있게 계정이 없으면 만들어 준다(닉네임 변경과 동일).
+          // 전에는 account 가 없으면 조용히 무시하면서 토스트만 '바꿨어요'라 떠 거짓이었다.
+          if (!Store.state.account) Store.state.account = { provider: '게스트', avatar: DEFAULT_AVATAR };
+          Store.state.account.avatar = d.id; Store.save();
           close(); toast('프로필 대표 인형을 바꿨어요', { mini: true }); go('my');
         },
         trade: () => { close(); Dialogs.trade(d.id); },
@@ -269,7 +272,8 @@ const Sheets = {
             btn.style.boxShadow = agreed ? 'inset 0 0 0 1.5px var(--danger)' : '';
             btn.style.color = agreed ? 'var(--danger)' : '';
           },
-          go: () => { Store.reset(); close(); Overlay.closeAll(); toast('탈퇴가 완료됐어요', { mini: true }); go('splash'); },
+          // 카카오 세션도 내린다 — 안 그러면 다음 접속 때 세션이 남아 조용히 새 계정으로 재가입된다.
+          go: () => { Store.reset(); window.Auth?.logout(); close(); Overlay.closeAll(); toast('탈퇴가 완료됐어요', { mini: true }); go('splash'); },
         });
       });
   },
