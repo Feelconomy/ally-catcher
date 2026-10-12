@@ -564,7 +564,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen" style="align-items:center">
       ${statusbar()}
       <div class="result">
-        <div class="blob a"></div><div class="blob b"></div>
+        <div class="blobs"><div class="blob a"></div><div class="blob b"></div></div>
         <div class="kicker">GOT IT!</div>
         <h2>인형을 뽑았어요</h2>
         <div class="prize">${'<i class="cf"></i>'.repeat(12)}${dollImg(d.id, 172, '', 'win')}</div>
@@ -630,7 +630,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen" style="align-items:center;background:${green ? 'var(--green)' : 'var(--dark-soft)'}">
       ${statusbar()}
       <div class="result fail ${green ? 'arc' : ''}">
-        ${green ? '<div class="blob a"></div><div class="blob b"></div>' : ''}
+        ${green ? '<div class="blobs"><div class="blob a"></div><div class="blob b"></div></div>' : ''}
         <div class="kicker">${copy.k}</div>
         <h2>${copy.h}</h2>
 
