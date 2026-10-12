@@ -670,8 +670,8 @@ a:hover { color: var(--green-deep); }
 /* 원이 sits straight on the gradient — no plate behind it — and overhangs the
    card top and bottom so the whole machine reads as a sticker on the banner. */
 .promo .mascot {
-  width: 132px; height: auto; flex-shrink: 0;
-  margin: -30px -14px -34px 0;
+  width: 112px; height: auto; flex-shrink: 0;
+  margin: -14px -14px -16px 0;
   filter: drop-shadow(0 8px 14px rgba(0, 70, 34, .35));
 }
 
