@@ -560,6 +560,8 @@ const Screens = {
     const d = DOLLS[dollId] || DOLLS[DOLL_IDS[0]];
     if (!d) { go('home'); return; }
     const gradeLabel = { N: '노멀 등급', R: '레어 등급', SR: 'SR 등급' }[d.grade];
+    // 보관함 하단 '방금 뽑음' 바를 띄우기 위한 컨텍스트 (인형은 이미 자동 저장됨).
+    App.justWon = { dollId: d.id, machineId: (Play.machine || MACHINES[0]).id };
 
     screenEl().innerHTML = `<div class="screen" style="align-items:center">
       ${statusbar()}
@@ -584,7 +586,7 @@ const Screens = {
     </div>`;
 
     bind(screenEl(), {
-      keep: () => { go('storage'); toast('보관함에 담았어요', { tone: 'ok', action: '보기', onAction: () => go('storage') }); },
+      keep: () => go('storage'),   // 보관함 하단 '방금 담겼어요' 바가 확인을 대신한다
       brag: () => Dialogs.brag(d.id),
       again: () => {
         const m = Play.machine || MACHINES[0];
@@ -737,12 +739,25 @@ const Screens = {
           <button class="btn md auto btn--primary" style="margin-top:24px" data-tab="home">기계 보러 가기</button>
           <button class="btn sm auto btn--text" data-tab="mission">티켓 받는 방법 알아보기</button>
         </div>`}
+      ${App.justWon && DOLLS[App.justWon.dollId] ? `
+        <div class="justwon-bar">
+          <span class="jw-doll" style="background:${DOLLS[App.justWon.dollId].bg || 'var(--surface)'}">${dollImg(App.justWon.dollId, 30)}</span>
+          <span class="jw-txt">방금 <b>${esc(DOLLS[App.justWon.dollId].name)}</b>가 담겼어요 🎉</span>
+          <button class="jw-again" data-act="againWon">한 번 더</button>
+        </div>` : ''}
       ${tabbar('storage')}
     </div>`;
 
     bind(screenEl(), {
       f: el => { App.storageFilter = el.dataset.v; Screens.storage(); },
       doll: el => Sheets.dollDetail(el.dataset.id),
+      againWon: () => {
+        const mid = App.justWon && App.justWon.machineId;
+        const mc = MACHINES.find(x => x.id === mid) || Play.machine || MACHINES[0];
+        App.justWon = null;
+        if (!Store.canAfford(mc.cost)) { Sheets.ticketShort(mc); return; }
+        go('loading', mc.id);
+      },
     });
   },
 

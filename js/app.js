@@ -49,6 +49,10 @@ function render(route, arg) {
   Overlay.closeAll();
   shellEl().style.background = '';
 
+  // 뽑기 직후 보관함 상단에 '방금 뽑음 · 한 번 더' 바를 띄우는 플래그.
+  // 보관함을 벗어나면(한 번 더/홈 등) 지워 다음 방문 때 재노출되지 않게 한다.
+  if (route !== 'storage') App.justWon = null;
+
   if (!Screens[route] && route !== 'play') route = 'home';
 
   if (App.guarded.includes(route) && !Store.state.account && !Store.state.guest) {
