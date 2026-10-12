@@ -212,9 +212,22 @@ const Sync = (function () {
               if (drows && drows.length) {
                 playerId = drows[0].id;
                 const nick = (window.Auth && Auth.nickname && Auth.nickname()) || drows[0].nickname;
+                // 로그인 화면만 거쳐 생긴 '빈' 익명 행을 승계하는 경우, 이 기기는 아직
+                // 가입 보너스를 받은 적이 없다(signupBonus=false). 그러면 진짜 신규 가입과
+                // 똑같이 보너스 + 온보딩을 준다 — 안 그러면 10장도 못 받고 홈으로 직행한다.
+                const fresh = !Store.state.signupBonus;
                 return req('PATCH', 'players?id=eq.' + encodeURIComponent(playerId),
                   { auth_user_id: authUserId, nickname: nick })
-                  .then(() => applyRow(drows[0]));
+                  .then(() => applyRow(drows[0]))   // 서버 상태(티켓 등)를 먼저 로컬에 반영
+                  .then((res) => {
+                    // applyRow 가 티켓을 서버값으로 덮으므로 보너스는 '그 뒤에' 얹는다.
+                    if (fresh && Store.claimSignupBonus) {
+                      const n = Store.claimSignupBonus();   // 티켓 지급 + save()
+                      if (n) { App.freshSignup = n; savePlayer(); }   // 서버 행에도 티켓 반영
+                      if (typeof go === 'function' && ['home', 'login', 'splash'].includes(App.route)) go('onboarding');
+                    }
+                    return res;
+                  });
               }
               return createRow({ auth_user_id: authUserId });
             });
