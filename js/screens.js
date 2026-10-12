@@ -247,6 +247,16 @@ const Screens = {
       return true;
     });
     const left = Store.remainingMissions();
+    // 데일리 미션 카드 문구 — 남은 미션이 있으면 셋 중 랜덤으로 신나게.
+    const tk = Store.claimableTickets();
+    const PROMO_COPIES = [
+      `미션 깨고 🎯<br>티켓 ${tk}장 쓸어담기!`,
+      `오늘 미션 ${left}개만 더!<br>티켓 ${tk}장이 기다려요 🎁`,
+      `미션 ${left}개 클리어하면<br>티켓 ${tk}장 획득! 🔥`,
+    ];
+    const promoCopy = left
+      ? PROMO_COPIES[Math.floor(Math.random() * PROMO_COPIES.length)]
+      : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요';
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
@@ -264,7 +274,7 @@ const Screens = {
           <span class="body">
             <span class="copy">
               <span class="eyebrow">DAILY MISSION</span>
-              <span class="title">${left ? `오늘 미션 ${left}개 남음<br>티켓 ${Store.claimableTickets()}장 더 받기` : '오늘 미션 전부 완료!<br>내일 새 미션이 열려요'}</span>
+              <span class="title">${promoCopy}</span>
               <span class="prog"><i style="width:${(MISSIONS.length - left) / MISSIONS.length * 100}%"></i></span>
               <span class="cta">미션 하러 가기 ${icon('chevronRight3', 12)}</span>
             </span>
