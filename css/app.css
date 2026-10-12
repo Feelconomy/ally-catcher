@@ -705,7 +705,7 @@ a:hover { color: var(--green-deep); }
 .hero { height: 290px; flex-shrink: 0; position: relative; display: flex; align-items: center; justify-content: center; background: linear-gradient(160deg, #FFE9A8, var(--yellow)); }
 .hero.down { background: var(--canvas-alt); }
 .hero > .statusbar { position: absolute; top: 0; left: 0; right: 0; }
-.hero .back, .hero .act { position: absolute; top: 62px; width: 36px; height: 36px; border-radius: var(--r-md); background: rgba(255, 255, 255, .85); display: flex; align-items: center; justify-content: center; }
+.hero .back, .hero .act { position: absolute; top: calc(var(--safe-t) + 14px); width: 36px; height: 36px; border-radius: var(--r-md); background: rgba(255, 255, 255, .85); display: flex; align-items: center; justify-content: center; }
 .hero .back { left: 20px; } .hero .act { right: 20px; }
 .hero img { width: 168px; height: 168px; margin-top: 22px; animation: bob 3.4s ease-in-out infinite; }
 .hero-carousel { position: relative; width: 168px; height: 190px; margin-top: 22px; }
@@ -718,7 +718,7 @@ a:hover { color: var(--green-deep); }
 .hero.down img { width: 150px; filter: grayscale(1); opacity: .45; animation: none; }
 .hero .pill { position: absolute; bottom: 20px; padding: 7px 14px; border-radius: var(--r-chip); background: var(--ink); color: var(--yellow); font-size: 12px; font-weight: 700; }
 .hero .dots { position: absolute; bottom: 14px; }
-.detail-foot { flex-shrink: 0; padding: 14px 20px calc(32px + var(--safe-b)); background: var(--cream); box-shadow: 0 -1px 0 rgba(112, 115, 124, .12); display: flex; align-items: center; gap: 12px; }
+.detail-foot { flex-shrink: 0; padding: 14px 20px calc(16px + var(--safe-b)); background: var(--cream); box-shadow: 0 -1px 0 rgba(112, 115, 124, .12); display: flex; align-items: center; gap: 12px; }
 .detail-foot .bookmark { width: 44px; height: 52px; border-radius: 14px; background: var(--surface); box-shadow: var(--hairline); display: flex; align-items: center; justify-content: center; color: var(--ink-40); flex-shrink: 0; }
 .detail-foot .bookmark[aria-pressed="true"] { color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); }
 .doll-strip { margin-top: 11px; display: flex; gap: 10px; width: 100%; }
