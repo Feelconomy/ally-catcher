@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=230';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=230';
-import { GrabAnalyzer } from './claw/analyzer.js?v=230';
-import { ClawController, STATE } from './claw/controller.js?v=230';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=232';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=232';
+import { GrabAnalyzer } from './claw/analyzer.js?v=232';
+import { ClawController, STATE } from './claw/controller.js?v=232';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -52,6 +52,12 @@ const CHUTE = { x: -.89, z: .53 };
 const CLAW_REACH = .31;
 /* 조준 광선: 인형과 통 바닥은 맞고 집게는 지나친다 (집게 필터가 TOY 만 받는다). */
 const AIM_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
+/* 링을 면에 맞춰 눕히되 45° 까지만. 더 가면 거의 옆으로 서서 다시 안 보인다
+   — 인형 옆구리에 광선이 닿으면 실제 면은 70~80° 씩 기울어 있다. */
+const AIM_MIN_Y = Math.cos(0.79);
+const AIM_UP = new THREE.Vector3(0, 0, 1);   // RingGeometry 는 XY 평면에 있어 법선이 +Z 다
+const AIM_N = new THREE.Vector3();       // 매 프레임 쓰는 임시 벡터 (새로 만들지 않는다)
+const AIM_Q = new THREE.Quaternion();
 const RANGE = { x: 1.24 - CLAW_REACH - .02, zMin: -.90 + CLAW_REACH + .02, zMax: .91 - CLAW_REACH - .02 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
    집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
@@ -266,7 +272,8 @@ export const Play3D = {
     const aimMat = (o) => new THREE.MeshBasicMaterial(Object.assign(
       { color: 0xFFC400, transparent: true, side: THREE.DoubleSide, depthWrite: false, depthTest: false }, o));
     this.shadow = new THREE.Mesh(new THREE.RingGeometry(.165,.195,44), aimMat({ opacity: .95 }));
-    this.shadow.rotation.x = -Math.PI/2; this.shadow.renderOrder = 990; this.scene.add(this.shadow);
+    this.shadow.renderOrder = 990; this.scene.add(this.shadow);
+    this.aimNormal = new THREE.Vector3(0, 1, 0);     // 링이 현재 누워 있는 방향
     /* 가운데 점은 구슬이다 — 납작한 원은 '정면' 시점에서 옆으로 누워 사라진다.
        구슬은 어느 각도에서나 보여, 줄이 끝나는 자리가 늘 읽힌다. */
     this.aimDot = new THREE.Mesh(new THREE.SphereGeometry(.028,14,10), aimMat({ opacity: .85 }));
@@ -583,11 +590,23 @@ export const Play3D = {
     const aiming = this.phase === 'aim';
     this.shadow.visible = this.aimDot.visible = this.aimLine.visible = aiming;
     if (aiming) {
-      // 집게보다 조금 아래에서 쏜다 — 집게 자신은 필터가 걸러 준다
-      const surf = this.pw.surfaceBelow(cl.x, cl.z, 2.6, AIM_FILTER);
-      const y = (surf == null ? 0 : surf) + .018;
-      this.shadow.position.set(cl.x, y, cl.z);
-      this.aimDot.position.set(cl.x, y + .022, cl.z);
+      /* 집게 바로 아래로 쏘고(집게 자신은 필터가 거른다), 맞은 면의 기울기에
+         링을 눕힌다 — 인형 등에 떨어졌는데 수평이면 위에 떠 있는 것처럼 보인다.
+         면이 울퉁불퉁해 normal 이 프레임마다 튀므로 천천히 따라가게 하고,
+         너무 가파르면(측면) 링이 옆으로 누워 안 보이니 기울기를 제한한다. */
+      const hit = this.pw.surfaceHitBelow(cl.x, cl.z, 2.6, AIM_FILTER);
+      const y = (hit ? hit.y : 0) + .018;
+      const raw = hit ? AIM_N.set(hit.nx, hit.ny, hit.nz).normalize() : AIM_N.set(0, 1, 0);
+      if (raw.y < AIM_MIN_Y) {                       // 60° 넘게 기울면 그만큼만
+        raw.y = AIM_MIN_Y;
+        const h = Math.hypot(raw.x, raw.z) || 1, k = Math.sqrt(1 - AIM_MIN_Y * AIM_MIN_Y) / h;
+        raw.x *= k; raw.z *= k;
+      }
+      this.aimNormal.lerp(raw, 1 - Math.exp(-dt * 12)).normalize();
+      AIM_Q.setFromUnitVectors(AIM_UP, this.aimNormal);
+      this.shadow.quaternion.copy(AIM_Q);
+      this.shadow.position.set(cl.x, y, cl.z).addScaledVector(this.aimNormal, .004);
+      this.aimDot.position.set(cl.x, y, cl.z).addScaledVector(this.aimNormal, .03);
       const from = cl.y - .22;                       // 집게 발끝 바로 아래부터
       const len = Math.max(.02, from - y);
       this.aimLine.scale.y = len;

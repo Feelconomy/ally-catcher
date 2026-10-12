@@ -71,11 +71,22 @@ export class PhysicsWorld {
       filterGroups 는 (내 소속 << 16) | 맞출 대상 — 집게는 TOY 만 받으므로
       소속을 CLAW 로 주면 집게 자신은 맞지 않는다. */
   surfaceBelow(x, z, fromY, filterGroups) {
+    const hit = this.surfaceHitBelow(x, z, fromY, filterGroups);
+    return hit ? hit.y : null;
+  }
+
+  /** 위와 같지만 맞은 면의 기울기(normal)까지 준다. 인형 등 위에 표시를 얹을 때
+      그 면에 맞춰 눕히려고 쓴다 — 늘 수평이면 인형 위에 떠 있는 것처럼 보인다. */
+  surfaceHitBelow(x, z, fromY, filterGroups) {
     const ray = new this.R.Ray({ x, y: fromY, z }, { x: 0, y: -1, z: 0 });
-    const hit = this.world.castRay(ray, fromY + 1, true, undefined, filterGroups);
+    const hit = this.world.castRayAndGetNormal(ray, fromY + 1, true, undefined, filterGroups);
     if (!hit) return null;
     const t = hit.timeOfImpact ?? hit.toi;
-    return typeof t === 'number' ? fromY - t : null;
+    if (typeof t !== 'number') return null;
+    const n = hit.normal || { x: 0, y: 1, z: 0 };
+    // 광선이 아래로 가므로 맞은 면의 normal 은 위를 봐야 한다 (뒤집혀 오면 바로 세운다)
+    const flip = n.y < 0 ? -1 : 1;
+    return { y: fromY - t, nx: n.x * flip, ny: n.y * flip, nz: n.z * flip };
   }
 
   /** 두 collider 사이의 가장 깊은 침투 깊이(m). 관통 자동 검증용. */
