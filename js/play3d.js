@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=224';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=224';
-import { GrabAnalyzer } from './claw/analyzer.js?v=224';
-import { ClawController, STATE } from './claw/controller.js?v=224';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=226';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=226';
+import { GrabAnalyzer } from './claw/analyzer.js?v=226';
+import { ClawController, STATE } from './claw/controller.js?v=226';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -98,7 +98,7 @@ export const Play3D = {
        보기엔 흐물흐물해도 겨냥은 예측 가능하게 남긴다. */
     this.swing = new THREE.Vector2(); this.swingVel = new THREE.Vector2(); this.yaw = 0;
     this.clawPos = this.position.clone(); this.prevPos = this.position.clone();
-    this.gripT = 0;
+    this.gripT = 0; this.coaching = false;
     /* 준비 화면이 이미 떠 있으면 떼지 않고(애니메이션이 처음부터 다시 돌지 않게)
        그 뒤에 인형통을 깔고, 준비 화면은 위에 덮어 둔다. */
     const keep = document.getElementById('loading3d');
@@ -290,6 +290,8 @@ export const Play3D = {
     this.phase = 'aim'; this.status('뽑을 준비 완료'); document.getElementById('drop3d').disabled = false;
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
+    // 3D 가 처음이면 조작법을 한 번 짚어 준다. 그동안 남은 시간은 멈춘다.
+    if (!Store.state.coach3dDone) coach3D(this);
   },
 
   buildPhysics() {
@@ -507,8 +509,9 @@ export const Play3D = {
   update(now) {
     if(!this.active)return;
     const dt=clamp((now-this.previous)/1000,0,.05);this.previous=now;
+    if(this.coaching) this.input.set(0,0);          // 튜토리얼 중엔 조작도 멈춘다
     if(this.phase==='aim') {
-      this.time=Math.max(0,this.time-dt);
+      if(!this.coaching) this.time=Math.max(0,this.time-dt);
       // 레버를 밀면 곧바로 최고 속도가 되지 않고 천천히 실렸다가 천천히 멎는다
       /* 좌우 조작은 원래 속도 그대로 둔다 — 빠르게 했더니 조준이 어려웠다.
          내리고 올리는 속도만 빨라져 있다(아래 ClawController 설정). */
@@ -518,7 +521,7 @@ export const Play3D = {
       this.position.x=clamp(nx,-RANGE.x,RANGE.x); this.position.z=clamp(nz,RANGE.zMin,RANGE.zMax);
       if(nx!==this.position.x)this.velocity.x*=-.3;   // 끝에 닿으면 살짝 되튄다
       if(nz!==this.position.z)this.velocity.y*=-.3;
-      if(this.time<=0){this.timedOut=true;this.drop();}   // 시간이 끝나 저절로 내려간 판
+      if(this.time<=0&&!this.coaching){this.timedOut=true;this.drop();}   // 시간이 끝나 저절로 내려간 판
       const near=this.nearest();
       const id=near&&near.distance<.32?near.toy.id:null;
       if(id!==this.lastTarget){
@@ -570,7 +573,7 @@ export const Play3D = {
      세고 결과를 냈더니, 인형이 아직 떨어지는 중인데 실패 화면이 떠서 "제대로
      보여주지도 않고 실패시킨다"는 느낌을 줬다. */
   drop() {
-    if (this.phase !== 'aim') return;
+    if (this.phase !== 'aim' || this.coaching) return;   // 튜토리얼 중엔 내려가지 않는다
     this.phase = 'dropping';
     this.release(); this.velocity.set(0, 0);
     document.getElementById('drop3d').disabled = true;

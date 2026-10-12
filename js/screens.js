@@ -253,7 +253,6 @@ const Screens = {
       <div class="home-head">
         <button class="brandmark s" data-act="egg" aria-label="올리캐쳐"><img src="assets/logo-mark.png?v=120" alt="" width="30" height="30"></button>
         <button class="wordmark" data-act="egg">올리캐쳐</button>
-        <button class="iconbtn" data-route="search" aria-label="검색">${icon('search', 18)}</button>
         ${walletChip()}
       </div>
       <div class="chiprow">
@@ -597,7 +596,7 @@ const Screens = {
     const copy = {
       slip:    { k: 'SO CLOSE',    h: '집게에서 놓쳤어요',   s: '' },
       miss:    { k: 'JUST MISSED', h: '집게가 빗나갔어요',   s: '' },
-      empty:   { k: 'EMPTY',       h: '빈손으로 올라왔어요', s: '집게 아래에 인형이 없었어요' },
+      empty:   { k: 'AIR GRAB',    h: '공기만 꽉 잡았어요',  s: '집게 아래에 인형이 없었어요' },
       timeout: { k: 'TIME UP',     h: '시간이 다 됐어요',    s: '시간이 끝나 집게가 저절로 내려갔어요' },
     }[kind];
 
@@ -610,7 +609,7 @@ const Screens = {
 
         ${!doll || kind === 'timeout' || kind === 'empty' ? `
           <div class="prize empty-claw">
-            ${icon('circleExclamation', 64)}
+            ${emptyClawArt()}
           </div>
           <div class="slip-name dim">${esc(copy.s)}</div>`
         : `
@@ -687,7 +686,7 @@ const Screens = {
           <button class="chip sm" data-act="f" data-v="all"  aria-pressed="${filter === 'all'}">전체 ${total}</button>
           <button class="chip sm" data-act="f" data-v="rare" aria-pressed="${filter === 'rare'}">레어 ${rare}</button>
           <button class="chip sm" data-act="f" data-v="dupe" aria-pressed="${filter === 'dupe'}">중복 ${dupes}</button>
-          <button class="chip sm" data-route="codex">도감</button>
+          <button class="chip sm" data-route="codex">도감${Store.collectionsReady() ? '<span class="chip-dot"></span>' : ''}</button>
         </div>
         <div class="scroll pad">
           <div class="prize-grid">
@@ -723,36 +722,64 @@ const Screens = {
   /* --- 29 인형 도감 ------------------------------------------------------ */
   codex() {
     setTheme('');
+    const tab = App.codexTab === 'collection' ? 'collection' : 'all';
     const counts = Store.prizeCounts();
     const owned = Store.codexOwned();
     // The season roster is larger than the dolls in play; the rest stay locked.
     const lockedSlots = Math.max(0, CODEX_TOTAL - DOLL_IDS.length);
+    const cols = Store.collections().filter(c => c.ids.length);
+    const ready = cols.filter(c => c.done && !c.claimed).length;
+    const complete = cols.filter(c => c.claimed).length;
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('인형 도감')}
-      <div style="margin:0 20px 16px" class="card pad">
-        <div style="display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:13px;font-weight:700">수집률</span>
-          <span style="font-size:16px;font-weight:700;color:var(--green)">${owned} / ${CODEX_TOTAL}</span>
-        </div>
-        <div style="margin-top:11px">${meter((owned / CODEX_TOTAL) * 100, 'tall')}</div>
-        <div style="margin-top:9px;font-size:11px;font-weight:600;color:var(--ink-45)">시즌1 컬렉션 완성 시 티켓 ${CODEX_REWARD_TICKETS}장 지급</div>
+      <div class="chiprow" style="padding-bottom:12px">
+        <button class="chip sm" data-act="tab" data-t="all" aria-pressed="${tab === 'all'}">전체 ${owned}/${CODEX_TOTAL}</button>
+        <button class="chip sm" data-act="tab" data-t="collection" aria-pressed="${tab === 'collection'}">
+          컬렉션 ${complete}/${cols.length}${ready ? '<span class="chip-dot"></span>' : ''}</button>
       </div>
-      <div class="scroll pad">
-        <div class="codex-grid">
-          ${DOLL_IDS.map(id => counts[id]
-            ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
-            : `<div class="locked">${dollSilhouette(id, 50)}<span class="lk">${icon('lock', 10)}</span></div>`).join('')}
-          ${Array.from({ length: lockedSlots }, () => `<div class="locked soon">?</div>`).join('')}
+
+      ${tab === 'all' ? `
+        <div style="margin:0 20px 16px" class="card pad">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:13px;font-weight:700">수집률</span>
+            <span style="font-size:16px;font-weight:700;color:var(--green)">${owned} / ${CODEX_TOTAL}</span>
+          </div>
+          <div style="margin-top:11px">${meter((owned / CODEX_TOTAL) * 100, 'tall')}</div>
+          <div style="margin-top:9px;font-size:11px;font-weight:600;color:var(--ink-45)">시즌1 컬렉션 완성 시 티켓 ${CODEX_REWARD_TICKETS}장 지급</div>
         </div>
-        <div style="height:24px"></div>
-      </div>
+        <div class="scroll pad">
+          <div class="codex-grid">
+            ${DOLL_IDS.map(id => counts[id]
+              ? `<button class="unlocked" data-act="doll" data-id="${id}">${dollImg(id, 56)}</button>`
+              : `<div class="locked">${dollSilhouette(id, 50)}<span class="lk">${icon('lock', 10)}</span></div>`).join('')}
+            ${Array.from({ length: lockedSlots }, () => `<div class="locked soon">?</div>`).join('')}
+          </div>
+          <div style="height:24px"></div>
+        </div>`
+      : `
+        <div class="scroll pad" style="display:flex;flex-direction:column;gap:12px">
+          <p class="col-intro">인형통 하나에 들어 있는 인형을 전부 모으면 보너스 티켓을 드려요.</p>
+          ${cols.map(c => collectionCard(c)).join('')}
+          <div style="height:24px"></div>
+        </div>`}
     </div>`;
 
     bind(screenEl(), {
       back: () => go('storage'),
       doll: el => Sheets.dollDetail(el.dataset.id),
+      tab: el => { App.codexTab = el.dataset.t; Screens.codex(); },
+      claimCol: el => {
+        const n = Store.claimCollection(el.dataset.id);
+        if (!n) { Screens.codex(); return; }
+        const m = MACHINES.find(x => x.id === el.dataset.id);
+        Dialogs.reward(n, `${m.name} 컬렉션을 완성했어요`, m, () => Screens.codex());
+      },
+      playCol: el => {
+        const m = MACHINES.find(x => x.id === el.dataset.id);
+        if (m) go('machine', m.id);
+      },
     });
   },
 
@@ -901,7 +928,7 @@ const Screens = {
           <button class="top" style="width:100%;text-align:left" data-act="nh">
             <span class="nh-logo nh-logo--sm">NH</span>
             <span style="flex:1">
-              <span class="t" style="display:block">NH멤버스 포인트로 전환</span>
+              <span class="t" style="display:block">NH멤버스 포인트로 전환 <em class="soon">예정</em></span>
               <span class="s" style="display:block">농협 계열사 어디서나 현금처럼</span>
             </span>
             <span class="chev">${icon('chevronRight3', 16)}</span>
@@ -920,9 +947,9 @@ const Screens = {
           </div>
           <div class="cta">
             <button class="btn md ${convertible ? 'btn--nh' : 'btn--disabled'}" data-act="convert" ${convertible ? '' : 'disabled'}>
-              ${convertible ? `${fmt(convertible)}P 전환하기` : `${fmt(NH_MIN)}P부터 전환할 수 있어요`}
+              ${convertible ? `${fmt(convertible)}P 전환하기 (예정)` : `${fmt(NH_MIN)}P부터 전환할 수 있어요`}
             </button>
-            <div class="fine">NH멤버스 앱 연동 후 전환됩니다. 전환된 포인트는 되돌릴 수 없어요.</div>
+            <div class="fine">아직 NH멤버스와 실제로 연결되지 않았어요. 지금 보이는 전환 과정은 미리보기이고, 포인트는 그대로 남습니다.</div>
           </div>
         </div>
         <div style="height:24px"></div>
@@ -1080,7 +1107,7 @@ const Screens = {
           <div class="group-label">계정</div>
           <div class="card list">
             <div class="row"><span class="label">연결된 계정</span><span class="value">${esc(acc ? acc.provider : '게스트')}</span></div>
-            <div class="row"><span class="label">NH멤버스 연동</span><span class="value" style="color:${Store.state.nhLinked ? 'var(--nh-green)' : ''}">${Store.state.nhLinked ? '연동됨' : '미연동'}</span></div>
+            <div class="row"><span class="label">NH멤버스 연동</span><span class="value" style="color:${Store.state.nhLinked ? 'var(--nh-green)' : ''}">${Store.state.nhLinked ? '연동됨 (예정)' : '미연동'}</span></div>
             <button class="row" style="width:100%" data-act="rename"><span class="label" style="text-align:left">닉네임 변경</span><span class="chev">${icon('chevronRight3', 18)}</span></button>
           </div>
         </div>
@@ -1089,7 +1116,6 @@ const Screens = {
           <div class="group-label">앱</div>
           <div class="card list">
             ${toggleRow('haptics', '진동 피드백', s.haptics)}
-            ${toggleRow('sfx', '효과음', s.sfx)}
             ${toggleRow('dataSaver', '데이터 절약 모드', s.dataSaver)}
             <button class="row" style="width:100%" data-act="cache"><span class="label" style="text-align:left">캐시 삭제</span><span class="value">34.2MB</span></button>
           </div>
@@ -1126,7 +1152,9 @@ const Screens = {
         if (k === 'haptics' && Store.state.settings[k]) haptic(20);
       },
       logout: () => {
+        // 로컬만 지우면 카카오 세션이 그대로 남아, 다음 실행 때 조용히 다시 로그인된다.
         Store.state.account = null; Store.save();
+        window.Auth?.logout();
         Overlay.closeAll(); go('login');
       },
       withdraw: () => Sheets.withdraw(),
@@ -1160,7 +1188,7 @@ const Screens = {
     setTheme('');
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
-      ${appbar('NH멤버스 연동')}
+      ${appbar('NH멤버스 연동', { meta: '예정' })}
       <div style="margin:0 20px 18px;border-radius:var(--r-2xl);background:linear-gradient(100deg,var(--nh-green),var(--nh-green-deep));padding:24px 22px;color:#fff;display:flex;align-items:center;gap:14px">
         <span class="nh-logo nh-logo--md">NH</span>
         <div style="flex:1">
@@ -1190,13 +1218,15 @@ const Screens = {
           </span>
           <span style="margin-top:8px;font-size:11px;font-weight:600;color:var(--ink-45);display:block">문자를 받지 못했다면 재요청해 주세요</span>
         </label>
-        <div style="margin-top:4px;padding:14px;border-radius:14px;background:rgba(0,166,81,.07);font-size:11px;font-weight:600;line-height:1.6;color:var(--nh-green-deep)">
-          본인 확인을 위해 이름과 휴대폰 번호를 NH멤버스에 전달합니다. 동의 후에도 마이페이지에서 연동을 해제할 수 있어요.
+        <div class="soon-note">
+          <strong>아직 준비 중인 기능이에요</strong>
+          NH멤버스와 실제로 연결되지 않습니다. 입력한 이름과 번호는 어디로도 보내지 않고, 인증번호도 실제로 오지 않아요.
+          화면 흐름만 미리 보여 드립니다.
         </div>
       </div>
 
       <div style="padding:16px 20px calc(34px + var(--safe-b))">
-        <button class="btn btn--disabled" id="linkBtn" data-act="link" disabled>연동 완료하기</button>
+        <button class="btn btn--disabled" id="linkBtn" data-act="link" disabled>연동 완료하기 (예정)</button>
       </div>
     </div>`;
 
@@ -1220,7 +1250,7 @@ const Screens = {
         codeField.style.display = '';
         $('#nhCode').addEventListener('input', refresh);
         $('#nhCode').focus();
-        toast('인증번호를 보냈어요', { tone: 'ok' });
+        toast('인증번호를 보낸 것처럼 보여 드려요 (예정)', { tone: 'warn' });
         let left = 180;
         clearInterval(countdown);
         countdown = setInterval(() => {
@@ -1235,7 +1265,7 @@ const Screens = {
       link: () => {
         clearInterval(countdown);
         Store.state.nhLinked = true; Store.save();
-        toast('NH멤버스 계정을 연동했어요', { tone: 'ok' });
+        toast('연동된 것처럼 표시했어요 — 실제 연동은 예정이에요', { tone: 'warn' });
         go('exchange');
       },
     });
@@ -1254,14 +1284,15 @@ const Screens = {
         <div class="blob"></div>
         <span class="nh-logo nh-logo--lg">NH</span>
         <h2>전환이 끝났어요</h2>
+        <div class="soon-badge">예정 · 포인트는 그대로 남아 있어요</div>
         <div class="receipt">
-          <div class="ln"><span class="l">사용 포인트</span><span class="v">${fmt(used)}P</span></div>
+          <div class="ln"><span class="l">전환될 포인트</span><span class="v">${fmt(used)}P</span></div>
           <div class="hr"></div>
-          <div class="ln"><span class="l">받은 멤버스 포인트</span><span class="v big">${fmt(got)}P</span></div>
+          <div class="ln"><span class="l">받게 될 멤버스 포인트</span><span class="v big">${fmt(got)}P</span></div>
           <div class="txid">거래번호 ${esc(tx)}</div>
         </div>
         <div style="margin-top:auto;padding-bottom:calc(34px + var(--safe-b));width:100%;display:flex;flex-direction:column;gap:10px;position:relative">
-          <button class="btn btn--nh-gold" data-act="nhApp">NH멤버스 앱에서 확인</button>
+          <button class="btn btn--nh-gold" data-act="nhApp">NH멤버스 앱에서 확인 (예정)</button>
           <button class="btn md btn--translucent" data-act="back">교환소로 돌아가기</button>
         </div>
       </div>
@@ -1326,19 +1357,29 @@ const Screens = {
     const tab = App.adminTab || 'dolls';
     const a = Store.state.admin;
     const dirty = Object.keys(a.dolls).length + Object.keys(a.machines).length
-                + Object.keys(a.custom).length;
+                + Object.keys(a.custom).length + Object.keys(a.raffles || {}).length
+                + Object.keys(a.customRaffles || {}).length;
 
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       ${appbar('관리자', { meta: dirty ? `${dirty}건 수정됨` : '' })}
+      <div style="margin:0 20px 14px" class="live-card" id="liveCard">
+        <span class="dot"></span>
+        <span class="n" id="liveN">…</span>
+        <span class="l" id="liveL">지금 접속 중</span>
+      </div>
       <div class="chiprow">
         <button class="chip" aria-pressed="${tab === 'dolls'}" data-act="tab" data-t="dolls">인형 ${DOLL_IDS.length}</button>
         <button class="chip" aria-pressed="${tab === 'machines'}" data-act="tab" data-t="machines">기계 ${MACHINES.length}</button>
+        <button class="chip" aria-pressed="${tab === 'raffles'}" data-act="tab" data-t="raffles">추첨 ${RAFFLES.length}</button>
         <button class="chip" aria-pressed="${tab === 'screen'}" data-act="tab" data-t="screen">화면</button>
         <button class="chip" aria-pressed="${tab === 'loading'}" data-act="tab" data-t="loading">3D 로딩</button>
       </div>
       <div class="scroll pad">
-        ${tab === 'machines' ? adminMachineList() : tab === 'screen' ? adminSkinPicker() : tab === 'loading' ? adminLoadingPreview() : adminDollGrid()}
+        ${tab === 'machines' ? adminMachineList()
+          : tab === 'raffles' ? adminRaffleList()
+          : tab === 'screen' ? adminSkinPicker()
+          : tab === 'loading' ? adminLoadingPreview() : adminDollGrid()}
         ${tab === 'loading' ? '' : '<button class="btn md btn--outline" style="margin-top:18px" data-act="reset">전부 원래대로 되돌리기</button>'}
         <div style="margin:10px 0 6px;font-size:12px;font-weight:600;color:var(--ink-40);text-align:center">
           ${window.Sync && Sync.enabled
@@ -1347,6 +1388,18 @@ const Screens = {
         </div>
       </div>
     </div>`;
+
+    /* 접속자 수는 숫자만 갈아 끼운다 — 화면을 다시 그리면 탭 위치가 튄다.
+       이 화면을 떠나면 App.unwatchLive 로 구독을 끊는다. */
+    App.unwatchLive?.();
+    App.unwatchLive = window.Presence ? Presence.watch((n, st) => {
+      const card = document.getElementById('liveCard');
+      if (!card) { App.unwatchLive?.(); App.unwatchLive = null; return; }
+      card.dataset.state = st;
+      document.getElementById('liveN').textContent = n == null ? '—' : n;
+      document.getElementById('liveL').textContent =
+        n == null ? (st === 'connecting' ? '접속자 수 확인 중' : '집계를 쓸 수 없어요') : '지금 접속 중';
+    }) : null;
 
     bind(screenEl(), {
       back: () => go('home'),
@@ -1360,6 +1413,8 @@ const Screens = {
       },
       machine: el => Sheets.adminMachine(el.dataset.id),
       newMachine: () => Sheets.adminMachine(null),
+      raffle: el => Sheets.adminRaffle(el.dataset.id),
+      newRaffle: () => Sheets.adminRaffle(null),
       moveUp: el => reorder(el.dataset.id, -1),
       moveDown: el => reorder(el.dataset.id, 1),
       lf: el => { App.adminLoad = { ...App.adminLoad, friend: el.dataset.v }; Screens.admin(); },
@@ -1371,7 +1426,8 @@ const Screens = {
         toast(`${modeName(el.dataset.s)} 화면으로 바꿨어요`, { tone: 'ok' });
       },
       reset: () => {
-        Store.state.admin = { dolls: {}, machines: {}, custom: {}, skin: 'arcade' };
+        Store.state.admin = { dolls: {}, machines: {}, custom: {}, customMachines: {},
+          raffles: {}, customRaffles: {}, skin: 'arcade' };
         // 서버까지 비운 다음에 새로고침해야 되돌린 게 다시 딸려오지 않는다.
         Store.pushAdmin().then(() => location.reload());
       },
@@ -1536,6 +1592,37 @@ function adminMachineList() {
   </div>`;
 }
 
+/* 관리자 '추첨' 탭. 기계 목록과 같은 카드 모양이라 눈에 익은 자리에 같은 정보가 온다.
+   발표일이 지난 건 따로 표시한다 — 이 화면을 만든 이유가 그거라서. */
+function adminRaffleList() {
+  const today = new Date().toISOString().slice(5, 10).replace('-', '.');
+  const entered = Store.allEntries();
+  return `<div class="adm-machines">
+    ${RAFFLES.map(r => {
+      const n = entered.filter(e => e.raffle === r.id).length;
+      const past = r.announce && r.announce < today;
+      return `<div class="adm-mrow">
+      <button class="adm-mcard" data-act="raffle" data-id="${r.id}">
+        <span class="top">
+          <span class="hero" style="background:${r.bg};color:${r.iconColor}">${icon(r.icon, 24)}</span>
+          <span class="txt">
+            <span class="nm">${esc(r.name)}</span>
+            <span class="mt">${fmt(r.cost)}P · ${r.winners}명 당첨</span>
+            <span class="mt ${past ? 'warn' : ''}">${esc(r.announce || '발표일 없음')} 발표${past ? ' · 지난 날짜' : ''}${n ? ` · 내 응모 ${n}건` : ''}</span>
+          </span>
+          <span class="chev">${icon('chevronRight3', 18)}</span>
+        </span>
+      </button>
+      </div>`;
+    }).join('')}
+    <button class="adm-mcard add" data-act="newRaffle">
+      <span class="plus">${icon('plusThick', 22)}</span>
+      <span class="nm">추첨 추가</span>
+      <span class="mt">이름 · 포인트 · 당첨 인원 · 발표일</span>
+    </button>
+  </div>`;
+}
+
 /* ------------------------------------------------------------- fragments */
 
 function machineCard(m) {
@@ -1551,6 +1638,85 @@ function machineCard(m) {
       <span class="cost">티켓 ${m.cost}장</span>
     </span>
   </button>`;
+}
+
+/* 컬렉션 카드 — 인형통 하나의 수집 현황. 모은 인형은 그림, 아직인 인형은 실루엣.
+   다 모으면 보너스 티켓 버튼이 뜨고, 받고 나면 완성 표시만 남는다. */
+function collectionCard(c) {
+  const m = MACHINES.find(x => x.id === c.id);
+  if (!m) return '';
+  const pct = (c.owned.length / c.ids.length) * 100;
+  const counts = Store.prizeCounts();
+  const state = c.claimed ? 'claimed' : (c.done ? 'ready' : '');
+
+  return `<section class="colcard ${state}">
+    <div class="colcard-top">
+      <span class="hero" style="background:${m.bg}">${dollImg(m.hero, 42)}</span>
+      <span class="who">
+        <span class="nm">${esc(m.name)}</span>
+        <span class="mt">${c.owned.length} / ${c.ids.length}종 수집</span>
+      </span>
+      ${c.claimed
+        ? `<span class="done-badge">${icon('check', 12)} 완성</span>`
+        : `<span class="prize">${icon('ticketFill', 13)} ${c.tickets}장</span>`}
+    </div>
+
+    <div class="colcard-bar">${meter(pct)}</div>
+
+    <div class="colcard-dolls">
+      ${c.ids.map(id => counts[id]
+        ? `<button class="have" data-act="doll" data-id="${id}" aria-label="${esc(DOLLS[id].name)}">${dollImg(id, 34)}</button>`
+        : `<span class="want" title="${esc(DOLLS[id].name)}">${dollSilhouette(id, 30)}</span>`).join('')}
+    </div>
+
+    ${c.done && !c.claimed
+      ? `<button class="btn sm btn--accent" data-act="claimCol" data-id="${c.id}">보너스 티켓 ${c.tickets}장 받기</button>`
+      : c.claimed
+        ? ''
+        : `<button class="btn sm btn--text colcard-go" data-act="playCol" data-id="${c.id}">${c.missing.length}마리 남음 · 뽑으러 가기 ${icon('chevronRight3', 11)}</button>`}
+  </section>`;
+}
+
+/* 아무것도 못 잡고 올라온 판에 쓰는 그림. 경고 아이콘(!) 대신 게임에 나오는 그
+   집게가 빈 채로 꽉 다물려 있는 모습을 그린다 — 무슨 일이 있었는지 한눈에 읽히고,
+   '잘못했다' 가 아니라 '헛잡았다' 로 보인다. 밑의 점 세 개가 훑고 간 자리다.
+   색(줄·먼지)은 currentColor 라, 어두운 화면과 초록 화면에서 각각 맞춘다. */
+function emptyClawArt() {
+  return `<svg class="empty-claw-art" viewBox="0 0 160 160" role="img" aria-label="아무것도 잡지 못한 집게">
+    <defs>
+      <linearGradient id="ecArm" x1="0" y1="0" x2="1" y2=".4">
+        <stop offset="0" stop-color="#FFEE9B"/><stop offset=".5" stop-color="#FFD400"/><stop offset="1" stop-color="#B98F00"/>
+      </linearGradient>
+      <linearGradient id="ecHead" x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#B98F00"/><stop offset=".26" stop-color="#FFE87A"/>
+        <stop offset=".6" stop-color="#FFD400"/><stop offset="1" stop-color="#9E7700"/>
+      </linearGradient>
+    </defs>
+
+    <!-- 매달린 줄 -->
+    <path d="M80 4 V28" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" opacity=".7"/>
+    <rect x="72" y="26" width="16" height="15" rx="6" fill="url(#ecHead)"/>
+
+    <!-- 뒤쪽 발톱 — 몸통에 반쯤 가리게 먼저 그린다 -->
+    <path d="M80 52 C 87 78, 85 104, 80 120" fill="none" stroke="#9A7600" stroke-width="10" stroke-linecap="round"/>
+
+    <!-- 몸통 -->
+    <rect x="47" y="40" width="66" height="23" rx="11" fill="url(#ecHead)"/>
+
+    <!-- 앞 발톱 둘. 가운데가 바깥으로 불룩해 사이가 텅 빈 게 보이고,
+         끝은 거의 맞닿아 '닫힌 채 올라왔다' 가 읽힌다. -->
+    <path d="M60 62 C 47 82, 57 104, 73 116" fill="none" stroke="url(#ecArm)" stroke-width="9.5" stroke-linecap="round"/>
+    <path d="M100 62 C 113 82, 103 104, 87 116" fill="none" stroke="url(#ecArm)" stroke-width="9.5" stroke-linecap="round"/>
+
+    <!-- 헛잡고 지나간 자리 -->
+    <g fill="currentColor">
+      <circle cx="80" cy="135" r="4" opacity=".55"/>
+      <circle cx="60" cy="143" r="2.8" opacity=".38"/>
+      <circle cx="100" cy="143" r="2.8" opacity=".38"/>
+      <circle cx="72" cy="150" r="1.9" opacity=".24"/>
+      <circle cx="90" cy="150" r="1.9" opacity=".24"/>
+    </g>
+  </svg>`;
 }
 
 /** Turns a 0–100 aim score into advice the player can act on. */

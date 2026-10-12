@@ -209,13 +209,27 @@ const RAFFLES = [
     icon: 'coffee', bg: '#FFF4C2', iconColor: '#8A6A00', winners: 200, announce: '08.21' },
 ];
 
+/* 기본 추첨 사본. 관리자가 고치거나 지워도 되돌릴 수 있도록, 기계·인형과 같이
+   Store.applyAdmin() 이 매번 여기서 다시 세운 뒤 수정분을 얹는다. */
+const RAFFLE_BASE = JSON.parse(JSON.stringify(RAFFLES));
+
+/* 추첨 카드에 쓸 수 있는 아이콘과 색. 관리자가 고르는 목록이라 짧게 둔다. */
+const RAFFLE_LOOKS = [
+  { icon: 'musicMicrophone', bg: '#FFF0F3', iconColor: '#D24A6A' },
+  { icon: 'coffee',          bg: '#FFF4C2', iconColor: '#8A6A00' },
+  { icon: 'ticketFill',      bg: '#EAF7DE', iconColor: '#00762F' },
+  { icon: 'calendar',        bg: '#EEF1FF', iconColor: '#4A5BD2' },
+  { icon: 'star',            bg: '#FFF3DC', iconColor: '#B4761A' },
+  { icon: 'inbox',           bg: '#F0F3F6', iconColor: '#4A5560' },
+];
+
 /* Seeded entry history so 응모 내역 has the three states the design shows. */
 const TEST_TICKETS = 10;      // 미션 화면의 테스트용 충전 버튼이 주는 장수
 
 const MY_MENU = [
   { id: 'exchange', label: '포인트 교환소',        icon: 'ticketFill', route: 'exchange' },
   { id: 'entries',  label: '추첨 응모 내역',        icon: 'inbox',      route: 'entries' },
-  { id: 'nh',       label: 'NH멤버스 계정 연동',    icon: 'link',       route: 'nh-link' },
+  { id: 'nh',       label: 'NH멤버스 계정 연동 (예정)', icon: 'link',    route: 'nh-link' },
   { id: 'invite',   label: '친구 초대하기', icon: 'personPlus', action: 'invite' },
   { id: 'notif',    label: '알림 설정',            icon: 'bell',       route: 'notif' },
   { id: 'support',  label: '고객센터',             icon: 'bubble',     action: 'support' },
@@ -225,6 +239,11 @@ const NH_RATE = 0.8;          // 100P → 80 멤버스P
 const NH_MIN = 1000;          // 최소 전환 포인트
 const CODEX_TOTAL = 35;       // 시즌1 도감 정원
 const CODEX_REWARD_TICKETS = 10;
+/* 컬렉션 — 한 인형통에 들어 있는 인형(contents)을 전부 모으면 주는 보너스.
+   인형이 많은 통일수록 오래 걸리니 마릿수에 비례해서 준다. */
+const COLLECTION_MIN_TICKETS = 3;
+const collectionTickets = (machine) =>
+  Math.max(COLLECTION_MIN_TICKETS, Math.round((machine.contents || []).length / 2));
 const SIGNUP_TICKETS = 10;
 const AD_TICKETS = 1;
 const AD_DAILY_LIMIT = 3;

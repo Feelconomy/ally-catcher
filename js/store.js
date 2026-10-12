@@ -19,6 +19,7 @@ const DEFAULT_STATE = {
   missions: {},           // id -> progress count
   claimed: [],            // mission ids already collected
   bonusClaimed: false,
+  collections: [],        // 보너스를 이미 받은 컬렉션(기계) id
   adsWatchedToday: 0,
   adVideoIdx: 0,          // 광고 영상 번갈아 재생용 인덱스
   attendance: 5,
@@ -27,14 +28,15 @@ const DEFAULT_STATE = {
   bookmarks: [],
   recent: RECENT_SEEDS.slice(),
   nhLinked: false,
-  settings: { haptics: true, sfx: false, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
+  settings: { haptics: true, dataSaver: false, skin: null },   // skin: 플레이어가 고른 플레이 화면 (null 이면 관리자 기본값)
   notifications: { osGranted: false, missions: false, raffle: false, newMachine: false, marketing: false },
   coachDone: false,
+  coach3dDone: false,     // 3D 는 조작이 달라 튜토리얼을 따로 센다
   day: null,
   // 관리자 페이지(이스터 에그)에서 만든 것들. dolls·machines 는 덮어쓴 필드만,
   // custom 은 관리자가 직접 추가한 인형(포즈 이미지는 data URL).
   // skin: classic (basic), arcade (green 2D), green3d (green 3D).
-  admin: { dolls: {}, machines: {}, custom: {}, skin: 'arcade' },
+  admin: { dolls: {}, machines: {}, custom: {}, raffles: {}, customRaffles: {}, skin: 'arcade' },
 };
 
 const Store = {
@@ -51,8 +53,11 @@ const Store = {
       this.state[k] = Object.assign({}, DEFAULT_STATE[k], (saved && saved[k]) || {});
     }
     this.state.missions = Object.assign({}, (saved && saved.missions) || {});
-    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, customMachines: {}, skin: 'arcade' }, (saved && saved.admin) || {});
+    this.state.admin = Object.assign({ dolls: {}, machines: {}, custom: {}, customMachines: {},
+      raffles: {}, customRaffles: {}, skin: 'arcade' }, (saved && saved.admin) || {});
     this.state.admin.customMachines = this.state.admin.customMachines || {};
+    this.state.admin.raffles = this.state.admin.raffles || {};
+    this.state.admin.customRaffles = this.state.admin.customRaffles || {};
     // 마이그레이션: 이 플래그가 생기기 전에 이미 가입(onboarded)한 사용자는
     // 보너스를 받은 것으로 간주해, 재접속 때 소급 지급/토스트가 뜨지 않게 한다.
     if (saved && saved.onboarded && saved.signupBonus === undefined) {
@@ -114,6 +119,18 @@ const Store = {
       list.sort((x, y) => at(x.id) - at(y.id));
     }
     MACHINES.length = 0; MACHINES.push(...list);
+    /* 추첨도 같은 방식으로 다시 세운다. 이벤트는 매주 바뀌는데 코드에 박아 두면
+       배포를 해야 바뀌고, 지난 발표일이 그대로 노출된다. 기계와 달리 화면이
+       추첨 객체를 들고 있지 않아 매번 새로 만들어도 된다. */
+    const rl = RAFFLE_BASE.map(r => JSON.parse(JSON.stringify(r)));
+    for (const id in (a.customRaffles || {})) rl.push(JSON.parse(JSON.stringify(a.customRaffles[id])));
+    for (const id in (a.raffles || {})) {
+      const r = rl.find(x => x.id === id);
+      if (!r) continue;
+      const { deleted, ...rest } = a.raffles[id];
+      if (deleted) rl.splice(rl.indexOf(r), 1); else Object.assign(r, rest);
+    }
+    RAFFLES.length = 0; RAFFLES.push(...rl);
     // DOLL_IDS 는 const 배열이라 통째로 갈 수 없어 내용만 갈아끼운다.
     DOLL_IDS.length = 0;
     DOLL_IDS.push.apply(DOLL_IDS, Object.keys(DOLLS));
@@ -174,6 +191,25 @@ const Store = {
     if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
     if (before) bag[machine.id] = before; else delete bag[machine.id];
     return false;
+  },
+
+  /** 관리자가 추가한 추첨. 실패하면 false (보통 localStorage 용량 초과). */
+  addCustomRaffle(raffle) {
+    const bag = this.state.admin.customRaffles = this.state.admin.customRaffles || {};
+    const before = bag[raffle.id];
+    bag[raffle.id] = raffle;
+    if (this.save()) { this.applyAdmin(); this.pushAdmin(); return true; }
+    if (before) bag[raffle.id] = before; else delete bag[raffle.id];
+    return false;
+  },
+
+  /** 추첨 삭제 — 추가한 건 지우고, 기본 추첨은 '삭제됨'만 남긴다(되살릴 수 있게).
+      이미 응모한 내역은 state.entries 에 따로 있어 그대로 남는다. */
+  removeRaffle(id) {
+    const bag = this.state.admin.customRaffles = this.state.admin.customRaffles || {};
+    if (bag[id]) delete bag[id];
+    else (this.state.admin.raffles[id] = this.state.admin.raffles[id] || {}).deleted = true;
+    this.applyAdmin(); this.pushAdmin();
   },
 
   /** 기계 순서를 한 칸 올리거나(-1) 내린다(+1). 홈 목록도 이 순서를 따른다. */
@@ -508,6 +544,39 @@ const Store = {
       left: WINS_PER_LEVEL - done,
       percent: Math.round((done / WINS_PER_LEVEL) * 100),
     };
+  },
+
+  /* --- 컬렉션 ------------------------------------------------------------
+     한 인형통의 contents 를 전부 모으면 보너스 티켓. 중복은 안 치고 종류만 센다. */
+  collection(machine) {
+    const have = this.prizeCounts();
+    const ids = (machine.contents || []).filter(id => DOLLS[id]);   // 관리자가 지운 인형은 뺀다
+    const owned = ids.filter(id => have[id]);
+    return {
+      id: machine.id,
+      ids,
+      owned,
+      missing: ids.filter(id => !have[id]),
+      done: ids.length > 0 && owned.length === ids.length,
+      claimed: this.state.collections.includes(machine.id),
+      tickets: collectionTickets(machine),
+    };
+  },
+
+  collections() { return MACHINES.map(m => this.collection(m)); },
+
+  /** 받을 수 있는 컬렉션 보너스 개수 — 도감 탭의 빨간 점에 쓴다. */
+  collectionsReady() { return this.collections().filter(c => c.done && !c.claimed).length; },
+
+  /** 보너스를 지급하고 받은 티켓 수를 돌려준다. 못 받으면 0. */
+  claimCollection(machineId) {
+    const m = MACHINES.find(x => x.id === machineId);
+    if (!m) return 0;
+    const c = this.collection(m);
+    if (!c.done || c.claimed) return 0;
+    this.state.collections.push(machineId);
+    this.addTickets(c.tickets);        // addTickets 가 save() 까지 한다
+    return c.tickets;
   },
 
   codexOwned() { return this.ownedIds().length; },

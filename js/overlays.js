@@ -628,6 +628,84 @@ const Sheets = {
         });
       });
   },
+
+  /* --- 관리자 · 추첨 편집 ------------------------------------------------
+     이벤트는 매주 바뀌는데 코드에 박혀 있어서, 지난 발표일이 그대로 교환소에
+     걸려 있었다. 값만 고치면 되도록 카탈로그(서버)에 얹는다. */
+  adminRaffle(raffleId) {
+    const isNew = !raffleId;
+    const r = isNew
+      ? Object.assign({ id: 'r' + Date.now(), name: '', note: '', cost: 100, winners: 10,
+          announce: '' }, RAFFLE_LOOKS[0])
+      : RAFFLES.find(x => x.id === raffleId);
+    if (!r) return;
+    const builtin = !isNew && RAFFLE_BASE.some(b => b.id === r.id);
+    let look = Math.max(0, RAFFLE_LOOKS.findIndex(l => l.icon === r.icon));
+
+    sheet(`
+      <h3>${isNew ? '추첨 추가' : '추첨 설정'}</h3>
+      <label class="field" style="margin-top:16px">
+        <span class="lbl">경품 이름</span>
+        <span class="box"><input id="rn" type="text" maxlength="24" value="${esc(r.name)}" placeholder="예: 카페 모바일 기프티콘"></span>
+      </label>
+      <label class="field" style="margin-top:12px">
+        <span class="lbl">안내 문구</span>
+        <span class="box"><input id="rt" type="text" maxlength="40" value="${esc(r.note || '')}" placeholder="예: 추첨 200명 · 응모 8,910"></span>
+      </label>
+
+      <div class="entry-calc" style="margin-top:14px">
+        <div class="ln"><span class="l">응모 포인트</span>
+          <input class="adm-in num" id="rc" type="tel" inputmode="numeric" value="${r.cost}" aria-label="응모 포인트"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">당첨 인원</span>
+          <input class="adm-in num" id="rw" type="tel" inputmode="numeric" value="${r.winners}" aria-label="당첨 인원"></div>
+        <div class="hr"></div>
+        <div class="ln"><span class="l">발표일</span>
+          <input class="adm-in num wide" id="ra" type="text" maxlength="5" value="${esc(r.announce || '')}" placeholder="MM.DD" aria-label="발표일"></div>
+      </div>
+
+      <div class="group-label" style="margin:18px 0 8px">카드 모양</div>
+      <div class="adm-looks" id="looks">
+        ${RAFFLE_LOOKS.map((l, i) => `<button class="lk" data-act="look" data-i="${i}" aria-pressed="${i === look}"
+          style="background:${l.bg};color:${l.iconColor}" aria-label="모양 ${i + 1}">${icon(l.icon, 22)}</button>`).join('')}
+      </div>
+
+      <button class="btn btn--primary" style="margin-top:18px" data-act="save">${isNew ? '추가하기' : '저장'}</button>
+      ${isNew ? '' : `<button class="btn md btn--text" style="margin-top:4px;color:var(--danger)" data-act="del">이 추첨 ${builtin ? '숨기기' : '삭제'}</button>`}`,
+      (node, close) => {
+        const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
+        bind(node, {
+          look: el => {
+            look = Number(el.dataset.i);
+            $$('#looks .lk', node).forEach((b, i) => b.setAttribute('aria-pressed', String(i === look)));
+          },
+          del: () => {
+            Store.removeRaffle(r.id);
+            close(); Screens.admin();
+            toast(builtin ? '추첨을 숨겼어요' : '추첨을 지웠어요', { mini: true });
+          },
+          save: () => {
+            const name = $('#rn', node).value.trim();
+            if (!name) return toast('경품 이름을 입력해 주세요', { tone: 'error' });
+            const announce = $('#ra', node).value.trim();
+            // 발표일은 교환소와 응모 내역에 그대로 찍히는 문자열이라 모양만 본다.
+            if (announce && !/^\d{2}\.\d{2}$/.test(announce))
+              return toast('발표일은 MM.DD 로 적어 주세요', { tone: 'error' });
+            const cost = num($('#rc', node), 99999);
+            if (!cost) return toast('응모 포인트를 입력해 주세요', { tone: 'error' });
+            const patch = Object.assign({
+              name, note: $('#rt', node).value.trim(),
+              cost, winners: num($('#rw', node), 99999), announce,
+            }, RAFFLE_LOOKS[look]);
+            if (isNew) {
+              if (!Store.addCustomRaffle(Object.assign({ id: r.id }, patch)))
+                return toast('저장 공간이 부족해요', { tone: 'error' });
+            } else Store.setAdmin('raffles', r.id, patch);
+            close(); Screens.admin(); toast('저장했어요', { tone: 'ok' });
+          },
+        });
+      });
+  },
 };
 
 /* 인형 삭제 확인. 되돌리기 어려운 부분(이미 뽑은 사람의 보관함)을 먼저 말하고,
@@ -1123,11 +1201,11 @@ const Dialogs = {
   },
 
   /* --- 32 보상 획득 ------------------------------------------------------ */
-  reward(tickets, reason, machine) {
+  reward(tickets, reason, machine, repaint) {
     const before = Store.state.tickets - tickets;
     setTheme('');
     shellEl().style.background = '';
-    Screens.mission();   // 보상 후 미션 화면을 갱신
+    (repaint || Screens.mission)();   // 보상 후 원래 있던 화면을 갱신
 
     dialog(`
       <div class="art xl" style="background:var(--yellow-soft);color:var(--yellow-pressed)">${icon('ticketFill', 46)}</div>
@@ -1213,9 +1291,9 @@ const Dialogs = {
     const got = Math.floor(amount * NH_RATE);
     const { close } = dialog(`
       <div class="spinner-lg brand" style="margin:0 auto"></div>
-      <h3 style="margin-top:20px;font-size:18px">NH멤버스로 전환 중</h3>
+      <h3 style="margin-top:20px;font-size:18px">NH멤버스로 전환 중 (예정)</h3>
       <p>${fmt(amount)}P → ${fmt(got)} 멤버스P<br>최대 1분이 걸릴 수 있어요</p>
-      <div class="code">창을 닫아도 전환은 계속 진행됩니다</div>`,
+      <div class="code">실제 전환은 아직 연결되지 않았어요</div>`,
       null, { persistent: true, scrim: 'deep' });
 
     setTimeout(() => {
@@ -1223,7 +1301,9 @@ const Dialogs = {
       // NH멤버스 점검 시간(00:00~04:00)에는 전환이 막힌다 — 설계 38번 화면.
       const hour = new Date().getHours();
       if (hour < 4) { Dialogs.convertFailed(amount); return; }
-      Store.addPoints(-amount);
+      /* 포인트는 차감하지 않는다. NH멤버스와 실제로 연결되지 않은 상태라
+         (화면 흐름만 미리보기) 여기서 깎으면 아무것도 못 받고 포인트만 사라진다.
+         실제 연동이 붙으면 이 줄을 되살린다. */
       const tx = 'NHM-' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '-' + String(Date.now() % 10000).padStart(4, '0');
       go('convert-done', `${amount}|${got}|${tx}`);
     }, 1800);
@@ -1233,7 +1313,7 @@ const Dialogs = {
   convertFailed(amount) {
     dialog(`
       <div class="art" style="background:var(--danger-bg);color:var(--danger)">${icon('circleExclamation', 26)}</div>
-      <h3>전환에 실패했어요</h3>
+      <h3>전환에 실패했어요 (예정)</h3>
       <p>NH멤버스 점검 시간(00:00~04:00)에는<br>전환할 수 없어요. 포인트는 그대로 있어요.</p>
       <div class="code">오류 코드 NHM_MAINTENANCE_503</div>
       <div class="actions side">
