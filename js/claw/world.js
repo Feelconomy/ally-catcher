@@ -66,6 +66,18 @@ export class PhysicsWorld {
     }
   }
 
+  /** (x,z) 에서 똑바로 아래로 쏴, 처음 맞는 표면의 높이(y)를 돌려준다. 아무것도
+      없으면 null. 인형이 쌓여 바닥이 안 보일 때 조준 표시를 더미 위에 올리려고 쓴다.
+      filterGroups 는 (내 소속 << 16) | 맞출 대상 — 집게는 TOY 만 받으므로
+      소속을 CLAW 로 주면 집게 자신은 맞지 않는다. */
+  surfaceBelow(x, z, fromY, filterGroups) {
+    const ray = new this.R.Ray({ x, y: fromY, z }, { x: 0, y: -1, z: 0 });
+    const hit = this.world.castRay(ray, fromY + 1, true, undefined, filterGroups);
+    if (!hit) return null;
+    const t = hit.timeOfImpact ?? hit.toi;
+    return typeof t === 'number' ? fromY - t : null;
+  }
+
   /** 두 collider 사이의 가장 깊은 침투 깊이(m). 관통 자동 검증용. */
   deepestPenetration(colliderA, colliderB) {
     let worst = 0;

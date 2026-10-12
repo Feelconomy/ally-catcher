@@ -39,10 +39,10 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=226';
-import { ClawAssembly, CLAW } from './claw/claw.js?v=226';
-import { GrabAnalyzer } from './claw/analyzer.js?v=226';
-import { ClawController, STATE } from './claw/controller.js?v=226';
+import { initRapier, PhysicsWorld, GROUP, members } from './claw/world.js?v=230';
+import { ClawAssembly, CLAW } from './claw/claw.js?v=230';
+import { GrabAnalyzer } from './claw/analyzer.js?v=230';
+import { ClawController, STATE } from './claw/controller.js?v=230';
 
 const CHUTE = { x: -.89, z: .53 };
 /* 집게를 벽 안쪽에 가둔다. 발을 벌리면 중심에서 0.31 까지 뻗는데(0.183 x 1.7),
@@ -50,6 +50,8 @@ const CHUTE = { x: -.89, z: .53 };
    조금 내려가다 만다. 벽은 중심 ±1.29 에 두께 0.10 이라 안쪽 면이 ±1.24,
    앞뒤는 -0.90 / 0.91 이다. 그 안쪽 면에서 발 반경만큼 더 뺀다. */
 const CLAW_REACH = .31;
+/* 조준 광선: 인형과 통 바닥은 맞고 집게는 지나친다 (집게 필터가 TOY 만 받는다). */
+const AIM_FILTER = members(GROUP.CLAW, GROUP.TOY | GROUP.WALL);
 const RANGE = { x: 1.24 - CLAW_REACH - .02, zMin: -.90 + CLAW_REACH + .02, zMax: .91 - CLAW_REACH - .02 };
 /* 실험실(lab/claw.html)에서 맞춘 물리를 그대로 쓴다. 게임 쪽 좌표가 더 커서
    집게 치수와 힘을 CLAW_SCALE 배로 늘린다 (인형 지름 실험실 0.25 → 게임 0.41). */
@@ -253,8 +255,24 @@ export const Play3D = {
     if (this.assets.Claw) this.assets.Claw.visible = false;
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
-    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
-    this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
+    /* 조준 표시. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보인다.
+       매 프레임 집게 아래로 광선을 쏴, 처음 닿는 표면(인형 윗면이든 바닥이든)
+       위에 올린다. 링이 올라앉은 높이가 곧 그 자리의 더미 높이라, 어디가 높고
+       어디가 낮은지도 같이 읽힌다. 가는 세로줄은 집게와 그 지점을 이어 준다. */
+    /* 깊이 검사를 끈다(depthTest:false). 표면 위에 올려 놔도 앞줄 인형에 가려
+       안 보이는 각도가 생기는데, 조준 표시는 가려지면 쓸모가 없다. 인형 위로
+       비쳐 보이게 두고, 대신 색을 노랑으로 해 파스텔 더미에서 바로 눈에 띈다
+       (2D 의 노란 조준 빔과 같은 말을 쓴다). */
+    const aimMat = (o) => new THREE.MeshBasicMaterial(Object.assign(
+      { color: 0xFFC400, transparent: true, side: THREE.DoubleSide, depthWrite: false, depthTest: false }, o));
+    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.165,.195,44), aimMat({ opacity: .95 }));
+    this.shadow.rotation.x = -Math.PI/2; this.shadow.renderOrder = 990; this.scene.add(this.shadow);
+    /* 가운데 점은 구슬이다 — 납작한 원은 '정면' 시점에서 옆으로 누워 사라진다.
+       구슬은 어느 각도에서나 보여, 줄이 끝나는 자리가 늘 읽힌다. */
+    this.aimDot = new THREE.Mesh(new THREE.SphereGeometry(.028,14,10), aimMat({ opacity: .85 }));
+    this.aimDot.renderOrder = 991; this.scene.add(this.aimDot);
+    this.aimLine = new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,1,8), aimMat({ opacity: .42 }));
+    this.aimLine.renderOrder = 989; this.scene.add(this.aimLine);
     await initRapier();                       // wasm 준비 (두 번째부터는 즉시 반환)
     if (!this.active || session !== this.session) return;
     this.buildPhysics(); this.stockToys();
@@ -407,7 +425,13 @@ export const Play3D = {
       // Rotated feet and ears must stay above the floor and inside the glass.
       const y = Math.max(.035 - box.min.y, s[1] + (Math.random() - .5) * .10);
       body.setTranslation({ x, y, z }, false);
-      if (saved.position) {
+      /* 저장된 자리가 통 밖이면 쓰지 않는다. 한 번이라도 인형이 바닥 아래로
+         빠지면 그 좌표가 그대로 저장돼, 다음부터 매번 없는 인형으로 되살아난다
+         (인형통이 조용히 비어 간다). 그럴 땐 위에서 계산한 제자리에 둔다. */
+      const [sx, sy, sz] = saved.position || [];
+      const inBox = saved.position && sy > -.2 && sy < 3.2
+        && Math.abs(sx) < 1.3 && sz > -1 && sz < 1;
+      if (inBox) {
         body.setTranslation({ x: saved.position[0], y: saved.position[1], z: saved.position[2] }, false);
         const [qx, qy, qz, qw] = saved.quaternion;
         body.setRotation({ x: qx, y: qy, z: qz, w: qw }, false);
@@ -556,8 +580,19 @@ export const Play3D = {
     this.cable.scale.y = Math.max(.08, span.length());
     this.cable.position.copy(top).addScaledVector(span, .5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), span.clone().normalize());
-    this.shadow.position.set(cl.x, .015, cl.z);
-    this.shadow.visible = this.phase === 'aim';
+    const aiming = this.phase === 'aim';
+    this.shadow.visible = this.aimDot.visible = this.aimLine.visible = aiming;
+    if (aiming) {
+      // 집게보다 조금 아래에서 쏜다 — 집게 자신은 필터가 걸러 준다
+      const surf = this.pw.surfaceBelow(cl.x, cl.z, 2.6, AIM_FILTER);
+      const y = (surf == null ? 0 : surf) + .018;
+      this.shadow.position.set(cl.x, y, cl.z);
+      this.aimDot.position.set(cl.x, y + .022, cl.z);
+      const from = cl.y - .22;                       // 집게 발끝 바로 아래부터
+      const len = Math.max(.02, from - y);
+      this.aimLine.scale.y = len;
+      this.aimLine.position.set(cl.x, y + len / 2, cl.z);
+    }
 
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
