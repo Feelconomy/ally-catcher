@@ -447,14 +447,31 @@ const Screens = {
       const slides = $$('#carousel .slide');
       const dots = $$('#heroDots i');
       let at = 0;
-      App.heroTimer = setInterval(() => {
-        if (App.route !== 'machine' || !document.getElementById('carousel')) {
-          clearInterval(App.heroTimer); return;
-        }
+      const show = (i) => {
+        if (!slides.length) return;
         slides[at].classList.remove('on'); dots[at].classList.remove('on');
-        at = (at + 1) % slides.length;
+        at = (i + slides.length) % slides.length;
         slides[at].classList.add('on'); dots[at].classList.add('on');
-      }, 2400);
+      };
+      const startAuto = () => {
+        clearInterval(App.heroTimer);
+        App.heroTimer = setInterval(() => {
+          if (App.route !== 'machine' || !document.getElementById('carousel')) { clearInterval(App.heroTimer); return; }
+          show(at + 1);
+        }, 2400);
+      };
+      startAuto();
+      // 좌우 스와이프로 넘기기 (수동 조작 후엔 자동 회전 타이머를 리셋)
+      const hero = document.querySelector('.hero');
+      if (hero && slides.length > 1) {
+        let sx = 0, sy = 0, on = false;
+        hero.addEventListener('touchstart', (e) => { const t = e.touches[0]; sx = t.clientX; sy = t.clientY; on = true; }, { passive: true });
+        hero.addEventListener('touchend', (e) => {
+          if (!on) return; on = false;
+          const t = e.changedTouches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+          if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) { show(at + (dx < 0 ? 1 : -1)); startAuto(); }
+        }, { passive: true });
+      }
     }
 
     bind(screenEl(), {

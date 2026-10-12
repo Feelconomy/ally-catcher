@@ -252,9 +252,51 @@ const Overlay = {
 
 /** Bottom sheet. `body` is the markup below the grab handle. */
 function sheet(body, onMount, opts) {
-  return Overlay.open(`<div class="sheet" role="dialog" aria-modal="true">
+  const res = Overlay.open(`<div class="sheet" role="dialog" aria-modal="true">
     <div class="grab"></div>${body}
   </div>`, onMount, opts);
+  attachSheetSwipe(res.node, res.close);
+  return res;
+}
+
+/* 아래로 쓸어 내려 시트를 닫는다. 시트/내부 목록이 스크롤 가능한 경우, 그 스크롤이
+   '맨 위'일 때만 닫기 제스처로 인식한다 — 아니면 평범한 스크롤로 둔다. */
+function attachSheetSwipe(node, close) {
+  const el = $('.sheet', node);
+  if (!el) return;
+  let startY = 0, dy = 0, active = false;
+  // 터치 지점에서 가장 가까운 스크롤 영역이 맨 위에 있는지 (아니면 스크롤 우선)
+  const canDrag = (target) => {
+    let n = target;
+    while (n && n !== el.parentElement) {
+      if (n.scrollHeight > n.clientHeight + 1 && /(auto|scroll)/.test(getComputedStyle(n).overflowY)) {
+        return n.scrollTop <= 0;
+      }
+      n = n.parentElement;
+    }
+    return true;
+  };
+  el.addEventListener('touchstart', (e) => {
+    active = canDrag(e.target);
+    startY = e.touches[0].clientY; dy = 0;
+    if (active) el.style.transition = 'none';
+  }, { passive: true });
+  el.addEventListener('touchmove', (e) => {
+    if (!active) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { el.style.transform = ''; return; }   // 위로 끌면 무효
+    e.preventDefault();                                  // 당기는 동안 스크롤 막기
+    el.style.transform = `translateY(${dy}px)`;
+  }, { passive: false });
+  const end = () => {
+    if (!active) return;
+    active = false;
+    el.style.transition = '';
+    if (dy > 90) { el.style.transform = 'translateY(100%)'; setTimeout(close, 200); }
+    else el.style.transform = '';
+  };
+  el.addEventListener('touchend', end);
+  el.addEventListener('touchcancel', end);
 }
 
 /** Centred dialog. `body` is everything inside the card. */
