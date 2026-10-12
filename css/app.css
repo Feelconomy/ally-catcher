@@ -720,6 +720,8 @@ a:hover { color: var(--green-deep); }
 .hero .dots { position: absolute; bottom: 14px; }
 .detail-foot { flex-shrink: 0; padding: 14px 20px calc(16px + var(--safe-b)); background: var(--cream); box-shadow: 0 -1px 0 rgba(112, 115, 124, .12); display: flex; align-items: center; gap: 12px; }
 .detail-foot .bookmark { width: 44px; height: 52px; border-radius: 14px; background: var(--surface); box-shadow: var(--hairline); display: flex; align-items: center; justify-content: center; color: var(--ink-40); flex-shrink: 0; }
+/* 바닥에 붙은 바에선 버튼 초록 글로우가 바 구분선과 겹쳐 떠 보여 제거한다. */
+.detail-foot .btn--primary { box-shadow: none; }
 .detail-foot .bookmark[aria-pressed="true"] { color: var(--green); box-shadow: inset 0 0 0 1.5px var(--green); }
 .doll-strip { margin-top: 11px; display: flex; gap: 10px; width: 100%; }
 .doll-strip > * { flex: 1; height: 78px; border-radius: 14px; background: var(--surface); box-shadow: 0 2px 6px rgba(23, 23, 23, .06); display: flex; align-items: center; justify-content: center; }
