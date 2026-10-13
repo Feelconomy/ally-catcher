@@ -1739,8 +1739,10 @@ a:hover { color: var(--green-deep); }
   animation: dialogIn .22s cubic-bezier(.2, .8, .3, 1);
 }
 /* 이벤트 팝업(10주년 KV): 패딩·배경 없이 이미지 풀블리드 + X + CTA */
-.dialog.event { width: min(330px, 82vw); padding: 0; background: transparent; }
-.dialog.event .event-kv { display: block; width: 100%; height: auto; max-height: 70vh; object-fit: contain; border-radius: 24px; box-shadow: 0 18px 44px rgba(0, 0, 0, .3); }
+.dialog.event { width: auto; padding: 0; background: transparent; }
+/* 이미지를 비율 그대로 가로·세로 제약 안에 맞춘다. object-fit:contain + width:100% 는
+   세로가 70vh 에 걸리는 짧은 화면에서 좌우 레터박스(여백)를 만들어 제거했다. */
+.dialog.event .event-kv { display: block; width: auto; height: auto; max-width: min(330px, 82vw); max-height: 78vh; border-radius: 24px; box-shadow: 0 18px 44px rgba(0, 0, 0, .3); }
 .dialog.event .event-x {
   position: absolute; top: 10px; right: 10px; width: 34px; height: 34px; border-radius: 50%;
   background: rgba(0, 0, 0, .42); color: #fff; display: flex; align-items: center; justify-content: center; z-index: 2;
