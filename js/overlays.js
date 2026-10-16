@@ -309,6 +309,7 @@ const Sheets = {
 
       <div style="margin-top:22px" class="group-label">화면 바로가기</div>
       <button class="btn md btn--outline" data-act="anniv">🎉 10주년 이벤트 팝업 보기</button>
+      <button class="btn md btn--outline" style="margin-top:10px" data-act="resetAnnivHide">🔄 이벤트 팝업 '오늘 그만보기' 리셋</button>
       <button class="btn md btn--outline" style="margin-top:10px" data-act="onboarding">온보딩 처음부터 보기</button>
       <button class="btn md btn--outline" style="margin-top:10px" data-act="admin">관리자 페이지</button>
 
@@ -335,6 +336,11 @@ const Sheets = {
             if (['home', 'mission', 'play'].includes(App.route)) Screens[App.route] && Screens[App.route]();
           },
           anniv: () => { close(); Dialogs.anniv(); },
+          resetAnnivHide: () => {
+            try { localStorage.removeItem('anniv_hide'); } catch (_) {}
+            App.annivShownSession = false;
+            toast("이벤트 팝업 '오늘 그만보기'를 초기화했어요", { tone: 'ok' });
+          },
           onboarding: () => { close(); go('onboarding'); },
           admin: () => { close(); go('admin'); },
         });
@@ -948,6 +954,10 @@ async function makeBragCard(dollId) {
   return canvas;
 }
 
+/* 이벤트 팝업 '오늘 하루 그만 보기' — 누른 날짜(로컬 기준)를 저장하고, 같은 날이면 안 띄운다. */
+function annivHideKey() { try { return new Date().toLocaleDateString('en-CA'); } catch (_) { return ''; } }
+function annivHiddenToday() { try { return localStorage.getItem('anniv_hide') === annivHideKey(); } catch (_) { return false; } }
+
 const Dialogs = {
 
   /* --- 이벤트 팝업 (올원뱅크 10주년) ------------------------------------- */
@@ -958,7 +968,8 @@ const Dialogs = {
       <img class="event-kv" src="assets/event-anniv.webp?v=234" alt="올원뱅크 10주년 기념 이벤트">
       <button class="btn md btn--primary event-cta" data-act="claim" ${claimed ? 'disabled' : ''}>
         ${claimed ? '이미 받았어요' : `${icon('ticketFill', 18)}10주년 축하 티켓 ${ANNIV_TICKETS}장 받기`}
-      </button>`,
+      </button>
+      <button class="event-dismiss" data-act="hideToday">오늘 하루 그만 보기</button>`,
       (node, close) => bind(node, {
         claim: () => {
           if (Store.state.annivClaimed) { close(); return; }
@@ -967,6 +978,7 @@ const Dialogs = {
           close();
           toast(`10주년 축하 티켓 ${ANNIV_TICKETS}장을 받았어요! 🎉`, { tone: 'ok' });
         },
+        hideToday: () => { try { localStorage.setItem('anniv_hide', annivHideKey()); } catch (_) {} close(); },
       }), { cls: 'event', scrim: 'deep' });
   },
 

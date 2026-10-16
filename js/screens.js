@@ -52,7 +52,7 @@ const Screens = {
     screenEl().innerHTML = `<div class="screen">
       ${statusbar()}
       <div class="login">
-        <div class="brandmark l"><img src="assets/logo.png?v=120" alt="" width="72" height="72"></div>
+        <button class="brandmark l" data-act="splash" aria-label="올리캐쳐 스플래시 다시 보기"><img src="assets/logo.png?v=120" alt="" width="72" height="72"></button>
         <h2>3초면 시작해요</h2>
         <p>카카오 계정으로 간편하게 로그인하고<br>올리캐쳐에 티켓과 인형을 저~장해보세요!</p>
         <div class="login-hero"><span class="glow"></span>${dollImg('olly', 150, '', 'win')}</div>
@@ -66,6 +66,7 @@ const Screens = {
     $('.login-hero img').classList.add('mascot');   // 문구와 버튼 사이 hero 영역의 올리 이미지에
 
     bind(screenEl(), {
+      splash: () => go('splash'),
       sso: el => {
         const p = el.dataset.p;
         // 카카오는 실제 Supabase Auth 로그인(리다이렉트). 나머지는 기존 데모 흐름.
@@ -299,6 +300,13 @@ const Screens = {
       machine: el => go('machine', el.dataset.id),
       egg: () => tapEasterEgg(),
     });
+
+    // 올원뱅크 10주년 이벤트 팝업 — 세션당 1회, 홈 진입 시.
+    // '오늘 하루 그만 보기' 를 누른 날은 띄우지 않는다.
+    if (!App.annivShownSession && typeof Dialogs !== 'undefined' && Dialogs.anniv && !annivHiddenToday()) {
+      App.annivShownSession = true;
+      setTimeout(() => { if (App.route === 'home') Dialogs.anniv(); }, 450);
+    }
   },
 
   /* --- 16 / 17 검색 ------------------------------------------------------ */
