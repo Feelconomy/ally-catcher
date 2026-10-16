@@ -44,6 +44,20 @@ import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
 const GROUP_TOY = 1, GROUP_CLAW = 2;   // 집게가 더미를 밀고 지나가도록 (아래 clawBody)
+/* 조준 링. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보인다. 링을
+   조각으로 나눠 조각마다 바로 아래로 광선을 쏴, 각자 그 자리의 표면 높이에
+   붙인다 — 인형 등의 굴곡을 따라 그린 자국이 된다. */
+const AIM_SEG = 28;                      // 링을 나눌 조각 수 — 조각마다 광선 한 발
+const AIM_R_IN = .150, AIM_R_OUT = .188, AIM_R_MID = (AIM_R_IN + AIM_R_OUT) / 2;
+/* 조각 높이를 가운데에서 이만큼까지만 벌린다. 인형 가장자리를 넘어가면 표면이
+   뚝 떨어지는데, 그대로 두면 링이 절벽처럼 늘어져 하나로 안 읽힌다. */
+const AIM_SPREAD = .13;
+const AIM_FROM = new CANNON.Vec3(), AIM_TO = new CANNON.Vec3();
+const AIM_HIT = new CANNON.RaycastResult();
+/* 광선은 집게 자신을 맞으면 안 된다. 집게 몸통은 GROUP_CLAW 라, 광선을
+   GROUP_CLAW 소속으로 쏘고 GROUP_TOY 만 맞히면 인형과 통 벽에만 닿는다
+   (벽은 기본 그룹 1 = GROUP_TOY 로 들어가 있다). */
+const AIM_RAY = { collisionFilterGroup: GROUP_CLAW, collisionFilterMask: GROUP_TOY, skipBackfaces: true };
 const REST_Y = 2.72;
 /* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
    것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
@@ -231,8 +245,25 @@ export const Play3D = {
     });
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
-    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
-    this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
+    /* 깊이 검사는 끈다(depthTest:false). 표면에 붙여도 앞줄 인형에 가리는 각도가
+       남는데, 조준 표시는 가려지면 쓸모가 없다. 색은 파스텔 더미에서 묻히지 않게
+       노랑 — 2D 의 노란 조준 빔과 같은 말이다. */
+    const ringIdx = [];
+    for (let i = 0; i < AIM_SEG; i++) {
+      const a = i * 2, b = ((i + 1) % AIM_SEG) * 2;
+      ringIdx.push(a, a + 1, b + 1, a, b + 1, b);
+    }
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(AIM_SEG * 6), 3));
+    ringGeo.setIndex(ringIdx);
+    this.shadow = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+      color: 0xFFC400, transparent: true, opacity: .95,
+      side: THREE.DoubleSide, depthWrite: false, depthTest: false,
+    }));
+    this.shadow.frustumCulled = false;               // 좌표를 직접 넣어 경계상자가 없다
+    this.shadow.renderOrder = 990; this.scene.add(this.shadow);
+    this.aimH = new Float32Array(AIM_SEG);           // 조각별 높이 (부드럽게 따라간다)
+    this.aimSettled = false;
     this.buildPhysics(); this.stockToys();
     /* 굴리지 않는다. TOY_SLOTS 가 이미 서로 닿는 정확한 높이라 자리를 잡을 필요가
        없고, 조금만 굴려도(40스텝) 더미가 평평해진다. 바로 재워 모양을 유지하고,
@@ -405,6 +436,15 @@ export const Play3D = {
     this.camera.updateProjectionMatrix();
   },
 
+  /** (x,z) 에서 똑바로 아래로 쏴, 처음 맞는 표면의 높이를 돌려준다. 아무것도
+      없으면 바닥(0). 인형은 구 두 개로 되어 있어 광선이 싸게 맞는다. */
+  surfaceBelow(x, z) {
+    AIM_FROM.set(x, 2.6, z); AIM_TO.set(x, -0.4, z);
+    AIM_HIT.reset();
+    this.world.raycastClosest(AIM_FROM, AIM_TO, AIM_RAY, AIM_HIT);
+    return AIM_HIT.hasHit ? AIM_HIT.hitPointWorld.y : 0;
+  },
+
   nearest() {
     let best=null;
     for(const toy of this.toys){
@@ -507,7 +547,28 @@ export const Play3D = {
     this.cable.scale.y=Math.max(.08,span.length());
     this.cable.position.copy(top).addScaledVector(span,.5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),span.clone().normalize());
-    this.shadow.position.set(this.clawPos.x,.015,this.clawPos.z);this.shadow.visible=this.phase==='aim';
+    const aiming = this.phase === 'aim';
+    this.shadow.visible = aiming;
+    if (aiming) {
+      /* 조각마다 바로 아래로 광선을 쏴 그 자리의 표면 높이에 붙인다. 면이
+         울퉁불퉁해 높이가 프레임마다 튀므로 천천히 따라가게 하고(판이 시작될 땐
+         바로 붙인다), 가운데 높이에서 너무 벗어나면 잘라 하나의 자국으로 둔다. */
+      const cx = this.clawPos.x, cz = this.clawPos.z;
+      const mid = this.surfaceBelow(cx, cz);
+      const k = this.aimSettled ? 1 - Math.exp(-dt * 16) : 1;
+      const pos = this.shadow.geometry.attributes.position;
+      for (let i = 0; i < AIM_SEG; i++) {
+        const a = (i / AIM_SEG) * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
+        const h = this.surfaceBelow(cx + cs * AIM_R_MID, cz + sn * AIM_R_MID);
+        const want = clamp(h, mid - AIM_SPREAD, mid + AIM_SPREAD);
+        this.aimH[i] += (want - this.aimH[i]) * k;
+        const y = this.aimH[i] + .008;               // 표면에 살짝 띄워 겹침을 피한다
+        pos.setXYZ(i * 2,     cx + cs * AIM_R_IN,  y, cz + sn * AIM_R_IN);
+        pos.setXYZ(i * 2 + 1, cx + cs * AIM_R_OUT, y, cz + sn * AIM_R_OUT);
+      }
+      this.aimSettled = true;
+      pos.needsUpdate = true;
+    } else this.aimSettled = false;                  // 다음 판엔 새 자리에 바로 붙는다
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
   },
