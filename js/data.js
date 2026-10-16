@@ -194,7 +194,7 @@ const MISSIONS = [
     icon: 'play',       iconBg: '#FFF4C2', iconColor: '#8A6A00', btn: '시청', btnClass: 'btn--accent' },
   { id: 'rare',   title: '레어 등급 인형 뽑기',   reward: 2, goal: 1, kind: 'play',
     icon: 'star',       iconBg: '#FFF0F3', iconColor: '#D24A6A', btn: '도전', btnClass: 'btn--primary' },
-  { id: 'plays',  title: '오늘 3판 플레이',       reward: 1, goal: 3, kind: 'play',
+  { id: 'plays',  title: '오늘 2판 플레이',       reward: 1, goal: 2, kind: 'play',
     icon: 'checkThick', iconBg: '#E5FBEC', iconColor: '#00863F', btn: '도전', btnClass: 'btn--primary' },
   { id: 'streak', title: '7일 연속 출석',         reward: 3, goal: 7, kind: 'passive',
     icon: 'calendar',   iconBg: '#EEF1FF', iconColor: '#4A5AC8', btn: '진행중', btnClass: 'btn--neutral' },

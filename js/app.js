@@ -102,7 +102,15 @@ document.addEventListener('DOMContentLoaded', () => {
   // 특정 콘텐츠로의 딥링크는 스플래시 없이 바로. home/login 은 '첫 진입'으로 취급한다.
   if (route && route !== 'login' && route !== 'home') { render(route, arg); return; }
 
+  // 카카오 OAuth 복귀 중이면 스플래시를 또 띄우지 않는다 — Auth 가 세션을 확정하면
+  // 알아서 홈으로 보낸다. 그 사이에는 홈(게스트)을 잠깐 보여 둔다.
+  // (Supabase 가 URL 의 code 를 일찍 지우므로, 로그인 시작 때 심어둔 플래그도 함께 본다.)
+  let kakaoPending = false;
+  try { kakaoPending = sessionStorage.getItem('kakao_pending') === '1'; sessionStorage.removeItem('kakao_pending'); } catch (_) {}
+  const oauthReturning = kakaoPending || /[?&](code|error|error_description)=/.test(location.search);
+
   // 로그인돼 있으면 바로 홈(온보딩 전이면 온보딩), 아니면(로그아웃·신규) 스플래시부터 → 로그인.
   if (Store.state.account) go(Store.state.onboarded ? 'home' : 'onboarding');
+  else if (oauthReturning) go('home');
   else go('splash');
 });

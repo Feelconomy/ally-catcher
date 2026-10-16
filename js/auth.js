@@ -37,6 +37,8 @@ const Auth = {
     // 요청 스코프(닉네임/프로필/이메일)는 Supabase 기본값을 따르며,
     // 카카오 개발자콘솔의 '동의항목'에 등록돼 있어야 KOE205가 안 난다.
     const redirectTo = location.origin + location.pathname;
+    // 복귀 시 스플래시를 또 띄우지 않도록 '로그인 진행 중' 표시 (부팅에서 확인·제거).
+    try { sessionStorage.setItem('kakao_pending', '1'); } catch (_) {}
     return sb.auth.signInWithOAuth({ provider: 'kakao', options: { redirectTo } });
   },
 
