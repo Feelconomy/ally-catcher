@@ -99,9 +99,10 @@ document.addEventListener('DOMContentLoaded', () => {
   Store.load();
 
   const { route, arg } = readHash();
-  if (route) { render(route, arg); return; }
+  // 특정 콘텐츠로의 딥링크는 스플래시 없이 바로. home/login 은 '첫 진입'으로 취급한다.
+  if (route && route !== 'login' && route !== 'home') { render(route, arg); return; }
 
-  if (!Store.state.account && !Store.state.onboarded) go('splash');
-  else if (!Store.state.onboarded) go('onboarding');
-  else go('home');
+  // 로그인돼 있으면 바로 홈(온보딩 전이면 온보딩), 아니면(로그아웃·신규) 스플래시부터 → 로그인.
+  if (Store.state.account) go(Store.state.onboarded ? 'home' : 'onboarding');
+  else go('splash');
 });
