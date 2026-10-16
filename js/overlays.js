@@ -975,7 +975,7 @@ const Dialogs = {
           const m = (typeof MACHINES !== 'undefined' && MACHINES.find(x => /10주년/.test(x.name || ''))) || null;
           go('machine', m ? m.id : 'bear3');
           // 이동(렌더) 후에 토스트를 띄워 기계 화면 위에서 보이게 한다.
-          setTimeout(() => toast('올원뱅크 10주년 생일파티 초대장이 도착했어요', { icon: 'mailOpened', iconColor: '#FF3A80' }), 280);
+          setTimeout(() => toast('올원뱅크 10주년 생일파티 초대장이 도착했어요 - !', { icon: 'mailOpened', iconColor: '#FF3A80' }), 280);
         },
         hideToday: () => { try { localStorage.setItem('anniv_hide', annivHideKey()); } catch (_) {} close(); },
       }), { cls: 'event', scrim: 'deep' });
