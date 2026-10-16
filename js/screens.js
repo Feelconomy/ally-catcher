@@ -1494,7 +1494,7 @@ function adminSkinPicker() {
         <span class="sw" style="background:${b.swatch}"></span>${b.name}
       </button>`).join('')}
     </div>
-    <div class="adm-note">3D 화면에서 인형통 바깥에 보이는 풍경이에요.</div>
+    <div class="adm-note">3D 화면에서 인형통 바깥에 보이는 풍경의 기본값이에요. 기계마다 따로 고르면 그쪽이 우선합니다.</div>
   </div>`;
 }
 

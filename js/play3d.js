@@ -40,7 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=254';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=255';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
@@ -123,7 +123,9 @@ export const Play3D = {
     this.scene = new THREE.Scene();
     /* 배경은 관리자가 고른다 (들판 / 생일파티). 하늘색과 안개도 같이 바뀌어야
        바깥이 한 장면으로 보인다. */
-    this.backdrop = Store.state.admin.backdrop === 'party' ? 'party' : 'meadow';
+    /* 기계마다 고른 풍경이 먼저, 비워 두면 관리자가 정한 기본값을 따른다. */
+    const want = machine.backdrop || Store.state.admin.backdrop;
+    this.backdrop = want === 'party' ? 'party' : 'meadow';
     if (this.backdrop === 'party') {
       this.scene.background = new THREE.Color(PARTY_SKY);
       this.scene.fog = new THREE.Fog(PARTY_FOG.color, PARTY_FOG.near, PARTY_FOG.far);

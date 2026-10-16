@@ -568,6 +568,14 @@ const Sheets = {
         </button>`).join('')}
       </div>
 
+      <div class="group-label" style="margin:16px 0 8px">3D 바깥 풍경</div>
+      <div class="adm-tags" id="mbg">
+        <button class="tg bd" data-act="mbg" data-v="" aria-pressed="${!m.backdrop}">
+          <span class="none">기본값 따름</span></button>
+        ${BACKDROPS.map(b => `<button class="tg bd" data-act="mbg" data-v="${b.id}" aria-pressed="${m.backdrop === b.id}">
+          <span class="sw" style="background:${b.swatch}"></span>${b.name}</button>`).join('')}
+      </div>
+
       <div class="group-label" style="margin:16px 0 8px">난이도</div>
       <div class="adm-tags" id="levels">
         ${MACHINE_LEVELS.map(v => `<button class="tg lv" data-act="level" data-v="${v}" aria-pressed="${v === m.difficulty}">${v}</button>`).join('')}
@@ -588,6 +596,7 @@ const Sheets = {
         let open = !!m.open;
         let tagIdx = Math.max(0, MACHINE_TAGS.findIndex(t => t.tag === (m.tag || '')));
         let level = MACHINE_LEVELS.includes(m.difficulty) ? m.difficulty : '보통';
+        let mbg = m.backdrop || '';            // '' 이면 관리자 기본값을 따른다
         const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
 
         bind(node, {
@@ -595,6 +604,10 @@ const Sheets = {
           tag: el => {
             tagIdx = Number(el.dataset.i);
             $$('#tags .tg', node).forEach((b, i) => b.setAttribute('aria-pressed', String(i === tagIdx)));
+          },
+          mbg: el => {
+            mbg = el.dataset.v;
+            $$('#mbg .tg', node).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === mbg)));
           },
           level: el => {
             level = el.dataset.v;
@@ -627,7 +640,7 @@ const Sheets = {
               blurb: $('#mb', node).value.trim(),
               cost: num($('#mc', node), 99),
               baseRate: num($('#mr', node), 100),
-              tag: look.tag, tagClass: look.tagClass, difficulty: level,
+              tag: look.tag, tagClass: look.tagClass, difficulty: level, backdrop: mbg,
               pool, contents: pool,
               hero: pool.includes(m.hero) ? m.hero : pool[0],
             };
