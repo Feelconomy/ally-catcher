@@ -1750,6 +1750,9 @@ a:hover { color: var(--green-deep); }
 .dialog.event .event-cta { margin-top: 14px; width: 100%; }
 /* 이미 받은 상태(disabled)도 투명 다이얼로그 위에서 또렷이 보이게 — 흰 버튼 */
 .dialog.event .event-cta:disabled { background: #fff !important; color: var(--ink-45) !important; box-shadow: 0 6px 18px rgba(0, 0, 0, .18) !important; }
+/* 이벤트 팝업 CTA만 팝업(파티) 분위기에 맞춰 핑크로 — 다른 btn--primary 는 그대로 */
+.dialog.event .event-cta { background: #FF3A80; color: #fff; box-shadow: 0 6px 18px rgba(255, 58, 128, .45); }
+.dialog.event .event-cta:active:not(:disabled) { background: #ED2A6C; }
 /* '오늘 하루 그만 보기' — 투명 다이얼로그(어두운 스크림) 위 옅은 흰 텍스트 버튼 */
 .dialog.event .event-dismiss { display: block; width: 100%; margin-top: 9px; padding: 7px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, .82); text-align: center; }
 .dialog.event .event-dismiss:active { color: #fff; }

@@ -324,7 +324,7 @@ function toast(message, opts) {
   node.setAttribute('role', 'status');
   node.innerHTML = o.mini
     ? esc(message)
-    : `${o.tone ? `<span class="ic ${o.tone === 'error' ? 'err' : 'ok'}">${icon(o.tone === 'error' ? 'circleExclamation' : 'circleCheck', 19)}</span>` : ''}
+    : `${(o.tone || o.icon) ? `<span class="ic ${o.tone === 'error' ? 'err' : 'ok'}"${o.iconColor ? ` style="color:${o.iconColor}"` : ''}>${icon(o.icon || (o.tone === 'error' ? 'circleExclamation' : 'circleCheck'), 19)}</span>` : ''}
        <span class="tx">${esc(message)}</span>
        ${o.action ? `<button class="act">${esc(o.action)}</button>` : ''}`;
   // Retire the oldest so a burst of toasts cannot pile up off-screen.

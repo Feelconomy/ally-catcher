@@ -962,21 +962,17 @@ const Dialogs = {
 
   /* --- 이벤트 팝업 (올원뱅크 10주년) ------------------------------------- */
   anniv() {
-    const claimed = Store.state.annivClaimed;
     dialog(`
       <button class="event-x" data-close aria-label="닫기">${icon('close', 18)}</button>
       <img class="event-kv" src="assets/event-anniv.webp?v=234" alt="올원뱅크 10주년 기념 이벤트">
-      <button class="btn md btn--primary event-cta" data-act="claim" ${claimed ? 'disabled' : ''}>
-        ${claimed ? '이미 받았어요' : `${icon('ticketFill', 18)}10주년 축하 티켓 ${ANNIV_TICKETS}장 받기`}
-      </button>
+      <button class="btn md btn--primary event-cta" data-act="invite">${icon('gift', 18)}생일파티 초대장 받기</button>
       <button class="event-dismiss" data-act="hideToday">오늘 하루 그만 보기</button>`,
       (node, close) => bind(node, {
-        claim: () => {
-          if (Store.state.annivClaimed) { close(); return; }
-          Store.state.annivClaimed = true;
-          Store.addTickets(ANNIV_TICKETS);   // save 까지 함
+        // 재클릭 제한 없음 — 누를 때마다 초대장 토스트. (추후 10주년 기념 인형통으로 연결)
+        invite: () => {
           close();
-          toast(`10주년 축하 티켓 ${ANNIV_TICKETS}장을 받았어요! 🎉`, { tone: 'ok' });
+          toast('올원뱅크 10주년 생일파티 초대장이 도착했어요 🎂', { icon: 'mailOpened', iconColor: '#FF3A80' });
+          // TODO: 10주년 기념 인형통 연결 — go('loading', '<machineId>')
         },
         hideToday: () => { try { localStorage.setItem('anniv_hide', annivHideKey()); } catch (_) {} close(); },
       }), { cls: 'event', scrim: 'deep' });
