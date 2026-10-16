@@ -151,6 +151,14 @@ const Store = {
       const s = this.state.stock[k];
       if (Array.isArray(s)) this.state.stock[k] = s.filter(stocked);
     }
+    /* 기계 구성에도 지워진 인형이 남는다. 기본 기계의 pool 은 data.js 에 박혀
+       있어서, 관리자가 그 인형을 지워도 기계를 세울 때마다 없는 id 가 딸려 오고
+       관리자 기계 목록이 DOLLS[id].hidden 을 읽다 통째로 죽었다. */
+    for (const m of MACHINES) {
+      if (Array.isArray(m.pool)) m.pool = m.pool.filter(known);
+      if (Array.isArray(m.contents)) m.contents = m.contents.filter(known);
+      if (m.hero && !known(m.hero)) m.hero = m.pool[0] || m.contents[0] || null;
+    }
   },
 
   /* 관리자가 고친 카탈로그는 이 기기만의 것이 아니라 서비스 전체가 공유한다.
