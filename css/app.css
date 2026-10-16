@@ -471,6 +471,8 @@ a:hover { color: var(--green-deep); }
 .adm-tags .tg:active { transform: scale(.95); }
 .adm-tags .tg .none { font-size: 11px; font-weight: 700; color: var(--ink-45); }
 .adm-tags .tg.lv { font-size: 12px; font-weight: 700; padding: 9px 14px; }
+.adm-tags .tg.bd { font-size: 12px; font-weight: 700; padding: 8px 13px; gap: 7px; }
+.adm-tags .tg.bd .sw { width: 14px; height: 14px; border-radius: 5px; display: inline-block; }
 
 /* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
 /* 지금 함께 뽑는 중 — 위 통계 카드와 경쟁하지 않게 흰 카드 대신 옅은 알약으로

@@ -196,6 +196,12 @@ const MACHINE_TAGS = [
   { tag: '쉬움', tagClass: 'badge--easy',    label: '쉬움' },
 ];
 const MACHINE_LEVELS = ['쉬움', '보통', '어려움'];
+/* 3D 인형통 바깥에 보이는 풍경. 들판은 9.25MB GLB 를 받아 오고, 생일파티는
+   받을 파일 없이 three.js 도형으로 그 자리에서 조립한다(1만 삼각형대). */
+const BACKDROPS = [
+  { id: 'meadow', name: '들판',     swatch: '#9ED06B' },
+  { id: 'party',  name: '생일파티', swatch: '#FF5FA2' },
+];
 
 /* Missions. `kind` drives what tapping the action button does. */
 const MISSIONS = [

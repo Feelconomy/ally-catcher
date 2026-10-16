@@ -40,6 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=254';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
@@ -120,8 +121,16 @@ export const Play3D = {
     this.renderer.toneMappingExposure = .95;
     this.root.prepend(this.renderer.domElement);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#a9def4');
-    this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    /* 배경은 관리자가 고른다 (들판 / 생일파티). 하늘색과 안개도 같이 바뀌어야
+       바깥이 한 장면으로 보인다. */
+    this.backdrop = Store.state.admin.backdrop === 'party' ? 'party' : 'meadow';
+    if (this.backdrop === 'party') {
+      this.scene.background = new THREE.Color(PARTY_SKY);
+      this.scene.fog = new THREE.Fog(PARTY_FOG.color, PARTY_FOG.near, PARTY_FOG.far);
+    } else {
+      this.scene.background = new THREE.Color('#a9def4');
+      this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    }
     // Bright surroundings keep coated surfaces reflective instead of black.
     const studio = new THREE.Scene(); studio.background = new THREE.Color('#eaf6ff');
     const softbox = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshBasicMaterial({color: new THREE.Color(3, 2.8, 2.5), side: THREE.DoubleSide}));
@@ -285,9 +294,9 @@ export const Play3D = {
     const bar = (pct) => document.getElementById('loading3dBar')?.style.setProperty('width', pct);
     /* 배경까지 다 받아 화면에 올린 뒤에 연다. 전에는 준비 화면을 먼저 걷고 250ms
        뒤에 들판을 깔아서, 들어가자마자 배경이 '팟' 하고 생기는 게 보였다. */
-    if (label) label.textContent = '들판 준비 중';
+    if (label) label.textContent = this.backdrop === 'party' ? '파티장 꾸미는 중' : '들판 준비 중';
     bar('88%');
-    await this.loadMeadow(session);
+    await this.loadBackdrop(session);
     if (!this.active || session !== this.session) return;
 
     if (label) label.textContent = '조명과 화면 준비 중';
@@ -783,6 +792,15 @@ export const Play3D = {
     this.saveToyLayout();
     this.status('다시 채웠어요');
     haptic(20);
+  },
+
+  /** 고른 배경을 깔아 둔다. 생일파티는 내려받을 파일이 없어 바로 선다. */
+  async loadBackdrop(session) {
+    if (this.backdrop === 'party') {
+      this.scene.add(buildPartyBackdrop());
+      return;
+    }
+    return this.loadMeadow(session);
   },
 
   async loadMeadow(session) {
