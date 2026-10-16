@@ -561,6 +561,18 @@ const Sheets = {
           <button class="toggle" role="switch" aria-checked="${!!m.open}" data-act="open" aria-label="운영중"><i></i></button></div>
       </div>
 
+      <div class="group-label" style="margin:18px 0 8px">태그</div>
+      <div class="adm-tags" id="tags">
+        ${MACHINE_TAGS.map((t, i) => `<button class="tg" data-act="tag" data-i="${i}" aria-pressed="${t.tag === (m.tag || '')}">
+          ${t.tag ? `<span class="badge ${t.tagClass}">${t.tag}</span>` : '<span class="none">없음</span>'}
+        </button>`).join('')}
+      </div>
+
+      <div class="group-label" style="margin:16px 0 8px">난이도</div>
+      <div class="adm-tags" id="levels">
+        ${MACHINE_LEVELS.map(v => `<button class="tg lv" data-act="level" data-v="${v}" aria-pressed="${v === m.difficulty}">${v}</button>`).join('')}
+      </div>
+
       <div class="group-label" style="margin:18px 0 8px">넣을 인형 <span id="pn">${picked.size}</span>종</div>
       <div class="adm-pick" id="pick">
         ${DOLL_IDS.map(id => `<button class="pk ${DOLLS[id].hidden ? 'off' : ''}" data-act="pick" data-id="${id}" aria-pressed="${picked.has(id)}">
@@ -574,10 +586,20 @@ const Sheets = {
       <button class="btn md btn--text" style="margin-top:2px;color:var(--danger)" data-act="del">이 기계 삭제</button>`}`,
       (node, close) => {
         let open = !!m.open;
+        let tagIdx = Math.max(0, MACHINE_TAGS.findIndex(t => t.tag === (m.tag || '')));
+        let level = MACHINE_LEVELS.includes(m.difficulty) ? m.difficulty : '보통';
         const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
 
         bind(node, {
           open: el => { open = !open; el.setAttribute('aria-checked', String(open)); },
+          tag: el => {
+            tagIdx = Number(el.dataset.i);
+            $$('#tags .tg', node).forEach((b, i) => b.setAttribute('aria-pressed', String(i === tagIdx)));
+          },
+          level: el => {
+            level = el.dataset.v;
+            $$('#levels .tg', node).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === level)));
+          },
           pick: el => {
             const id = el.dataset.id;
             if (picked.has(id)) picked.delete(id); else picked.add(id);
@@ -598,12 +620,14 @@ const Sheets = {
             if (!name) return toast('이름을 입력해 주세요', { tone: 'error' });
             if (!picked.size) return toast('인형을 한 종류 이상 고르세요', { tone: 'error' });
             const pool = Array.from(picked);
+            const look = MACHINE_TAGS[tagIdx] || MACHINE_TAGS[0];
             const patch = {
               name, open,
               short: name.length > 8 ? name.slice(0, 8) : name,
               blurb: $('#mb', node).value.trim(),
               cost: num($('#mc', node), 99),
               baseRate: num($('#mr', node), 100),
+              tag: look.tag, tagClass: look.tagClass, difficulty: level,
               pool, contents: pool,
               hero: pool.includes(m.hero) ? m.hero : pool[0],
             };

@@ -185,6 +185,17 @@ const MACHINES = [
 const MACHINE_BASE = JSON.parse(JSON.stringify(MACHINES));
 
 const HOME_FILTERS = ['전체', '인기', '한정판', '쉬움', '신규'];
+/* 기계 카드에 붙는 태그. 관리자가 고르는 목록이라 홈 필터(HOME_FILTERS)와 짝이
+   맞아야 한다 — '인기'·'한정'·'신규' 는 그 필터가 태그로 거르고, '쉬움' 필터만
+   태그가 아니라 난이도로 거른다. */
+const MACHINE_TAGS = [
+  { tag: '',     tagClass: '',              label: '없음' },
+  { tag: '신규', tagClass: 'badge--new',     label: '신규' },
+  { tag: '인기', tagClass: 'badge--pop',     label: '인기' },
+  { tag: '한정', tagClass: 'badge--limited', label: '한정' },
+  { tag: '쉬움', tagClass: 'badge--easy',    label: '쉬움' },
+];
+const MACHINE_LEVELS = ['쉬움', '보통', '어려움'];
 
 /* Missions. `kind` drives what tapping the action button does. */
 const MISSIONS = [

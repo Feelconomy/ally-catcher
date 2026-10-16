@@ -397,7 +397,7 @@ const Screens = {
       <div class="scroll" style="padding:20px 20px 0">
         ${m.open ? `
           <div style="display:flex;align-items:center;gap:7px">
-            <span class="badge ${m.tagClass}">${m.tag}</span>
+            ${m.tag ? `<span class="badge ${m.tagClass}">${m.tag}</span>` : ''}
             <span class="badge badge--easy">난이도 ${m.difficulty}</span>
           </div>
           <h2 class="h2" style="margin-top:10px">${esc(m.name)}</h2>
@@ -1571,7 +1571,9 @@ function machineCard(m) {
   return `<button class="mcard" data-act="machine" data-id="${m.id}" ${m.open ? '' : 'data-down'}>
     <span class="thumb" style="background:${m.bg};display:flex">
       ${dollImg(m.hero, 84)}
-      <span class="badge ${m.open ? m.tagClass : 'badge--down'}">${m.open ? m.tag : '점검'}</span>
+      ${m.open
+        ? (m.tag ? `<span class="badge ${m.tagClass}">${m.tag}</span>` : '')
+        : '<span class="badge badge--down">점검</span>'}
     </span>
     <span class="name" style="display:block">${esc(m.name)}</span>
     <span class="meta" style="display:flex">
