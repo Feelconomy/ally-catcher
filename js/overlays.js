@@ -971,8 +971,11 @@ const Dialogs = {
         // 재클릭 제한 없음 — 누를 때마다 초대장 토스트. (추후 10주년 기념 인형통으로 연결)
         invite: () => {
           close();
-          toast('올원뱅크 10주년 생일파티 초대장이 도착했어요 🎂', { icon: 'mailOpened', iconColor: '#FF3A80' });
-          // TODO: 10주년 기념 인형통 연결 — go('loading', '<machineId>')
+          // '올원뱅크 10주년 축하해' 기계로 이동 (이름에 10주년 있는 기계, 없으면 bear3).
+          const m = (typeof MACHINES !== 'undefined' && MACHINES.find(x => /10주년/.test(x.name || ''))) || null;
+          go('machine', m ? m.id : 'bear3');
+          // 이동(렌더) 후에 토스트를 띄워 기계 화면 위에서 보이게 한다.
+          setTimeout(() => toast('올원뱅크 10주년 생일파티 초대장이 도착했어요', { icon: 'mailOpened', iconColor: '#FF3A80' }), 280);
         },
         hideToday: () => { try { localStorage.setItem('anniv_hide', annivHideKey()); } catch (_) {} close(); },
       }), { cls: 'event', scrim: 'deep' });
