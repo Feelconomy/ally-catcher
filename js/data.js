@@ -56,12 +56,13 @@ const DOLLS = {
     { id: 'frogdali',   name: '개구리 달리', grade: 'R',  points: 120, bg: '#EAF5E2', rate: 2.4, model3d: 'ToyFrogDali' },
     { id: 'woni',       name: '원이',       grade: 'R',  points: 120, bg: '#FFF6D8', rate: 2.4, model3d: 'ToyWoni' },
     { id: 'hanbokkori', name: '한복 코리',  grade: 'R',  points: 120, bg: '#E8EEF8', rate: 2.4, model3d: 'ToyHanbokKori' },
-    /* 올원뱅크 10주년 생일파티 세트. 3D 모델은 턴어라운드 세 장으로 뽑았다.
-       파티 원이는 3D 모델(ToyPartyWoni)만 있고 2D 네 포즈가 아직 없어 여기에
-       넣지 않았다 — 넣으면 도감·보관함에 깨진 그림이 뜬다. 그림이 오면
-       partywoni 한 줄만 더하면 된다. */
+    /* 올원뱅크 10주년 생일파티 세트. 3D 모델은 턴어라운드 세 장씩으로 뽑았다.
+       파티 코리만 전용 3D 가 없어 기본 코리 모델을 빌려 쓴다 — 3D 에서는
+       고깔이 없지만 코끼리로는 제대로 선다. */
     { id: 'partyolly',  name: '파티 올리',  grade: 'SR', points: 400, bg: '#FDE7F1', rate: 1.8, model3d: 'ToyPartyOlly' },
     { id: 'partydali',  name: '파티 달리',  grade: 'R',  points: 120, bg: '#FFF0F6', rate: 2.4, model3d: 'ToyPartyDali' },
+    { id: 'partywoni',  name: '파티 원이',  grade: 'R',  points: 120, bg: '#FFF8E0', rate: 2.4, model3d: 'ToyPartyWoni' },
+    { id: 'partykori',  name: '파티 코리',  grade: 'R',  points: 120, bg: '#E8F4FD', rate: 2.4, model3d: 'ToyKori' },
   ]),
 };
 
