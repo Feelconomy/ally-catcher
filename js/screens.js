@@ -78,6 +78,7 @@ const Screens = {
          튕겼다. 기본 티켓도 가입과 똑같이 준다(기기당 1회). */
       peek: () => {
         Store.state.guest = true;
+        Store.seedGuestCollection();   // 둘러보기 전용: 기본 인형 5개 + 1000P (1회)
         Store.save();
         // 처음이면 온보딩부터 — 끝에서 기본 티켓을 준다(welcome).
         if (!Store.state.onboarded) { go('onboarding'); return; }
@@ -303,9 +304,17 @@ const Screens = {
 
     // 올원뱅크 10주년 이벤트 팝업 — 세션당 1회, 홈 진입 시.
     // '오늘 하루 그만 보기' 를 누른 날은 띄우지 않는다.
+    // 부팅 중에는 홈이 여러 번(게스트→세션확정→sync) 다시 그려지며 그때마다
+    // render()가 열린 팝업을 닫는다. 그래서 '마지막 렌더 뒤'에만 뜨도록 디바운스한다 —
+    // 재렌더가 멈추면 그 시점부터 쿨다운 후 1회 띄운다. (open 순간에 플래그를 세워 중복 방지.)
     if (!App.annivShownSession && typeof Dialogs !== 'undefined' && Dialogs.anniv && !annivHiddenToday()) {
-      App.annivShownSession = true;
-      setTimeout(() => { if (App.route === 'home') Dialogs.anniv(); }, 450);
+      clearTimeout(App.annivTimer);
+      App.annivTimer = setTimeout(() => {
+        if (App.route === 'home' && !App.annivShownSession && !annivHiddenToday()) {
+          App.annivShownSession = true;
+          Dialogs.anniv();
+        }
+      }, 650);
     }
   },
 

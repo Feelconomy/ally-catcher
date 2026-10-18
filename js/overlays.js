@@ -1065,8 +1065,8 @@ const Dialogs = {
       } catch (_) { /* toBlob 미지원 → 다운로드로 폴백 */ }
       $('#bragFrame', node).innerHTML =
         `<img src="${dataUrl}" alt="${esc(d.name)} 자랑 카드">`;
-      $('#bragHint', node).textContent = canShareImage()
-        ? '공유하기로 친구에게 자랑하거나 사진 앱에 저장할 수 있어요.'
+      $('#bragHint', node).innerHTML = canShareImage()
+        ? '공유하기로 친구에게 자랑하거나<br>사진 앱에 저장할 수 있어요.'
         : '공유하기로 카드 문구와 앱 링크를 보낼 수 있어요.';
       const shareBtn = $('#bragShare', node);
       shareBtn.style.opacity = '';
