@@ -40,7 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=260';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=262';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
@@ -189,6 +189,10 @@ export const Play3D = {
       ['ToyWoni', 'woni-plush.glb?v=1', null, -Math.PI / 2],
       ['ToyHanbokKori', 'hanbokkori-plush.glb?v=1', null, -Math.PI / 2],
       ['ToySpring', 'spring-plush.glb?v=1', null, -Math.PI / 2],
+      // 올원뱅크 10주년 생일파티 세트 (턴어라운드 3장으로 뽑은 모델)
+      ['ToyPartyWoni', 'partywoni-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyPartyDali', 'partydali-plush.glb?v=1', null, -Math.PI / 2],
+      ['ToyPartyOlly', 'partyolly-plush.glb?v=1', null, -Math.PI / 2],
     ].filter(([type]) => [...machine.pool, ...(Store.state.stock[machine.id] || [])].some(id => toyType(id) === type));
     let completed = 0;
     const files = ['mint-machine.glb', ...specs.map(s => s[1])];
