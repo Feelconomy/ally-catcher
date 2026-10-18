@@ -14,7 +14,7 @@ function warmGreen3D() {
   warmed = true;
   const idle = window.requestIdleCallback || (fn => setTimeout(fn, 1500));
   idle(() => {
-    import('./play3d.js?v=267').catch(() => { warmed = false; });
+    import('./play3d.js?v=268').catch(() => { warmed = false; });
     for (const f of ['higgsfield-meadow-detailed.glb', 'mint-machine.glb'])
       fetch('assets/3d/' + f, { priority: 'low' }).catch(() => {});
   });
@@ -83,11 +83,12 @@ async function startGreen3D(machine) {
   Play.machine = machine;
   Play.skinId = 'arcade';
   setTheme('arcade');
+  applyMachineTone(machine);      // 바로 들어온 경우(연결 화면을 안 거친 경우)
   // 기계 연결 화면에서 넘어왔으면 그 준비 화면을 그대로 이어 쓴다 — 두 번 안 띄운다
   if (!document.getElementById('loading3d')) screenEl().innerHTML = green3DLoading();
   try {
     if (location.protocol === 'file:') throw new Error('LOCAL_SERVER_REQUIRED');
-    const { Play3D } = await import('./play3d.js?v=267');
+    const { Play3D } = await import('./play3d.js?v=268');
     if (request !== green3DRequest || App.route !== 'play') return;
     window.Play3D = Play3D;
     await Play3D.start(machine);

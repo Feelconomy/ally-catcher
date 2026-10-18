@@ -209,14 +209,43 @@ const MACHINE_LEVELS = ['쉬움', '보통', '어려움'];
    벌로 묶어, 관리자가 하나만 고르면 두 화면의 색이 따로 놀지 않게 한다.
    bg 는 기존 기계들이 쓰던 연한 톤과 같은 밝기로 맞췄다. */
 const MACHINE_TONES = [
-  { id: 'green',  name: '초록', bg: '#EAF7DE', sky: '#A9DEF4', fog: '#C8E9ED', deck: ['#E9F7EE', '#B3D7C2'] },
-  { id: 'pink',   name: '분홍', bg: '#FFE9F2', sky: '#FBA8CC', fog: '#F8C9DE', deck: ['#FFEDF4', '#F0B9D1'] },
-  { id: 'yellow', name: '노랑', bg: '#FFF6D8', sky: '#FFE07A', fog: '#FBEFC4', deck: ['#FFF8E2', '#EFD79A'] },
-  { id: 'blue',   name: '파랑', bg: '#E8F4FD', sky: '#8FD0F5', fog: '#CBE6F6', deck: ['#EDF6FD', '#AECDE4'] },
-  { id: 'purple', name: '보라', bg: '#F1EBFC', sky: '#BBA6F2', fog: '#DED2F7', deck: ['#F3EEFC', '#C4B4E6'] },
-  { id: 'cream',  name: '크림', bg: '#FBF1E2', sky: '#F6D9A8', fog: '#F6E8D2', deck: ['#FDF6EC', '#E3CDAE'] },
+  // bg: 홈 카드 바탕 · sky/fog: 3D 하늘과 안개 · deck: 조작대 그라데이션
+  // ink: 글자와 실루엣 · lite/mid/deep: 조이스틱·드롭·시점 버튼 같은 조작 색
+  // cab: 3D 기계통 도장 [본체, 테두리, 바닥, 조이스틱]
+  { id: 'green',  name: '초록', bg: '#EAF7DE', sky: '#A9DEF4', fog: '#C8E9ED', deck: ['#E9F7EE', '#B3D7C2'],
+    ink: '#0E4F2C', lite: '#7ADFA0', mid: '#00A650', deep: '#006D39',
+    cab: ['#B5EDCE', '#FFF0B5', '#ECF7DC', '#69D9B1'] },
+  { id: 'pink',   name: '분홍', bg: '#FFE9F2', sky: '#FBA8CC', fog: '#F8C9DE', deck: ['#FFEDF4', '#F0B9D1'],
+    ink: '#6E1F44', lite: '#FFA8CE', mid: '#E8458E', deep: '#A62F63',
+    cab: ['#F3B8D0', '#FFF0B5', '#FCE8F0', '#F48FB6'] },
+  { id: 'yellow', name: '노랑', bg: '#FFF6D8', sky: '#FFE07A', fog: '#FBEFC4', deck: ['#FFF8E2', '#EFD79A'],
+    ink: '#5A3B06', lite: '#FFE08A', mid: '#F0A81E', deep: '#9C6A06',
+    cab: ['#F3DCA3', '#FFF6D8', '#FDF3DC', '#F2C45A'] },
+  { id: 'blue',   name: '파랑', bg: '#E8F4FD', sky: '#8FD0F5', fog: '#CBE6F6', deck: ['#EDF6FD', '#AECDE4'],
+    ink: '#0B3B59', lite: '#8FD2F7', mid: '#1E8FD0', deep: '#0B5A86',
+    cab: ['#AED9F2', '#FFF0B5', '#E6F2FB', '#6FC0EC'] },
+  { id: 'purple', name: '보라', bg: '#F1EBFC', sky: '#BBA6F2', fog: '#DED2F7', deck: ['#F3EEFC', '#C4B4E6'],
+    ink: '#3A2168', lite: '#C9B3F5', mid: '#7B52CE', deep: '#4C2E88',
+    cab: ['#CBBCEF', '#FFF0B5', '#EFE9FB', '#A98CE4'] },
+  { id: 'cream',  name: '크림', bg: '#FBF1E2', sky: '#F6D9A8', fog: '#F6E8D2', deck: ['#FDF6EC', '#E3CDAE'],
+    ink: '#4E3313', lite: '#F3D7A8', mid: '#C38C43', deep: '#7D5520',
+    cab: ['#EFD3AC', '#FFF6E2', '#FAF0E2', '#DDB882'] },
 ];
 const machineTone = (m) => MACHINE_TONES.find(t => t.id === (m && m.tone)) || MACHINE_TONES[0];
+/* 고른 색감을 화면에 깐다. 3D 준비 화면은 Play3D 가 뜨기 전에(기계 연결 화면에서)
+   이미 그려지므로, 한 군데(:root)에 넣어 두 화면이 같이 따라오게 한다. */
+function applyMachineTone(m) {
+  const t = machineTone(m), css = document.documentElement.style;
+  css.setProperty('--g3-bg', t.bg);
+  css.setProperty('--g3-stage', t.sky);
+  css.setProperty('--g3-deck-a', t.deck[0]);
+  css.setProperty('--g3-deck-b', t.deck[1]);
+  css.setProperty('--g3-ink', t.ink);
+  css.setProperty('--g3-lite', t.lite);
+  css.setProperty('--g3-mid', t.mid);
+  css.setProperty('--g3-deep', t.deep);
+  return t;
+}
 /* 3D 인형통 바깥에 보이는 풍경. 들판은 9.25MB GLB 를 받아 오고, 생일파티는
    받을 파일 없이 three.js 도형으로 그 자리에서 조립한다(1만 삼각형대). */
 const BACKDROPS = [

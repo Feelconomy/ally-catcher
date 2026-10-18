@@ -533,6 +533,7 @@ const Screens = {
   loading(id) {
     setTheme('arcade');
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
+    applyMachineTone(m);          // 준비 화면부터 그 인형통 색으로 — 3D 가 뜨기 전이다
     const is3D = availablePlayMode(Store.state.settings.skin || Store.state.admin.skin) === 'green3d';
     screenEl().innerHTML = green3DLoading();
     $('#loading3dText').textContent = `${m.name} · 티켓 ${m.cost}장`;

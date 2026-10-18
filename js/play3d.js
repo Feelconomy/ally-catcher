@@ -40,7 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=267';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=268';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
@@ -129,19 +129,14 @@ export const Play3D = {
     /* 하늘·안개·조작대 색은 기계에 정해 둔 색감을 따른다 — 홈 카드 바탕과 같은
        한 벌이라, 어느 통에 들어왔는지가 화면 전체에서 같은 색으로 읽힌다.
        생일파티 배경은 자기 돔 색이 따로 있어 그쪽을 쓴다. */
-    const tone = machineTone(machine);
+    const tone = applyMachineTone(machine);
     this.tone = tone;
     const sky = this.backdrop === 'party' ? PARTY_SKY : tone.sky;
     const fog = this.backdrop === 'party' ? PARTY_FOG : { color: tone.fog, near: 24, far: 70 };
     this.scene.background = new THREE.Color(sky);
     this.scene.fog = new THREE.Fog(fog.color, fog.near, fog.far);
-    // 캔버스 바깥(조작대·무대 여백)도 같은 색으로 맞춘다
-    const root = document.querySelector('.green3d');
-    if (root) {
-      root.style.setProperty('--g3-stage', sky);
-      root.style.setProperty('--g3-deck-a', tone.deck[0]);
-      root.style.setProperty('--g3-deck-b', tone.deck[1]);
-    }
+    /* 생일파티는 돔 색이 따로라 하늘만 덮어쓴다 — 조작대는 색감 그대로 둔다 */
+    if (this.backdrop === 'party') document.documentElement.style.setProperty('--g3-stage', sky);
     // Bright surroundings keep coated surfaces reflective instead of black.
     const studio = new THREE.Scene(); studio.background = new THREE.Color('#eaf6ff');
     const softbox = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshBasicMaterial({color: new THREE.Color(3, 2.8, 2.5), side: THREE.DoubleSide}));
@@ -250,7 +245,9 @@ export const Play3D = {
     for (const name of names.filter(n => !n.startsWith('Toy'))) this.scene.add(this.assets[name]);
     this.scene.traverse(o => {
       if (!o.isMesh) return;
-      const finishes = {'Mint enamel':'#b5edce', 'Pale mint trim':'#fff0b5', 'Mint floor':'#ecf7dc', 'Green joystick':'#69d9b1', 'Blush':'#f6b6c9'};
+      /* 기계통 도장도 색감을 따른다. Blush(볼터치)는 어느 색에서나 같은 분홍. */
+      const [enamel, trim, floor, joy] = tone.cab;
+      const finishes = {'Mint enamel':enamel, 'Pale mint trim':trim, 'Mint floor':floor, 'Green joystick':joy, 'Blush':'#f6b6c9'};
       if (finishes[o.material.name]) {
         o.material.color.set(finishes[o.material.name]);
         o.material.metalness = .05; o.material.roughness = .27;
