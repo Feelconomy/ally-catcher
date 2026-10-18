@@ -78,6 +78,7 @@ const Screens = {
          튕겼다. 기본 티켓도 가입과 똑같이 준다(기기당 1회). */
       peek: () => {
         Store.state.guest = true;
+        Store.seedGuestCollection();   // 둘러보기 전용: 기본 인형 5개 + 1000P (1회)
         Store.save();
         // 처음이면 온보딩부터 — 끝에서 기본 티켓을 준다(welcome).
         if (!Store.state.onboarded) { go('onboarding'); return; }

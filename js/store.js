@@ -10,6 +10,7 @@ const DEFAULT_STATE = {
   annivClaimed: false,    // 올원뱅크 10주년 이벤트 축하 티켓 수령 여부 (1회만)
   account: null,          // { provider, nickname, avatar }
   guest: false,           // 둘러보기로 들어온 상태 — 새로고침해도 유지돼야 한다
+  guestSeeded: false,     // 둘러보기 전용: 기본 인형 5개 + 1000P 시드 지급 여부 (1회만)
   terms: { service: false, privacy: false, age: false, marketing: false },
   tickets: 0,
   points: 0,
@@ -318,6 +319,18 @@ const Store = {
     this.state.signupBonus = true;
     this.addTickets(SIGNUP_TICKETS);   // addTickets 가 save() 까지 함
     return SIGNUP_TICKETS;
+  },
+
+  /** 둘러보기(게스트) 전용: 보관함을 비워 보이지 않게 기본 인형 5개 + 1000P 를 1회만 시드.
+     로그인(account) 상태에선 절대 실행 안 됨 — 둘러보기일 때만. 이미 플레이했으면 시드 생략. */
+  seedGuestCollection() {
+    if (!this.state.guest || this.state.account || this.state.guestSeeded) return;
+    this.state.guestSeeded = true;
+    if (this.state.prizes.length) { this.save(); return; }   // 이미 모은 게 있으면 시드 X
+    const now = Date.now();
+    DOLL_IDS.slice(0, 5).forEach((id, i) => this.state.prizes.push({ dollId: id, at: now - (5 - i) * 1000 }));
+    this.state.points = 1000;
+    this.save();
   },
 
   // --- prizes ------------------------------------------------------------
