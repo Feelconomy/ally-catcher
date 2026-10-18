@@ -56,6 +56,10 @@ const DOLLS = {
     { id: 'frogdali',   name: '개구리 달리', grade: 'R',  points: 120, bg: '#EAF5E2', rate: 2.4, model3d: 'ToyFrogDali' },
     { id: 'woni',       name: '원이',       grade: 'R',  points: 120, bg: '#FFF6D8', rate: 2.4, model3d: 'ToyWoni' },
     { id: 'hanbokkori', name: '한복 코리',  grade: 'R',  points: 120, bg: '#E8EEF8', rate: 2.4, model3d: 'ToyHanbokKori' },
+    /* 올원뱅크 10주년 생일파티 세트. 3D 모델은 아직 없어 model3d 를 비워 두면
+       기본 곰 모양으로 서는데, 2D 에서는 네 포즈가 다 있다. */
+    { id: 'partyolly',  name: '파티 올리',  grade: 'SR', points: 400, bg: '#FDE7F1', rate: 1.8 },
+    { id: 'partydali',  name: '파티 달리',  grade: 'R',  points: 120, bg: '#FFF0F6', rate: 2.4 },
   ]),
 };
 

@@ -40,7 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=259';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=260';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
