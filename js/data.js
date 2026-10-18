@@ -62,8 +62,8 @@ const DOLLS = {
     { id: 'partyolly',  name: '파티 올리',  grade: 'SR', points: 400, bg: '#FDE7F1', rate: 1.8, model3d: 'ToyPartyOlly' },
     { id: 'partydali',  name: '파티 달리',  grade: 'R',  points: 120, bg: '#FFF0F6', rate: 2.4, model3d: 'ToyPartyDali' },
     { id: 'partywoni',  name: '파티 원이',  grade: 'R',  points: 120, bg: '#FFF8E0', rate: 2.4, model3d: 'ToyPartyWoni' },
-    { id: 'partykori',  name: '파티 코리',  grade: 'R',  points: 120, bg: '#E8F4FD', rate: 2.4, model3d: 'ToyKori' },
-    { id: 'partypig',   name: '파티 단지',  grade: 'SR', points: 400, bg: '#FFE9F2', rate: 1.8, model3d: 'ToyPig' },
+    { id: 'partykori',  name: '파티 코리',  grade: 'R',  points: 120, bg: '#E8F4FD', rate: 2.4, model3d: 'ToyPartyKori' },
+    { id: 'partypig',   name: '파티 단지',  grade: 'SR', points: 400, bg: '#FFE9F2', rate: 1.8, model3d: 'ToyPartyPig' },
   ]),
 };
 
@@ -96,6 +96,7 @@ const TOY_SHAPES = {
   ToySki: '눈싸움올리', ToySanta: '산타올리', ToySnorkel: '물놀이올리',
   ToySummer: '수박올리', ToyFrogDali: '개구리달리', ToyWoni: '원이', ToyHanbokKori: '한복코리', ToySpring: '벚꽃올리',
   ToyPartyOlly: '파티올리', ToyPartyDali: '파티달리', ToyPartyWoni: '파티원이',
+  ToyPartyPig: '파티단지', ToyPartyKori: '파티코리',
   ToyBear: '곰', ToyBunny: '토끼', ToyDuck: '오리',
 };
 
