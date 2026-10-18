@@ -475,6 +475,15 @@ a:hover { color: var(--green-deep); }
 .adm-looks .lk:active { transform: scale(.94); }
 /* 지난 발표일처럼 손봐야 할 줄 */
 .adm-mcard .mt.warn { color: var(--danger); }
+/* 관리자 — 기계 태그·난이도 고르기. 고른 것만 또렷하고 나머지는 흐리게. */
+.adm-tags { display: flex; flex-wrap: wrap; gap: 8px; }
+.adm-tags .tg { padding: 7px 10px; border-radius: 11px; background: var(--surface); box-shadow: var(--hairline); opacity: .45; display: flex; align-items: center; }
+.adm-tags .tg[aria-pressed="true"] { opacity: 1; box-shadow: inset 0 0 0 2px var(--green); }
+.adm-tags .tg:active { transform: scale(.95); }
+.adm-tags .tg .none { font-size: 11px; font-weight: 700; color: var(--ink-45); }
+.adm-tags .tg.lv { font-size: 12px; font-weight: 700; padding: 9px 14px; }
+.adm-tags .tg.bd { font-size: 12px; font-weight: 700; padding: 8px 13px; gap: 7px; }
+.adm-tags .tg.bd .sw { width: 14px; height: 14px; border-radius: 5px; display: inline-block; }
 
 /* 기계 상세 — 플레이 화면 모드 고르기 (md- 접두어: 전역 이름과 안 부딪치게) */
 /* 지금 함께 뽑는 중 — 위 통계 카드와 경쟁하지 않게 흰 카드 대신 옅은 알약으로

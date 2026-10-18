@@ -40,10 +40,26 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=259';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
+const MIN_LOADING_MS = 3000;           // 준비가 끝나도 준비 화면을 이만큼은 보여 준다
 const GROUP_TOY = 1, GROUP_CLAW = 2;   // 집게가 더미를 밀고 지나가도록 (아래 clawBody)
+/* 조준 링. 바닥에만 깔면 인형이 두 층으로 쌓였을 때 더미에 묻혀 안 보인다. 링을
+   조각으로 나눠 조각마다 바로 아래로 광선을 쏴, 각자 그 자리의 표면 높이에
+   붙인다 — 인형 등의 굴곡을 따라 그린 자국이 된다. */
+const AIM_SEG = 28;                      // 링을 나눌 조각 수 — 조각마다 광선 한 발
+const AIM_R_IN = .150, AIM_R_OUT = .188, AIM_R_MID = (AIM_R_IN + AIM_R_OUT) / 2;
+/* 조각 높이를 가운데에서 이만큼까지만 벌린다. 인형 가장자리를 넘어가면 표면이
+   뚝 떨어지는데, 그대로 두면 링이 절벽처럼 늘어져 하나로 안 읽힌다. */
+const AIM_SPREAD = .13;
+const AIM_FROM = new CANNON.Vec3(), AIM_TO = new CANNON.Vec3();
+const AIM_HIT = new CANNON.RaycastResult();
+/* 광선은 집게 자신을 맞으면 안 된다. 집게 몸통은 GROUP_CLAW 라, 광선을
+   GROUP_CLAW 소속으로 쏘고 GROUP_TOY 만 맞히면 인형과 통 벽에만 닿는다
+   (벽은 기본 그룹 1 = GROUP_TOY 로 들어가 있다). */
+const AIM_RAY = { collisionFilterGroup: GROUP_CLAW, collisionFilterMask: GROUP_TOY, skipBackfaces: true };
 const REST_Y = 2.72;
 /* 집게 손가락 힌지 각도(라디안). 손가락 그룹을 통째로 굵게 키우면 벌레가 부푸는
    것처럼 보여서, 집게 중심의 피벗에서 실제로 여닫도록 바꿨다.
@@ -68,6 +84,7 @@ export const Play3D = {
     this.swing = new THREE.Vector2(); this.swingVel = new THREE.Vector2(); this.yaw = 0;
     this.clawPos = this.position.clone(); this.prevPos = this.position.clone();
     this.gripT = 0; this.coaching = false;
+    this.startedAt = performance.now();      // 준비 화면 최소 노출 시간을 재는 기준
     /* 준비 화면이 이미 떠 있으면 떼지 않고(애니메이션이 처음부터 다시 돌지 않게)
        그 뒤에 인형통을 깔고, 준비 화면은 위에 덮어 둔다. */
     const keep = document.getElementById('loading3d');
@@ -92,17 +109,30 @@ export const Play3D = {
     document.getElementById('exit3d').onclick = () => this.exit();
     document.getElementById('reset3d').onclick = () => this.rearrange();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
-    /* 픽셀비율을 그대로 쓰면 dpr 3 인 폰에서 채우는 픽셀이 9배가 된다. 2 로 막으면
-       또렷함은 거의 그대로면서 부담이 확 준다 (측정: dpr2 70fps -> dpr1 109fps). */
-    this.renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    /* 픽셀비율을 그대로 쓰면 dpr 3 인 폰에서 채우는 픽셀이 9배가 된다. 폰은 화면이
+       작아 1.5 로 낮춰도 또렷함 차이가 거의 안 보이는데 채울 픽셀은 44% 준다
+       (측정: 한 프레임 그리는 시간 1.67ms -> 0.96ms). 넓은 화면은 2 그대로. */
+    this.renderer.setPixelRatio(Math.min(devicePixelRatio, innerWidth < 820 ? 1.5 : 2));
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    /* PCFSoft 는 그림자 한 점마다 샘플을 여러 번 뜬다. 인형뽑기 그림자에 그만한
+       부드러움은 필요 없어 PCF 로 낮춘다. */
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = .95;
     this.root.prepend(this.renderer.domElement);
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color('#a9def4');
-    this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    /* 배경은 관리자가 고른다 (들판 / 생일파티). 하늘색과 안개도 같이 바뀌어야
+       바깥이 한 장면으로 보인다. */
+    /* 기계마다 고른 풍경이 먼저, 비워 두면 관리자가 정한 기본값을 따른다. */
+    const want = machine.backdrop || Store.state.admin.backdrop;
+    this.backdrop = want === 'party' ? 'party' : 'meadow';
+    if (this.backdrop === 'party') {
+      this.scene.background = new THREE.Color(PARTY_SKY);
+      this.scene.fog = new THREE.Fog(PARTY_FOG.color, PARTY_FOG.near, PARTY_FOG.far);
+    } else {
+      this.scene.background = new THREE.Color('#a9def4');
+      this.scene.fog = new THREE.Fog('#c8e9ed', 24, 70);
+    }
     // Bright surroundings keep coated surfaces reflective instead of black.
     const studio = new THREE.Scene(); studio.background = new THREE.Color('#eaf6ff');
     const softbox = new THREE.Mesh(new THREE.PlaneGeometry(12, 10), new THREE.MeshBasicMaterial({color: new THREE.Color(3, 2.8, 2.5), side: THREE.DoubleSide}));
@@ -123,7 +153,10 @@ export const Play3D = {
     /* 그림자 범위가 캐비닛보다 훨씬 넓어 그림자맵 한 칸이 굵었고, 그래서 인형·집게
        표면에 자기 그림자가 얼룩덜룩 찍혔다(어두운 때처럼 보이던 것). 범위를 캐비닛에
        맞춰 좁히고 해상도를 올린 뒤, 곡면에 맞는 normalBias 로 남은 얼룩을 지운다. */
-    key.castShadow = true; key.shadow.mapSize.set(4096,4096);
+    /* 4096 은 데스크톱 기준이었다. 위에서 그림자 범위를 캐비닛(3.4 x 3.9)에 맞춰
+       좁혀 뒀으니 1024 여도 한 칸이 3.3mm 라 얼룩이 다시 생기지 않는다. 폰에서는
+       메모리(64MB -> 4MB)와 그리는 시간이 같이 준다. */
+    key.castShadow = true; key.shadow.mapSize.set(1024,1024);
     Object.assign(key.shadow.camera, {left:-1.7,right:1.7,top:3.6,bottom:-.3,near:.5,far:12});
     key.shadow.bias = -.0004; key.shadow.normalBias = .035; this.scene.add(key);
     const fill = new THREE.DirectionalLight(0xe5fff3, 1.5); fill.position.set(-3, 2, 1); this.scene.add(fill);
@@ -231,8 +264,25 @@ export const Play3D = {
     });
     this.cable = new THREE.Mesh(new THREE.CylinderGeometry(.012,.012,1,10),new THREE.MeshStandardMaterial({color:0x677e73,metalness:.65,roughness:.4}));
     this.scene.add(this.cable);
-    this.shadow = new THREE.Mesh(new THREE.RingGeometry(.17,.19,40),new THREE.MeshBasicMaterial({color:0x278f61,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false}));
-    this.shadow.rotation.x = -Math.PI/2; this.scene.add(this.shadow);
+    /* 깊이 검사는 끈다(depthTest:false). 표면에 붙여도 앞줄 인형에 가리는 각도가
+       남는데, 조준 표시는 가려지면 쓸모가 없다. 색은 파스텔 더미에서 묻히지 않게
+       노랑 — 2D 의 노란 조준 빔과 같은 말이다. */
+    const ringIdx = [];
+    for (let i = 0; i < AIM_SEG; i++) {
+      const a = i * 2, b = ((i + 1) % AIM_SEG) * 2;
+      ringIdx.push(a, a + 1, b + 1, a, b + 1, b);
+    }
+    const ringGeo = new THREE.BufferGeometry();
+    ringGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(AIM_SEG * 6), 3));
+    ringGeo.setIndex(ringIdx);
+    this.shadow = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
+      color: 0xFFC400, transparent: true, opacity: .95,
+      side: THREE.DoubleSide, depthWrite: false, depthTest: false,
+    }));
+    this.shadow.frustumCulled = false;               // 좌표를 직접 넣어 경계상자가 없다
+    this.shadow.renderOrder = 990; this.scene.add(this.shadow);
+    this.aimH = new Float32Array(AIM_SEG);           // 조각별 높이 (부드럽게 따라간다)
+    this.aimSettled = false;
     this.buildPhysics(); this.stockToys();
     /* 굴리지 않는다. TOY_SLOTS 가 이미 서로 닿는 정확한 높이라 자리를 잡을 필요가
        없고, 조금만 굴려도(40스텝) 더미가 평평해진다. 바로 재워 모양을 유지하고,
@@ -243,18 +293,53 @@ export const Play3D = {
     this.view('angle'); this.resize(); this.bind();
     for (const toy of this.toys) { toy.mesh.position.copy(toy.body.position); toy.mesh.quaternion.copy(toy.body.quaternion); }
     const label = document.getElementById('loading3dText');
+    const bar = (pct) => document.getElementById('loading3dBar')?.style.setProperty('width', pct);
+    /* 배경까지 다 받아 화면에 올린 뒤에 연다. 전에는 준비 화면을 먼저 걷고 250ms
+       뒤에 들판을 깔아서, 들어가자마자 배경이 '팟' 하고 생기는 게 보였다. */
+    if (label) label.textContent = this.backdrop === 'party' ? '파티장 꾸미는 중' : '들판 준비 중';
+    bar('88%');
+    await this.loadBackdrop(session);
+    if (!this.active || session !== this.session) return;
+
     if (label) label.textContent = '조명과 화면 준비 중';
-    document.getElementById('loading3dBar')?.style.setProperty('width', '96%');
+    bar('96%');
     await this.renderer.compileAsync(this.scene, this.camera);
     if (!this.active || session !== this.session) return;
-    this.renderer.render(this.scene, this.camera);
+    /* 셰이더를 컴파일해도 첫 프레임에서 텍스처를 올리느라 한 번 덜컥인다.
+       몇 프레임 실제로 그려 그 덜컥임을 준비 화면 뒤에서 끝낸다. */
+    await this.warmFrames(4, session);
+    if (!this.active || session !== this.session) return;
+    bar('100%');
+
+    // 준비가 빨리 끝나도 준비 화면을 최소 이만큼은 보여 준다
+    const left = MIN_LOADING_MS - (performance.now() - this.startedAt);
+    if (left > 0) await new Promise(r => setTimeout(r, left));
+    if (!this.active || session !== this.session) return;
+
     document.getElementById('loading3d')?.remove();
     this.phase = 'aim'; this.status('뽑을 준비 완료'); document.getElementById('drop3d').disabled = false;
     this.previous = performance.now();
     this.frame = requestAnimationFrame(now => this.update(now));
     // 3D 가 처음이면 조작법을 한 번 짚어 준다. 그동안 남은 시간은 멈춘다.
     if (!Store.state.coach3dDone) coach3D(this);
-    this.meadowTimer = setTimeout(() => this.loadMeadow(session), 250);
+  },
+
+  /** 준비 화면 뒤에서 n 프레임을 실제로 그려, 첫 프레임의 덜컥임을 미리 끝낸다.
+      탭이 뒤로 가면 rAF 가 멈춰 영영 안 돌아오므로, 제한 시간을 걸어 둔다 —
+      준비 화면이 그대로 멈춰 있는 것보다 덜 다듬어진 첫 프레임이 낫다. */
+  warmFrames(n, session) {
+    return new Promise(resolve => {
+      let left = n, done = false;
+      const finish = () => { if (!done) { done = true; clearTimeout(guard); resolve(); } };
+      const guard = setTimeout(finish, 1200);
+      const step = () => {
+        if (done) return;
+        if (!this.active || session !== this.session || left-- <= 0) return finish();
+        this.renderer.render(this.scene, this.camera);
+        requestAnimationFrame(step);
+      };
+      step();
+    });
   },
 
   buildPhysics() {
@@ -407,6 +492,15 @@ export const Play3D = {
     this.camera.updateProjectionMatrix();
   },
 
+  /** (x,z) 에서 똑바로 아래로 쏴, 처음 맞는 표면의 높이를 돌려준다. 아무것도
+      없으면 바닥(0). 인형은 구 두 개로 되어 있어 광선이 싸게 맞는다. */
+  surfaceBelow(x, z) {
+    AIM_FROM.set(x, 2.6, z); AIM_TO.set(x, -0.4, z);
+    AIM_HIT.reset();
+    this.world.raycastClosest(AIM_FROM, AIM_TO, AIM_RAY, AIM_HIT);
+    return AIM_HIT.hasHit ? AIM_HIT.hitPointWorld.y : 0;
+  },
+
   nearest() {
     let best=null;
     for(const toy of this.toys){
@@ -510,7 +604,28 @@ export const Play3D = {
     this.cable.scale.y=Math.max(.08,span.length());
     this.cable.position.copy(top).addScaledVector(span,.5);
     this.cable.quaternion.setFromUnitVectors(new THREE.Vector3(0,-1,0),span.clone().normalize());
-    this.shadow.position.set(this.clawPos.x,.015,this.clawPos.z);this.shadow.visible=this.phase==='aim';
+    const aiming = this.phase === 'aim';
+    this.shadow.visible = aiming;
+    if (aiming) {
+      /* 조각마다 바로 아래로 광선을 쏴 그 자리의 표면 높이에 붙인다. 면이
+         울퉁불퉁해 높이가 프레임마다 튀므로 천천히 따라가게 하고(판이 시작될 땐
+         바로 붙인다), 가운데 높이에서 너무 벗어나면 잘라 하나의 자국으로 둔다. */
+      const cx = this.clawPos.x, cz = this.clawPos.z;
+      const mid = this.surfaceBelow(cx, cz);
+      const k = this.aimSettled ? 1 - Math.exp(-dt * 16) : 1;
+      const pos = this.shadow.geometry.attributes.position;
+      for (let i = 0; i < AIM_SEG; i++) {
+        const a = (i / AIM_SEG) * Math.PI * 2, cs = Math.cos(a), sn = Math.sin(a);
+        const h = this.surfaceBelow(cx + cs * AIM_R_MID, cz + sn * AIM_R_MID);
+        const want = clamp(h, mid - AIM_SPREAD, mid + AIM_SPREAD);
+        this.aimH[i] += (want - this.aimH[i]) * k;
+        const y = this.aimH[i] + .008;               // 표면에 살짝 띄워 겹침을 피한다
+        pos.setXYZ(i * 2,     cx + cs * AIM_R_IN,  y, cz + sn * AIM_R_IN);
+        pos.setXYZ(i * 2 + 1, cx + cs * AIM_R_OUT, y, cz + sn * AIM_R_OUT);
+      }
+      this.aimSettled = true;
+      pos.needsUpdate = true;
+    } else this.aimSettled = false;                  // 다음 판엔 새 자리에 바로 붙는다
     this.orbit.update();this.renderer.render(this.scene,this.camera);
     this.frame=requestAnimationFrame(t=>this.update(t));
   },
@@ -684,6 +799,15 @@ export const Play3D = {
     haptic(20);
   },
 
+  /** 고른 배경을 깔아 둔다. 생일파티는 내려받을 파일이 없어 바로 선다. */
+  async loadBackdrop(session) {
+    if (this.backdrop === 'party') {
+      this.scene.add(buildPartyBackdrop());
+      return;
+    }
+    return this.loadMeadow(session);
+  },
+
   async loadMeadow(session) {
     let pack;
     try { pack = await loadModel('higgsfield-meadow-detailed.glb'); }
@@ -715,7 +839,6 @@ export const Play3D = {
     this.toys=null;this.wonToy=null;
     this.active=false;this.session++;
     cancelAnimationFrame(this.frame);clearTimeout(this.delay);clearInterval(this.gripTimer);
-    clearTimeout(this.meadowTimer);
     this.delayResolve?.(false);this.delayResolve=null;
     this.tween?.resolve(false);this.tween=null;
     this.events?.abort();this.resizeObserver?.disconnect();this.orbit?.dispose();

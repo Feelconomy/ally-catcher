@@ -415,7 +415,7 @@ const Screens = {
       <div class="scroll" style="padding:20px 20px 0">
         ${m.open ? `
           <div style="display:flex;align-items:center;gap:7px">
-            <span class="badge ${m.tagClass}">${m.tag}</span>
+            ${m.tag ? `<span class="badge ${m.tagClass}">${m.tag}</span>` : ''}
             <span class="badge badge--easy">난이도 ${m.difficulty}</span>
           </div>
           <h2 class="h2" style="margin-top:10px">${esc(m.name)}</h2>
@@ -1474,6 +1474,12 @@ const Screens = {
       moveDown: el => reorder(el.dataset.id, 1),
       lf: el => { App.adminLoad = { ...App.adminLoad, friend: el.dataset.v }; Screens.admin(); },
       ls: el => { App.adminLoad = { ...App.adminLoad, stage: el.dataset.v }; Screens.admin(); },
+      backdrop: el => {
+        Store.state.admin.backdrop = el.dataset.v;
+        Store.pushAdmin();
+        Screens.admin();
+        toast(`${BACKDROPS.find(b => b.id === el.dataset.v).name} 풍경으로 바꿨어요`, { tone: 'ok' });
+      },
       skin: el => {
         Store.state.admin.skin = el.dataset.s;
         Store.pushAdmin();
@@ -1562,6 +1568,15 @@ function adminSkinPicker() {
       </span>
     </button>`).join('')}
     <div class="adm-note">모든 사용자의 기본값이에요. 사용자가 기계 화면에서 직접 고르면 그쪽이 우선합니다.</div>
+
+    <div class="group-label" style="margin:22px 0 8px">3D 바깥 풍경</div>
+    <div class="adm-tags" id="bg3d">
+      ${BACKDROPS.map(b => `<button class="tg bd" data-act="backdrop" data-v="${b.id}"
+        aria-pressed="${(Store.state.admin.backdrop || 'meadow') === b.id}">
+        <span class="sw" style="background:${b.swatch}"></span>${b.name}
+      </button>`).join('')}
+    </div>
+    <div class="adm-note">3D 화면에서 인형통 바깥에 보이는 풍경의 기본값이에요. 기계마다 따로 고르면 그쪽이 우선합니다.</div>
   </div>`;
 }
 
@@ -1684,7 +1699,9 @@ function machineCard(m) {
   return `<button class="mcard" data-act="machine" data-id="${m.id}" ${m.open ? '' : 'data-down'}>
     <span class="thumb" style="background:${m.bg};display:flex">
       ${dollImg(m.hero, 84)}
-      <span class="badge ${m.open ? m.tagClass : 'badge--down'}">${m.open ? m.tag : '점검'}</span>
+      ${m.open
+        ? (m.tag ? `<span class="badge ${m.tagClass}">${m.tag}</span>` : '')
+        : '<span class="badge badge--down">점검</span>'}
     </span>
     <span class="name" style="display:block">${esc(m.name)}</span>
     <span class="meta" style="display:flex">
