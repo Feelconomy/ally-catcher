@@ -291,11 +291,65 @@ function anniversaryDecor() {
    전부 '바닥 = 0' 기준으로 배치돼 있으므로 무리를 통째로 내려 맞춘다. */
 const PARTY_FLOOR_Y = -0.5;
 
-export function buildPartyBackdrop() {
+/* 트리포로 뽑은 소품을 자리에 앉힌다. 모델마다 원점도 크기도 제각각이라
+   경계상자로 바닥을 0 에 맞추고 키를 지정한 값으로 통일한다. */
+function placeProp(src, { x, z, height, rotY = 0, y = 0 }) {
+  const model = src.clone(true);
+  const box = new THREE.Box3().setFromObject(model);
+  const size = box.getSize(new THREE.Vector3());
+  const scale = height / (size.y || 1);
+  model.scale.setScalar(scale);
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.set(x - center.x * scale, y - box.min.y * scale, z - center.z * scale);
+  model.rotation.y = rotY;
+  model.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return model;
+}
+
+/* 소품을 놓을 자리. 카메라가 도는 앞쪽(+Z 가운데)은 비워 둔다 — 거기 두면
+   인형통을 가린다. inCameraWay 와 같은 규칙이다. */
+const PROP_SPOTS = {
+  gifts: [
+    { x: -4.2, z: -2.0, height: 4.2, rotY:  .5 },
+    { x:  4.5, z: -1.5, height: 4.6, rotY: -.7 },
+    { x: -2.4, z: -5.4, height: 3.6, rotY:  .2 },
+    { x:  2.8, z: -5.8, height: 3.9, rotY: -.3 },
+    { x: -6.2, z:  2.2, height: 4.0, rotY: 1.1 },
+    { x:  6.4, z:  2.6, height: 3.7, rotY: -1.2 },
+    { x: -7.8, z: -3.4, height: 3.4, rotY:  .8 },
+    { x:  7.9, z: -3.0, height: 3.5, rotY: -.8 },
+  ],
+  /* 풍선은 끈이 달린 모델이라 바닥에 붙이면 끈이 땅에 박힌다. 선물 더미 위로
+     띄워 끈이 그 사이로 내려오게 둔다. */
+  balloons: [
+    { x: -5.6, z: -4.4, height: 4.2, rotY:  .3, y: 2.6 },
+    { x:  5.9, z: -4.0, height: 4.6, rotY: -.4, y: 3.0 },
+    { x: -8.4, z: -0.6, height: 4.0, rotY:  .9, y: 2.2 },
+    { x:  8.6, z: -0.2, height: 4.4, rotY: -.9, y: 2.8 },
+    { x: -1.6, z: -8.2, height: 4.2, rotY:  .1, y: 3.4 },
+    { x:  2.2, z: -8.6, height: 4.0, rotY: -.2, y: 3.2 },
+  ],
+};
+
+/** props: { cake, gifts, balloons } — 못 받은 건 빼고 넘기면 절차적 모양 그대로다. */
+export function buildPartyBackdrop(props = {}) {
   const g = new THREE.Group();
   g.name = 'Party';
   g.position.y = PARTY_FLOOR_Y;
-  g.add(anniversaryDecor());
+  const decor = anniversaryDecor();
+  g.add(decor);
+
+  /* 케이크는 이 장면의 주인공이라, 받아 왔으면 도형으로 쌓은 케이크를 빼고
+     그 자리에 그대로 앉힌다. 못 받았으면 원래 케이크가 남는다. */
+  if (props.cake) {
+    const old = decor.getObjectByName('AnniversaryCake');
+    if (old) {
+      old.removeFromParent();
+      g.add(placeProp(props.cake, { x: -3.15, z: -3.8, height: 2.2, rotY: .25 }));
+    }
+  }
+  for (const [key, spots] of Object.entries(PROP_SPOTS))
+    if (props[key]) for (const spot of spots) g.add(placeProp(props[key], spot));
   const rnd = seeded(20261016);
   // Low rings and floor confetti decorate the visible foreground without blocking the toys.
   for (const [radius, color] of [[2.5, '#FF98C3'], [2.65, '#FFE9AB']]) {

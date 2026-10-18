@@ -40,7 +40,7 @@ async function loadModel(file) {
   return {scene};
 }
 import { OrbitControls } from '../vendor/OrbitControls.js';
-import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=275';
+import { buildPartyBackdrop, PARTY_SKY, PARTY_FOG } from './backdrop-party.js?v=277';
 import * as CANNON from '../vendor/cannon-es.js';
 
 const CHUTE = { x: -.91, z: .53 };
@@ -814,10 +814,25 @@ export const Play3D = {
   /** 고른 배경을 깔아 둔다. 생일파티는 내려받을 파일이 없어 바로 선다. */
   async loadBackdrop(session) {
     if (this.backdrop === 'party') {
-      this.scene.add(buildPartyBackdrop());
+      this.scene.add(buildPartyBackdrop(await this.loadPartyProps(session)));
       return;
     }
     return this.loadMeadow(session);
+  },
+
+  /* 파티 배경의 바탕은 코드로 그린다(받을 파일 0바이트). 눈에 가장 많이 닿는
+     케이크·선물·풍선만 따로 뽑은 모델로 바꿔 끼운다 — 셋 합쳐 0.9MB 로,
+     들판(9.25MB)의 10분의 1이다. 하나라도 못 받으면 그 자리는 원래 도형이 남는다. */
+  async loadPartyProps(session) {
+    const names = ['cake', 'gifts', 'balloons'];
+    const packs = await Promise.allSettled(names.map(n => loadModel(`party-${n}.glb?v=1`)));
+    if (!this.active || session !== this.session) {
+      for (const r of packs) if (r.status === 'fulfilled') this.disposeObject(r.value.scene);
+      return {};
+    }
+    const props = {};
+    packs.forEach((r, i) => { if (r.status === 'fulfilled') props[names[i]] = r.value.scene; });
+    return props;
   },
 
   async loadMeadow(session) {
