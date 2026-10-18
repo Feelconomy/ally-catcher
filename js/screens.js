@@ -546,7 +546,8 @@ const Screens = {
     setTimeout(() => {
       if (App.route !== 'loading') return;
       // A flaky connection is part of the spec (screen 23); refund and explain.
-      if (Math.random() < 0.06) { Dialogs.disconnected(m); return; }
+      // 시연 안정성을 위해 랜덤 연결 끊김 시뮬레이션 비활성화 (원복: 아래 주석 해제).
+      // if (Math.random() < 0.06) { Dialogs.disconnected(m); return; }
       Store.addTickets(-m.cost);
       go('play', m.id);
     }, is3D ? 300 : 1400);
