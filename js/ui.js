@@ -124,6 +124,74 @@ function setTheme(name) {
   const meta = document.querySelector('meta[name="theme-color"]');
   if (meta) meta.content = bg;
   paintBackdrop(name);
+  clearArcadeTone();            // 화면이 바뀌면 기계 색감은 떨군다
+}
+
+/* ── 2D 그린 스킨 색감 ──────────────────────────────────────────────
+   그린 스킨은 --arc-* 토큰 한 벌과 민트색 캐비닛 사진(green-cabinet-empty.png)
+   으로 칠해져 있다. 사진은 색을 바꿀 수 없으니 같은 각도만큼 hue-rotate 로 돌린다
+   — 사진은 빈 div(.glass)의 배경이고 인형·집게는 형제라 사진만 돌아간다.
+   토큰도 같은 각도로 돌려 끼워 틀·조작대까지 한 색으로 맞춘다.
+   색감이 초록이면 아무것도 넣지 않는다 — 원래 CSS 그대로다. */
+const ARC_TOKENS = ['--arc-bg', '--arc-body', '--arc-body-lit', '--arc-body-deep',
+  '--arc-glass', '--arc-glass-lit', '--arc-accent', '--arc-accent-lit',
+  '--arc-edge', '--arc-edge-lit', '--arc-deep', '--arc-ink', '--arc-ink-soft'];
+const CAB_HUE = 149;            // 캐비닛 사진의 민트 색상(픽셀에서 잰 값 148.8)
+
+/** '#rrggbb' · 'rgb(a)(...)' 를 [r,g,b,a] 로. 못 읽으면 null. */
+function readColor(css) {
+  const v = (css || '').trim();
+  let m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(v);
+  if (m) {
+    const h = m[1].length === 3 ? [...m[1]].map(c => c + c).join('') : m[1];
+    return [0, 2, 4].map(i => parseInt(h.slice(i, i + 2), 16)).concat(1);
+  }
+  m = /^rgba?\(([^)]+)\)$/i.exec(v);
+  if (!m) return null;
+  const n = m[1].split(/[,\s/]+/).filter(Boolean).map(Number);
+  return n.length >= 3 ? [n[0], n[1], n[2], n.length > 3 ? n[3] : 1] : null;
+}
+
+/** 색상(hue)만 deg 만큼 돌린다 — 채도·밝기·투명도는 그대로 둔다. */
+function rotateHue(css, deg) {
+  const c = readColor(css);
+  if (!c) return css;
+  const [r, g, b, a] = c, mx = Math.max(r, g, b) / 255, mn = Math.min(r, g, b) / 255;
+  const l = (mx + mn) / 2, d = mx - mn;
+  if (!d) return css;                                  // 무채색은 돌릴 것이 없다
+  const sat = d / (1 - Math.abs(2 * l - 1));
+  let h = mx === r / 255 ? ((g - b) / 255 / d) % 6
+        : mx === g / 255 ? (b - r) / 255 / d + 2 : (r - g) / 255 / d + 4;
+  h = (((h * 60 + deg) % 360) + 360) % 360;
+  const cc = (1 - Math.abs(2 * l - 1)) * sat, x = cc * (1 - Math.abs((h / 60) % 2 - 1)), m0 = l - cc / 2;
+  const [rr, gg, bb] = [[cc, x, 0], [x, cc, 0], [0, cc, x], [0, x, cc], [x, 0, cc], [cc, 0, x]][Math.floor(h / 60) % 6];
+  const out = [rr, gg, bb].map(v => Math.round((v + m0) * 255));
+  return a < 1 ? `rgba(${out.join(', ')}, ${a})` : '#' + out.map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+const hueOf = (css) => {
+  const c = readColor(css); if (!c) return CAB_HUE;
+  const [r, g, b] = c.map(v => v / 255), mx = Math.max(r, g, b), d = mx - Math.min(r, g, b);
+  if (!d) return CAB_HUE;
+  const h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+  return ((h * 60) % 360 + 360) % 360;
+};
+
+function clearArcadeTone() {
+  const st = shellEl().style;
+  for (const k of [...ARC_TOKENS, '--arc-shift']) st.removeProperty(k);
+}
+
+function applyArcadeTone(m) {
+  clearArcadeTone();
+  const t = machineTone(m);
+  if (t.id === 'green') return;               // 기본 초록은 원본 그대로
+  const st = shellEl().style, base = getComputedStyle(document.documentElement);
+  const deg = Math.round((((hueOf(t.mid) - CAB_HUE) % 360) + 360) % 360);
+  st.setProperty('--arc-shift', `hue-rotate(${deg}deg)`);
+  for (const k of ARC_TOKENS) st.setProperty(k, rotateHue(base.getPropertyValue(k), deg));
+  st.setProperty('--arc-edge', t.mid);        // 3D 조작 색과 같은 값으로 맞춘다
+  st.setProperty('--arc-ink', t.ink);
 }
 
 // 창 크기가 데스크톱↔모바일 경계를 넘나들면 뒷배경도 따라간다

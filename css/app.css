@@ -1029,6 +1029,7 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .cabinet .glass {
   position: absolute; inset: 0; border-radius: 22px;
   background: url('../assets/green-cabinet-empty.png') center / cover no-repeat;
+  filter: var(--arc-shift, none);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .72);
 }
 .screen.arcade .cabinet::after {
@@ -1074,7 +1075,7 @@ a:hover { color: var(--green-deep); }
   margin-left: calc(-52px * var(--claw-scale, 1));
   transition: left .16s ease-out;
 }
-.screen.arcade .claw-rig .cord { width: 5px; height: 76px; background: linear-gradient(180deg, #AFC4B6, #7E9487); border-radius: 3px; margin: 0 auto; }
+.screen.arcade .claw-rig .cord { width: 5px; height: 76px; background: linear-gradient(180deg, #BCC2BF, #8A908D); border-radius: 3px; margin: 0 auto; }
 .screen.arcade .claw-rig .claw {
   position: relative;
   animation: clawSwing 2.6s ease-in-out infinite;
@@ -1195,7 +1196,7 @@ a:hover { color: var(--green-deep); }
     radial-gradient(circle at 22% 40%, rgba(255, 255, 255, .9) 0 1.6px, transparent 2px),
     radial-gradient(circle at 74% 34%, rgba(255, 255, 255, .9) 0 1.4px, transparent 1.8px),
     radial-gradient(circle at 50% 72%, rgba(255, 255, 255, .75) 0 1.3px, transparent 1.7px),
-    radial-gradient(ellipse at 50% 26%, #DFF4E6, var(--arc-accent));
+    radial-gradient(ellipse at 50% 26%, var(--arc-accent-lit), var(--arc-accent));
   box-shadow: inset 0 -2px 0 rgba(0, 84, 40, .14), 0 2px 0 rgba(0, 84, 40, .1);
 }
 /* 봉 — 밑동이 회전축이라 기울면 실제 스틱처럼 눕는다 */
@@ -1209,7 +1210,7 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .lever .ball {
   position: absolute; top: -25px; left: 50%; margin-left: -17px;
   width: 34px; height: 34px; border-radius: 50%;
-  background: radial-gradient(circle at 34% 28%, #4FE096, var(--arc-edge) 72%, #00762F);
+  background: radial-gradient(circle at 34% 28%, var(--arc-edge-lit), var(--arc-edge) 72%, var(--arc-deep));
   box-shadow: 0 3px 0 rgba(0, 84, 40, .16);
 }
 .screen.arcade .lever .ball::after {
@@ -1238,10 +1239,10 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .timerrow .l { font-size: 11px; font-weight: 700; color: var(--arc-ink-soft); }
 .screen.arcade .timerrow .t { font-size: 19px; font-weight: 700; color: var(--arc-edge); letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
 .screen.arcade .timerrow .t.warn { color: var(--danger); }
-.screen.arcade .gauge .bar { height: 8px; border-radius: 4px; background: rgba(0, 166, 80, .16); overflow: hidden; }
+.screen.arcade .gauge .bar { height: 8px; border-radius: 4px; background: var(--arc-accent); overflow: hidden; }
 .screen.arcade .gauge .bar > i {
   display: block; height: 100%; border-radius: 4px;
-  background: linear-gradient(90deg, #4FE096, var(--arc-edge));
+  background: linear-gradient(90deg, var(--arc-edge-lit), var(--arc-edge));
   transition: width .1s linear;
 }
 
@@ -1249,15 +1250,15 @@ a:hover { color: var(--green-deep); }
 .screen.arcade .dropwrap { flex: 0 0 86px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; }
 .screen.arcade .drop-btn {
   width: 86px; height: 86px; border-radius: 50%;
-  background: radial-gradient(circle at 36% 28%, #3FD98A, var(--arc-edge));
-  box-shadow: 0 6px 0 #00762F, 0 10px 16px rgba(0, 166, 80, .32);
+  background: radial-gradient(circle at 36% 28%, var(--arc-edge-lit), var(--arc-edge));
+  box-shadow: 0 6px 0 var(--arc-deep), 0 10px 16px rgba(0, 0, 0, .18);
   color: #fff;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0;
   animation: bob 2.4s ease-in-out infinite;
 }
 .screen.arcade .drop-btn .ic { display: flex; }
 .screen.arcade .drop-btn .tx { font-size: 17px; font-weight: 700; letter-spacing: .04em; }
-.screen.arcade .drop-btn:active { transform: translateY(5px); box-shadow: 0 1px 0 #00762F; }
+.screen.arcade .drop-btn:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--arc-deep); }
 .screen.arcade .dropwrap .cap { font-size: 10px; font-weight: 700; color: var(--arc-ink); }
 .screen.arcade .drop-btn:disabled,
 .screen.arcade .drop-btn.btn--disabled {
@@ -1288,7 +1289,7 @@ a:hover { color: var(--green-deep); }
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .screen.arcade .tipbar .pc {
-  flex-shrink: 0; font-size: 18px; font-weight: 700; color: var(--green);
+  flex-shrink: 0; font-size: 18px; font-weight: 700; color: var(--arc-edge);
   font-variant-numeric: tabular-nums; display: none;
 }
 .screen.arcade .tipbar.on .pc { display: block; }

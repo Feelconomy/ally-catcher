@@ -399,9 +399,13 @@ const Screens = {
     setTheme('');
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
     const marked = Store.isBookmarked(m.id);
+    /* 머리 그림 바탕은 기계에 정해 둔 색감을 따른다 — 홈 카드·3D 화면과 한 벌.
+       (:root 에 깔지 않고 여기만 칠한다. .hero 는 다른 화면에서도 쓴다.) */
+    const tone = machineTone(m);
 
     screenEl().innerHTML = `<div class="screen">
-      <div class="hero ${m.open ? '' : 'down'}">
+      <div class="hero ${m.open ? '' : 'down'}"${m.open
+        ? ` style="background:linear-gradient(160deg,${tone.bg},${tone.sky})"` : ''}>
         ${statusbar()}
         <button class="back" data-act="back" aria-label="뒤로">${icon('chevronLeft3', 20)}</button>
         ${m.open ? `<button class="act" data-act="share" aria-label="공유">${icon('share', 18)}</button>` : ''}
@@ -534,6 +538,7 @@ const Screens = {
   loading(id) {
     setTheme('arcade');
     const m = MACHINES.find(x => x.id === id) || MACHINES[0];
+    applyMachineTone(m);          // 준비 화면부터 그 인형통 색으로 — 3D 가 뜨기 전이다
     const is3D = availablePlayMode(Store.state.settings.skin || Store.state.admin.skin) === 'green3d';
     screenEl().innerHTML = green3DLoading();
     $('#loading3dText').textContent = `${m.name} · 티켓 ${m.cost}장`;
