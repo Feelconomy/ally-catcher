@@ -214,6 +214,7 @@ const Play = {
 
   render() {
     setTheme(this.skin.theme);
+    applyArcadeTone(this.machine);   // 기계에 정해 둔 색감 (초록이면 아무것도 안 한다)
     const m = this.machine;
     const arcade = this.skinId === 'arcade';
 

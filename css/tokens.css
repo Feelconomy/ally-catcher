@@ -32,6 +32,11 @@
   --arc-ink-soft: rgba(14, 79, 44, .58);
   --arc-panel: #FFFBEF;
   --arc-accent: #CBEBD8;
+  /* 조작대(조이스틱·드롭·게이지)에 흩어져 있던 값들 — 기계 색감이 초록이 아니면
+     applyArcadeTone() 이 색상만 돌려 끼운다. */
+  --arc-accent-lit: #DFF4E6;
+  --arc-edge-lit: #4FE096;
+  --arc-deep: #00762F;
 
   /* Surfaces */
   --canvas: #F3F1EA;
