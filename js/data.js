@@ -63,6 +63,7 @@ const DOLLS = {
     { id: 'partydali',  name: '파티 달리',  grade: 'R',  points: 120, bg: '#FFF0F6', rate: 2.4, model3d: 'ToyPartyDali' },
     { id: 'partywoni',  name: '파티 원이',  grade: 'R',  points: 120, bg: '#FFF8E0', rate: 2.4, model3d: 'ToyPartyWoni' },
     { id: 'partykori',  name: '파티 코리',  grade: 'R',  points: 120, bg: '#E8F4FD', rate: 2.4, model3d: 'ToyKori' },
+    { id: 'partypig',   name: '파티 단지',  grade: 'SR', points: 400, bg: '#FFE9F2', rate: 1.8, model3d: 'ToyPig' },
   ]),
 };
 
@@ -204,6 +205,18 @@ const MACHINE_TAGS = [
   { tag: '쉬움', tagClass: 'badge--easy',    label: '쉬움' },
 ];
 const MACHINE_LEVELS = ['쉬움', '보통', '어려움'];
+/* 인형통 색감. 홈 카드의 바탕(bg)과 3D 플레이 화면의 하늘·안개·조작대까지 한
+   벌로 묶어, 관리자가 하나만 고르면 두 화면의 색이 따로 놀지 않게 한다.
+   bg 는 기존 기계들이 쓰던 연한 톤과 같은 밝기로 맞췄다. */
+const MACHINE_TONES = [
+  { id: 'green',  name: '초록', bg: '#EAF7DE', sky: '#A9DEF4', fog: '#C8E9ED', deck: ['#E9F7EE', '#B3D7C2'] },
+  { id: 'pink',   name: '분홍', bg: '#FFE9F2', sky: '#FBA8CC', fog: '#F8C9DE', deck: ['#FFEDF4', '#F0B9D1'] },
+  { id: 'yellow', name: '노랑', bg: '#FFF6D8', sky: '#FFE07A', fog: '#FBEFC4', deck: ['#FFF8E2', '#EFD79A'] },
+  { id: 'blue',   name: '파랑', bg: '#E8F4FD', sky: '#8FD0F5', fog: '#CBE6F6', deck: ['#EDF6FD', '#AECDE4'] },
+  { id: 'purple', name: '보라', bg: '#F1EBFC', sky: '#BBA6F2', fog: '#DED2F7', deck: ['#F3EEFC', '#C4B4E6'] },
+  { id: 'cream',  name: '크림', bg: '#FBF1E2', sky: '#F6D9A8', fog: '#F6E8D2', deck: ['#FDF6EC', '#E3CDAE'] },
+];
+const machineTone = (m) => MACHINE_TONES.find(t => t.id === (m && m.tone)) || MACHINE_TONES[0];
 /* 3D 인형통 바깥에 보이는 풍경. 들판은 9.25MB GLB 를 받아 오고, 생일파티는
    받을 파일 없이 three.js 도형으로 그 자리에서 조립한다(1만 삼각형대). */
 const BACKDROPS = [

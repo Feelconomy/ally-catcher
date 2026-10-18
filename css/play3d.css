@@ -53,8 +53,9 @@
   .l3-olly { animation: none; opacity: 1; transform: translate(140px, 102px); }
   .l3-claw, .l3-bulb, .l3-tip i { animation: none; }
 }
-.green3d { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: #cce5d8; }
-.green3d-stage { position: relative; flex: 1; min-height: 230px; overflow: hidden; background: #a9def4; }
+/* 색감은 기계마다 다르다 — play3d.js 가 --g3-* 를 넣어 준다 (없으면 기존 초록). */
+.green3d { position: relative; flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--g3-deck-b, #cce5d8); }
+.green3d-stage { position: relative; flex: 1; min-height: 230px; overflow: hidden; background: var(--g3-stage, #a9def4); }
 .green3d-stage canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 .green3d-top { position: absolute; inset: calc(12px + var(--safe-t)) 16px auto; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
 .green3d-top button, .green3d-views { pointer-events: auto; }
@@ -62,7 +63,7 @@
 .green3d-views { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); display: flex; background: #ffffffd9; padding: 3px; border-radius: 6px; }
 .green3d-views button { font-size: 11px; padding: 6px 12px; border-radius: 4px; white-space: nowrap; }
 .green3d-views button[aria-pressed="true"] { background: #007d49; color: white; }
-.green3d-deck { flex: 0 0 auto; padding: 12px 18px calc(12px + var(--safe-b)); background: linear-gradient(#e9f7ee,#b3d7c2); border-top: 1px solid #f4fff6; }
+.green3d-deck { flex: 0 0 auto; padding: 12px 18px calc(12px + var(--safe-b)); background: linear-gradient(var(--g3-deck-a, #e9f7ee), var(--g3-deck-b, #b3d7c2)); border-top: 1px solid #f4fff6; }
 .green3d-console { display: grid; grid-template-columns: 104px minmax(0,1fr) 86px; align-items: center; gap: 12px; }
 .green3d-stick { width: 104px; height: 104px; position: relative; border-radius: 50%; background: radial-gradient(ellipse, #91b69f 0 25%, #d9e9dc 27% 54%, #a1c9af 56% 58%, #eef7ef 60%); box-shadow: inset 0 2px 4px #487a5f30; touch-action: none; }
 .green3d-stick::before, .green3d-stick::after { content: ''; position: absolute; background: #68947780; pointer-events: none; }

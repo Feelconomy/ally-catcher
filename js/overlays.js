@@ -580,6 +580,14 @@ const Sheets = {
         </button>`).join('')}
       </div>
 
+      <div class="group-label" style="margin:16px 0 8px">색감</div>
+      <div class="adm-tags" id="mtone">
+        ${MACHINE_TONES.map(t => `<button class="tg bd" data-act="mtone" data-v="${t.id}"
+          aria-pressed="${machineTone(m).id === t.id}">
+          <span class="sw" style="background:${t.sky}"></span>${t.name}</button>`).join('')}
+      </div>
+      <div class="adm-note" style="margin:6px 0 0">홈 카드 바탕과 3D 플레이 화면의 하늘·조작대 색이 같이 바뀌어요.</div>
+
       <div class="group-label" style="margin:16px 0 8px">3D 바깥 풍경</div>
       <div class="adm-tags" id="mbg">
         <button class="tg bd" data-act="mbg" data-v="" aria-pressed="${!m.backdrop}">
@@ -609,6 +617,7 @@ const Sheets = {
         let tagIdx = Math.max(0, MACHINE_TAGS.findIndex(t => t.tag === (m.tag || '')));
         let level = MACHINE_LEVELS.includes(m.difficulty) ? m.difficulty : '보통';
         let mbg = m.backdrop || '';            // '' 이면 관리자 기본값을 따른다
+        let tone = machineTone(m).id;
         const num = (el, max) => Math.max(0, Math.min(max, parseInt(el.value, 10) || 0));
 
         bind(node, {
@@ -616,6 +625,10 @@ const Sheets = {
           tag: el => {
             tagIdx = Number(el.dataset.i);
             $$('#tags .tg', node).forEach((b, i) => b.setAttribute('aria-pressed', String(i === tagIdx)));
+          },
+          mtone: el => {
+            tone = el.dataset.v;
+            $$('#mtone .tg', node).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === tone)));
           },
           mbg: el => {
             mbg = el.dataset.v;
@@ -653,6 +666,7 @@ const Sheets = {
               cost: num($('#mc', node), 99),
               baseRate: num($('#mr', node), 100),
               tag: look.tag, tagClass: look.tagClass, difficulty: level, backdrop: mbg,
+              tone, bg: (MACHINE_TONES.find(t => t.id === tone) || MACHINE_TONES[0]).bg,
               pool, contents: pool,
               hero: pool.includes(m.hero) ? m.hero : pool[0],
             };
